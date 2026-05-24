@@ -52,78 +52,55 @@ function SectionLoader() {
 
 // ── Mock report data generators ──────────────────────────────────
 
-const MOCK_CONTACTS_BY_SOURCE = [];
-const MOCK_DQ_BY_SOURCE = [];
-const MOCK_SOURCE_PERFORMANCE = [];
-const MOCK_CAMPAIGN_PERFORMANCE = [];
-const MOCK_LEADS_CONVERSION = [];
-const MOCK_PIPELINE = [];
-const MOCK_ACTIVITY_SUMMARY = [];
-const MOCK_REVENUE_BY_MONTH = [];
-const MOCK_TOP_PERFORMERS = [];
-const MOCK_DEAL_CYCLE = [];
-const MOCK_ATTENDANCE = [];
-const MOCK_LEAVE_BALANCE = [];
-const MOCK_PAYROLL = [];
-const MOCK_HEADCOUNT = [];
-const MOCK_PNL = [];
-const MOCK_EXPENSES = [];
-const MOCK_INVOICE_AGING = [];
-const MOCK_CASHFLOW = [];
-const MOCK_DEAL_PIPELINE = [];
-const MOCK_PAYMENTS_SUMMARY = [];
-const MOCK_HANDOVER_STATUS = [];
-const MOCK_TICKETS_SUMMARY = [];
-
 // ── Report definitions ───────────────────────────────────────────
 
 const REPORT_CATEGORIES = [
   {
     key: 'crm', ar: 'تقارير CRM', en: 'CRM Reports', icon: Users, color: '#4A7AAB',
     reports: [
-      { key: 'contacts_by_source', ar: 'جهات الاتصال حسب المصدر', en: 'Contacts by Source', desc_ar: 'توزيع جهات الاتصال على مصادر الاستقطاب', desc_en: 'Distribution of contacts across acquisition sources', icon: PieChart, data: MOCK_CONTACTS_BY_SOURCE },
-      { key: 'dq_by_source', ar: 'نسبة الاستبعاد حسب المصدر', en: 'Disqualified by Source', desc_ar: 'نسبة جهات الاتصال المستبعدة من كل مصدر وأسباب الاستبعاد', desc_en: 'Disqualification rate per source with top reasons', icon: Target, data: MOCK_DQ_BY_SOURCE },
-      { key: 'source_performance', ar: 'أداء المصادر', en: 'Source Performance', desc_ar: 'تحويل كل مصدر: جهات اتصال → فرص → صفقات', desc_en: 'Source funnel: contacts → opportunities → won deals', icon: TrendingUp, data: MOCK_SOURCE_PERFORMANCE },
-      { key: 'campaign_performance', ar: 'أداء الحملات', en: 'Campaign Performance', desc_ar: 'تقرير مجمع لكل حملة: ليدز، استبعاد، فرص، صفقات، إيرادات', desc_en: 'Per-campaign report: leads, DQ, opps, deals, revenue', icon: Award, data: MOCK_CAMPAIGN_PERFORMANCE },
-      { key: 'leads_conversion', ar: 'معدل تحويل الليدز', en: 'Leads Conversion Rate', desc_ar: 'تتبع تحويل الليدز عبر مراحل البيع', desc_en: 'Track lead conversion through sales stages', icon: TrendingUp, data: MOCK_LEADS_CONVERSION },
-      { key: 'pipeline', ar: 'تحليل خط الأنابيب', en: 'Pipeline Analysis', desc_ar: 'قيمة وعدد الصفقات في كل مرحلة', desc_en: 'Deal count and value at each pipeline stage', icon: BarChart3, data: MOCK_PIPELINE },
-      { key: 'activity_summary', ar: 'ملخص النشاط', en: 'Activity Summary', desc_ar: 'إجمالي الأنشطة: مكالمات، اجتماعات، متابعات', desc_en: 'Total activities: calls, meetings, follow-ups', icon: Activity, data: MOCK_ACTIVITY_SUMMARY },
+      { key: 'contacts_by_source', ar: 'جهات الاتصال حسب المصدر', en: 'Contacts by Source', desc_ar: 'توزيع جهات الاتصال على مصادر الاستقطاب', desc_en: 'Distribution of contacts across acquisition sources', icon: PieChart, data: [] },
+      { key: 'dq_by_source', ar: 'نسبة الاستبعاد حسب المصدر', en: 'Disqualified by Source', desc_ar: 'نسبة جهات الاتصال المستبعدة من كل مصدر وأسباب الاستبعاد', desc_en: 'Disqualification rate per source with top reasons', icon: Target, data: [] },
+      { key: 'source_performance', ar: 'أداء المصادر', en: 'Source Performance', desc_ar: 'تحويل كل مصدر: جهات اتصال → فرص → صفقات', desc_en: 'Source funnel: contacts → opportunities → won deals', icon: TrendingUp, data: [] },
+      { key: 'campaign_performance', ar: 'أداء الحملات', en: 'Campaign Performance', desc_ar: 'تقرير مجمع لكل حملة: ليدز، استبعاد، فرص، صفقات، إيرادات', desc_en: 'Per-campaign report: leads, DQ, opps, deals, revenue', icon: Award, data: [] },
+      { key: 'leads_conversion', ar: 'معدل تحويل الليدز', en: 'Leads Conversion Rate', desc_ar: 'تتبع تحويل الليدز عبر مراحل البيع', desc_en: 'Track lead conversion through sales stages', icon: TrendingUp, data: [] },
+      { key: 'pipeline', ar: 'تحليل خط الأنابيب', en: 'Pipeline Analysis', desc_ar: 'قيمة وعدد الصفقات في كل مرحلة', desc_en: 'Deal count and value at each pipeline stage', icon: BarChart3, data: [] },
+      { key: 'activity_summary', ar: 'ملخص النشاط', en: 'Activity Summary', desc_ar: 'إجمالي الأنشطة: مكالمات، اجتماعات، متابعات', desc_en: 'Total activities: calls, meetings, follow-ups', icon: Activity, data: [] },
     ],
   },
   {
     key: 'sales', ar: 'تقارير المبيعات', en: 'Sales Reports', icon: DollarSign, color: '#4A7AAB',
     reports: [
-      { key: 'revenue_by_month', ar: 'الإيرادات الشهرية', en: 'Revenue by Month', desc_ar: 'مقارنة الإيرادات الفعلية مع المستهدف', desc_en: 'Compare actual revenue vs target by month', icon: BarChart3, data: MOCK_REVENUE_BY_MONTH },
-      { key: 'target_achievement', ar: 'تحقيق الأهداف', en: 'Target Achievement', desc_ar: 'أداء أفضل البائعين مقابل الأهداف', desc_en: 'Top performers achievement against targets', icon: TrendingUp, data: MOCK_TOP_PERFORMERS },
-      { key: 'top_performers', ar: 'أفضل البائعين', en: 'Top Performers', desc_ar: 'ترتيب البائعين حسب الإيرادات والصفقات', desc_en: 'Ranking of sellers by revenue and deals', icon: Users, data: MOCK_TOP_PERFORMERS },
-      { key: 'deal_cycle', ar: 'دورة الصفقة', en: 'Deal Cycle Time', desc_ar: 'متوسط الوقت لإغلاق الصفقات', desc_en: 'Average time to close deals by range', icon: Clock, data: MOCK_DEAL_CYCLE },
+      { key: 'revenue_by_month', ar: 'الإيرادات الشهرية', en: 'Revenue by Month', desc_ar: 'مقارنة الإيرادات الفعلية مع المستهدف', desc_en: 'Compare actual revenue vs target by month', icon: BarChart3, data: [] },
+      { key: 'target_achievement', ar: 'تحقيق الأهداف', en: 'Target Achievement', desc_ar: 'أداء أفضل البائعين مقابل الأهداف', desc_en: 'Top performers achievement against targets', icon: TrendingUp, data: [] },
+      { key: 'top_performers', ar: 'أفضل البائعين', en: 'Top Performers', desc_ar: 'ترتيب البائعين حسب الإيرادات والصفقات', desc_en: 'Ranking of sellers by revenue and deals', icon: Users, data: [] },
+      { key: 'deal_cycle', ar: 'دورة الصفقة', en: 'Deal Cycle Time', desc_ar: 'متوسط الوقت لإغلاق الصفقات', desc_en: 'Average time to close deals by range', icon: Clock, data: [] },
     ],
   },
   {
     key: 'hr', ar: 'تقارير الموارد البشرية', en: 'HR Reports', icon: Briefcase, color: '#6B8DB5',
     reports: [
-      { key: 'attendance', ar: 'ملخص الحضور', en: 'Attendance Summary', desc_ar: 'حضور وغياب وتأخير كل قسم', desc_en: 'Present, absent and late counts per department', icon: UserCheck, data: MOCK_ATTENDANCE },
-      { key: 'leave_balance', ar: 'رصيد الإجازات', en: 'Leave Balance', desc_ar: 'الرصيد المتبقي والمستخدم لكل موظف', desc_en: 'Remaining and used leave per employee', icon: Calendar, data: MOCK_LEAVE_BALANCE },
-      { key: 'payroll', ar: 'ملخص الرواتب', en: 'Payroll Summary', desc_ar: 'إجمالي ومستقطعات وصافي رواتب كل قسم', desc_en: 'Gross, deductions and net payroll per dept', icon: CreditCard, data: MOCK_PAYROLL },
-      { key: 'headcount', ar: 'عدد الموظفين حسب القسم', en: 'Headcount by Department', desc_ar: 'توزيع الموظفين على الأقسام', desc_en: 'Employee distribution across departments', icon: Building2, data: MOCK_HEADCOUNT },
+      { key: 'attendance', ar: 'ملخص الحضور', en: 'Attendance Summary', desc_ar: 'حضور وغياب وتأخير كل قسم', desc_en: 'Present, absent and late counts per department', icon: UserCheck, data: [] },
+      { key: 'leave_balance', ar: 'رصيد الإجازات', en: 'Leave Balance', desc_ar: 'الرصيد المتبقي والمستخدم لكل موظف', desc_en: 'Remaining and used leave per employee', icon: Calendar, data: [] },
+      { key: 'payroll', ar: 'ملخص الرواتب', en: 'Payroll Summary', desc_ar: 'إجمالي ومستقطعات وصافي رواتب كل قسم', desc_en: 'Gross, deductions and net payroll per dept', icon: CreditCard, data: [] },
+      { key: 'headcount', ar: 'عدد الموظفين حسب القسم', en: 'Headcount by Department', desc_ar: 'توزيع الموظفين على الأقسام', desc_en: 'Employee distribution across departments', icon: Building2, data: [] },
     ],
   },
   {
     key: 'finance', ar: 'التقارير المالية', en: 'Finance Reports', icon: FileBarChart, color: '#2B4C6F',
     reports: [
-      { key: 'pnl', ar: 'قائمة الدخل', en: 'P&L Statement', desc_ar: 'الإيرادات والمصروفات وصافي الربح', desc_en: 'Revenue, expenses and net profit overview', icon: FileText, data: MOCK_PNL },
-      { key: 'expense_breakdown', ar: 'تفصيل المصروفات', en: 'Expense Breakdown', desc_ar: 'توزيع المصروفات على الفئات', desc_en: 'Expense distribution across categories', icon: PieChart, data: MOCK_EXPENSES },
-      { key: 'invoice_aging', ar: 'أعمار الفواتير', en: 'Invoice Aging', desc_ar: 'الفواتير المستحقة حسب فترة التأخير', desc_en: 'Outstanding invoices by aging period', icon: Clock, data: MOCK_INVOICE_AGING },
-      { key: 'cashflow', ar: 'التدفق النقدي', en: 'Cash Flow', desc_ar: 'التدفقات النقدية الداخلة والخارجة', desc_en: 'Cash inflows and outflows by month', icon: TrendingUp, data: MOCK_CASHFLOW },
+      { key: 'pnl', ar: 'قائمة الدخل', en: 'P&L Statement', desc_ar: 'الإيرادات والمصروفات وصافي الربح', desc_en: 'Revenue, expenses and net profit overview', icon: FileText, data: [] },
+      { key: 'expense_breakdown', ar: 'تفصيل المصروفات', en: 'Expense Breakdown', desc_ar: 'توزيع المصروفات على الفئات', desc_en: 'Expense distribution across categories', icon: PieChart, data: [] },
+      { key: 'invoice_aging', ar: 'أعمار الفواتير', en: 'Invoice Aging', desc_ar: 'الفواتير المستحقة حسب فترة التأخير', desc_en: 'Outstanding invoices by aging period', icon: Clock, data: [] },
+      { key: 'cashflow', ar: 'التدفق النقدي', en: 'Cash Flow', desc_ar: 'التدفقات النقدية الداخلة والخارجة', desc_en: 'Cash inflows and outflows by month', icon: TrendingUp, data: [] },
     ],
   },
   {
     key: 'operations', ar: 'تقارير العمليات', en: 'Operations Reports', icon: Briefcase, color: '#1B3347',
     reports: [
-      { key: 'deal_pipeline', ar: 'خط سير الصفقات', en: 'Deal Pipeline', desc_ar: 'حالة الصفقات وقيمتها في كل مرحلة', desc_en: 'Deal status and value at each stage', icon: BarChart3, data: MOCK_DEAL_PIPELINE },
-      { key: 'payments_summary', ar: 'ملخص المدفوعات', en: 'Payments Summary', desc_ar: 'إجمالي المدفوع والمستحق والمتأخر', desc_en: 'Total paid, due and overdue payments', icon: CreditCard, data: MOCK_PAYMENTS_SUMMARY },
-      { key: 'handover_status', ar: 'حالة التسليمات', en: 'Handover Status', desc_ar: 'توزيع التسليمات حسب الحالة', desc_en: 'Handover distribution by status', icon: Building2, data: MOCK_HANDOVER_STATUS },
-      { key: 'tickets_summary', ar: 'ملخص التذاكر', en: 'Tickets Summary', desc_ar: 'التذاكر المفتوحة والمحلولة حسب النوع', desc_en: 'Open and resolved tickets by type', icon: Activity, data: MOCK_TICKETS_SUMMARY },
+      { key: 'deal_pipeline', ar: 'خط سير الصفقات', en: 'Deal Pipeline', desc_ar: 'حالة الصفقات وقيمتها في كل مرحلة', desc_en: 'Deal status and value at each stage', icon: BarChart3, data: [] },
+      { key: 'payments_summary', ar: 'ملخص المدفوعات', en: 'Payments Summary', desc_ar: 'إجمالي المدفوع والمستحق والمتأخر', desc_en: 'Total paid, due and overdue payments', icon: CreditCard, data: [] },
+      { key: 'handover_status', ar: 'حالة التسليمات', en: 'Handover Status', desc_ar: 'توزيع التسليمات حسب الحالة', desc_en: 'Handover distribution by status', icon: Building2, data: [] },
+      { key: 'tickets_summary', ar: 'ملخص التذاكر', en: 'Tickets Summary', desc_ar: 'التذاكر المفتوحة والمحلولة حسب النوع', desc_en: 'Open and resolved tickets by type', icon: Activity, data: [] },
     ],
   },
 ];
@@ -187,8 +164,6 @@ const MONTHS = [
   { id: 'jun', ar: 'يونيو', en: 'June' },
 ];
 
-const MOCK_TARGETS = [];
-
 const fmt = (n) => { if (n >= 1000000) return (n/1000000).toFixed(1)+'M'; if (n >= 1000) return (n/1000).toFixed(0)+'K'; return n; };
 const getRankIcon = (rank) => {
   if (rank === 1) return <Crown size={18} style={{ color: '#FFD700' }} />;
@@ -222,7 +197,7 @@ function TargetTrackerTab({ lang, isRTL }) {
   }, []);
 
   const monthData = useMemo(() => {
-    const targets = targetData.length > 0 ? targetData : MOCK_TARGETS;
+    const targets = targetData;
     return allEmps.map(emp => {
       const t = targets.find(t => (t.emp_id === emp.id || t.user_id === emp.id) && t.month === selectedMonth);
       if (!t) return null;
@@ -244,7 +219,7 @@ function TargetTrackerTab({ lang, isRTL }) {
   const getTrend = (empId, currentPct) => {
     const prevMonth = selectedMonth === 'mar' ? 'feb' : selectedMonth === 'feb' ? 'jan' : null;
     if (!prevMonth) return 0;
-    const prev = MOCK_TARGETS.find(t => t.emp_id === empId && t.month === prevMonth);
+    const prev = targetData.find(t => t.emp_id === empId && t.month === prevMonth);
     if (!prev) return 0;
     return currentPct - Math.round((prev.achieved / prev.target) * 100);
   };
@@ -389,7 +364,7 @@ function TargetTrackerTab({ lang, isRTL }) {
               <TrendingUp size={15} className="text-brand-500" /> {lang === 'ar' ? 'اتجاه الفريق (آخر 3 أشهر)' : 'Team Trend (Last 3M)'}
             </div>
             {['mar', 'feb', 'jan'].map((m) => {
-              const mData = MOCK_TARGETS.filter(t => t.month === m && (targetDept === 'all' || t.dept === targetDept));
+              const mData = targetData.filter(t => t.month === m && (targetDept === 'all' || t.dept === targetDept));
               if (!mData.length) return null;
               const mPct = Math.round((mData.reduce((s,t)=>s+t.achieved,0) / mData.reduce((s,t)=>s+t.target,0)) * 100);
               const mLabel = MONTHS.find(mo => mo.id === m);
