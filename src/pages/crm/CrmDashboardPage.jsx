@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import supabase from '../../lib/supabase';
 import {
   Users, Target, CheckSquare, Flame, AlertCircle, TrendingUp,
   Calendar, ChevronRight, RefreshCw, BarChart3, Activity,
+  Search, Plus, Bell, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { PageSkeleton, Button } from '../../components/ui';
@@ -35,18 +36,24 @@ export default function CrmDashboardPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
   const [loading, setLoading] = useState(true);
   // task stats were initially fetched but nothing on the page renders
   // them yet — Today's Focus uses todayTasks/overdueTasks lists directly.
   // Leaving them out of stats avoids dead state + a pointless query.
-  const [stats, setStats] = useState({ contact: null, opp: null, hotCount: 0 });
+  // lastMonthCount drives the period-comparison badge on the
+  // "New This Month" KPI card — count of contacts created last calendar
+  // month, regardless of where in the current month we are.
+  const [stats, setStats] = useState({ contact: null, opp: null, hotCount: 0, lastMonthCount: 0 });
   const [todayTasks, setTodayTasks] = useState([]);
   const [overdueTasks, setOverdueTasks] = useState([]);
   const [staleLeads, setStaleLeads] = useState([]);
   const [activityByDay, setActivityByDay] = useState([]);
   const [sourceBreakdown, setSourceBreakdown] = useState([]);
+  const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
 
   const ctx = useMemo(() => ({
     role: profile?.role,
@@ -63,17 +70,21 @@ export default function CrmDashboardPage() {
       const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
       const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      // "Upcoming" = the 48-hour window *after* today ends — so tomorrow
+      // + the day after. Excludes today (which has its own focus column).
+      const upcomingEnd = new Date(new Date(todayEnd).getTime() + 48 * 3600000).toISOString();
 
       // Parallel-fetch every panel. Each one's failure is reported but
       // doesn't block the others — partial data is better than a blank page.
       const [
-        contactStats, oppStats, hotCountRes,
+        contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
-        activityRes, sourceRes,
+        activityRes, sourceRes, upcomingRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
         loadHotLeadsCount(ctx),
+        loadLastMonthNewCount(ctx),
         fetchTasks({ ...ctx, dueDateFrom: todayStart, dueDateTo: todayEnd, status: 'pending', pageSize: 5, page: 1 }),
         fetchTasks({ ...ctx, overdueOnly: true, status: 'pending', pageSize: 5, page: 1 }),
         loadStaleLeads(ctx, sevenDaysAgo),
@@ -81,18 +92,21 @@ export default function CrmDashboardPage() {
         ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role)
           ? loadSourceBreakdown(ctx)
           : Promise.resolve([]),
+        fetchTasks({ ...ctx, dueDateFrom: todayEnd, dueDateTo: upcomingEnd, status: 'pending', pageSize: 5, page: 1 }),
       ]);
 
       setStats({
         contact: contactStats.status === 'fulfilled' ? contactStats.value : null,
         opp: oppStats.status === 'fulfilled' ? oppStats.value : null,
         hotCount: hotCountRes.status === 'fulfilled' ? hotCountRes.value : 0,
+        lastMonthCount: lastMonthRes.status === 'fulfilled' ? lastMonthRes.value : 0,
       });
       setTodayTasks(todayTasksRes.status === 'fulfilled' ? (todayTasksRes.value?.data || todayTasksRes.value || []) : []);
       setOverdueTasks(overdueTasksRes.status === 'fulfilled' ? (overdueTasksRes.value?.data || overdueTasksRes.value || []) : []);
       setStaleLeads(staleLeadsRes.status === 'fulfilled' ? staleLeadsRes.value : []);
       setActivityByDay(activityRes.status === 'fulfilled' ? activityRes.value : []);
       setSourceBreakdown(sourceRes.status === 'fulfilled' ? sourceRes.value : []);
+      setUpcomingTasks(upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : []);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -124,21 +138,54 @@ export default function CrmDashboardPage() {
   })();
   const displayName = profile?.full_name_ar || profile?.full_name_en || profile?.email || '';
 
+  // Submit the header search by jumping to the leads page with `q` set —
+  // ContactsPage already reads `searchParams.get('q')` on mount.
+  const submitSearch = (e) => {
+    e.preventDefault();
+    const trimmed = searchInput.trim();
+    if (!trimmed) return;
+    navigate(`/contacts?q=${encodeURIComponent(trimmed)}`);
+  };
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="p-4 sm:p-6 max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 sm:mb-6 flex-wrap gap-3">
+      <div className="flex items-start justify-between mb-5 sm:mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-content dark:text-content-dark m-0">
             {greeting}{displayName ? `, ${displayName.split(' ')[0]}` : ''}
           </h1>
           <p className="text-xs sm:text-sm text-content-muted dark:text-content-muted-dark mt-1 mb-0">
-            {isRTL ? 'نظرة عامة على CRM بتاعك' : 'Your CRM at a glance'}
+            {isRTL ? 'نظرة عامة على إدارة العملاء الخاصة بك' : 'Your CRM at a glance'}
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setRefreshKey(k => k + 1)} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {isRTL ? 'تحديث' : 'Refresh'}
-        </Button>
+
+        {/* Quick Actions: search + add-lead + add-task + refresh */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <form onSubmit={submitSearch} className="relative">
+            <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-2.5' : 'left-2.5'} text-content-muted dark:text-content-muted-dark pointer-events-none`} />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={isRTL ? 'ابحث في العملاء…' : 'Search leads…'}
+              className={`h-8 text-xs rounded-md bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-content-muted-dark focus:outline-none focus:border-brand-500 ${isRTL ? 'pr-8 pl-2' : 'pl-8 pr-2'} w-40 sm:w-56`}
+            />
+          </form>
+          <Link to="/contacts" className="no-underline">
+            <Button variant="primary" size="sm">
+              <Plus size={14} /> {isRTL ? 'عميل جديد' : 'Add Lead'}
+            </Button>
+          </Link>
+          <Link to="/tasks" className="no-underline">
+            <Button variant="secondary" size="sm">
+              <Plus size={14} /> {isRTL ? 'مهمة جديدة' : 'Add Task'}
+            </Button>
+          </Link>
+          <Button variant="secondary" size="sm" onClick={() => setRefreshKey(k => k + 1)} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {isRTL ? 'تحديث' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* KPI cards row */}
@@ -178,6 +225,7 @@ export default function CrmDashboardPage() {
           icon={TrendingUp}
           color="purple"
           to="/contacts"
+          delta={buildDelta(stats.contact?.newLeadsThisMonth ?? 0, stats.lastMonthCount ?? 0, isRTL)}
         />
       </div>
 
@@ -211,18 +259,37 @@ export default function CrmDashboardPage() {
             emptyMessage={isRTL ? 'مفيش متأخرات' : 'Nothing overdue'}
           />
           <FocusList
-            title={isRTL ? 'leads ما اتلمستش' : 'Stale Leads (7d+)'}
+            title={isRTL ? 'عملاء بدون متابعة (7 أيام+)' : 'Stale Leads (7d+)'}
             items={staleLeads}
             renderItem={(c) => ({
               primary: c.full_name || c.phone,
-              secondary: c.last_activity_at ? `${daysSince(c.last_activity_at)} ${isRTL ? 'يوم' : 'd ago'}` : (isRTL ? 'مفيش نشاط' : 'No activity'),
+              secondary: c.last_activity_at ? `${daysSince(c.last_activity_at)} ${isRTL ? 'يوم' : 'd ago'}` : (isRTL ? 'لا يوجد نشاط' : 'No activity'),
               meta: c.contact_status,
               to: `/contacts?highlight=${c.id}`,
             })}
-            emptyMessage={isRTL ? 'كل الـ leads بتتم متابعتها 👏' : 'Every lead is being followed up 👏'}
+            emptyMessage={isRTL ? 'كل العملاء تتم متابعتهم 👏' : 'Every lead is being followed up 👏'}
           />
         </div>
       </Section>
+
+      {/* Upcoming reminders — tasks due in the next 48h (after today). Only
+          render the section when there's actually something coming, so an
+          empty pipeline doesn't add a useless empty card. */}
+      {upcomingTasks.length > 0 && (
+        <Section title={isRTL ? 'قادم خلال 48 ساعة' : 'Upcoming (next 48h)'} icon={Bell}>
+          <FocusList
+            title={isRTL ? 'مهام قادمة' : 'Coming up'}
+            items={upcomingTasks}
+            renderItem={(t) => ({
+              primary: t.title,
+              secondary: [t.contact_name, t.due_date ? formatDate(t.due_date) : null].filter(Boolean).join(' • '),
+              meta: t.priority,
+              to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
+            })}
+            emptyMessage={isRTL ? 'لا يوجد قادم' : 'Nothing upcoming'}
+          />
+        </Section>
+      )}
 
       {/* Pipeline + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
@@ -294,6 +361,25 @@ export default function CrmDashboardPage() {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
+
+// New leads created during the previous calendar month (e.g. if today is
+// May 24, this counts everything created between Apr 1 00:00 and May 1 00:00).
+// Drives the period-comparison delta on the "New This Month" KPI card.
+async function loadLastMonthNewCount(ctx) {
+  const now = new Date();
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  let q = supabase
+    .from('contacts')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_deleted', false)
+    .gte('created_at', lastMonthStart)
+    .lt('created_at', thisMonthStart);
+  if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('assigned_to', ctx.userId);
+  const { count, error } = await q;
+  if (error) { reportError('CrmDashboardPage', 'loadLastMonthNewCount', error); return 0; }
+  return count || 0;
+}
 
 async function loadHotLeadsCount(ctx) {
   let q = supabase
@@ -403,9 +489,26 @@ function formatCurrency(n) {
   return String(n);
 }
 
+// Build a small {direction, label, tone} object for the period-comparison
+// badge on a KPI card. Returns null when there's nothing meaningful to
+// compare against (e.g. last month was also zero — no signal).
+function buildDelta(current, previous, isRTL) {
+  if (!previous && !current) return null;
+  if (!previous) return { direction: 'up', label: isRTL ? 'جديد' : 'new', tone: 'pos' };
+  const diff = current - previous;
+  const pct = Math.round((diff / previous) * 100);
+  if (diff === 0) return { direction: 'flat', label: isRTL ? 'بدون تغيير' : 'flat', tone: 'neutral' };
+  const sign = diff > 0 ? '+' : '';
+  return {
+    direction: diff > 0 ? 'up' : 'down',
+    label: `${sign}${pct}%`,
+    tone: diff > 0 ? 'pos' : 'neg',
+  };
+}
+
 // ── presentation components ────────────────────────────────────────────────
 
-function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to }) {
+function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to, delta }) {
   const colorMap = {
     brand: 'text-brand-500 bg-brand-500/10 border-brand-500/20',
     red: 'text-red-500 bg-red-500/10 border-red-500/20',
@@ -413,6 +516,12 @@ function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to }) {
     amber: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
     purple: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
   };
+  const DeltaIcon = delta?.direction === 'up' ? ArrowUp : delta?.direction === 'down' ? ArrowDown : Minus;
+  const deltaToneClass = delta?.tone === 'pos'
+    ? 'text-emerald-500'
+    : delta?.tone === 'neg'
+      ? 'text-red-500'
+      : 'text-content-muted dark:text-content-muted-dark';
   const content = (
     <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl p-3 sm:p-4 hover:border-brand-500/30 transition-colors">
       <div className="flex items-center justify-between mb-2">
@@ -423,6 +532,11 @@ function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to }) {
       </div>
       <div className="text-xl sm:text-2xl font-bold text-content dark:text-content-dark leading-tight">{value.toLocaleString()}</div>
       {sublabel && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1">{sublabel}</div>}
+      {delta && (
+        <div className={`text-[11px] font-medium mt-1 inline-flex items-center gap-0.5 ${deltaToneClass}`}>
+          <DeltaIcon size={11} /> {delta.label}
+        </div>
+      )}
     </div>
   );
   return to ? <Link to={to} className="block no-underline">{content}</Link> : content;
