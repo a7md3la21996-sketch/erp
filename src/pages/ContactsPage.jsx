@@ -53,6 +53,18 @@ import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
 // as a ref so it resets when the profile changes (see the useEffect on
 // profile?.id below).
 
+// Static status definitions — hoisted to module scope so loadStats's
+// useCallback doesn't close over a freshly-allocated array every render
+// (the older inline-in-component version was stable in practice but a
+// theoretical closure footgun for future edits).
+const STATUS_DEFS = [
+  { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
+  { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' },
+  { value: 'following', label: 'متابعة', labelEn: 'Following', color: '#10B981' },
+  { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
+  { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
+];
+
 export default function ContactsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -1373,14 +1385,9 @@ export default function ContactsPage() {
     }, { replace: true });
   }, [highlightId, loading, contacts, setSearchParams]);
 
-  // Stats — fetched from Supabase (real counts across all contacts)
-  const STATUS_DEFS = [
-    { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
-    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' },
-    { value: 'following', label: 'متابعة', labelEn: 'Following', color: '#10B981' },
-    { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
-    { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
-  ];
+  // Stats — fetched from Supabase (real counts across all contacts).
+  // STATUS_DEFS is hoisted to module scope (above) so the loadStats
+  // useCallback's closure can't go stale on it.
   const [stats, setStats] = useState({ total: 0, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 });
   const loadStats = useCallback(async () => {
     try {
@@ -1563,28 +1570,10 @@ export default function ContactsPage() {
       ? [{ campaign: form.campaign_name, campaign_id: matchedCampaign?.id || null, source: form.source, platform: form.platform, date: new Date().toISOString() }]
       : [];
     const myName = profile?.full_name_en || profile?.full_name_ar || '—';
-    // Pair the name with the UUID up front. The form may have set
-    // assigned_to (admin override) — keep that. Otherwise self-assign,
-    // and the AddContactModal admin path also fills it; but if only the
-    // name reaches us, defer to createContact's resolver.
-    const assigneeId = form.assigned_to || (form.assigned_to_name ? null : profile?.id || null);
-    const newContact = {
-      ...form,
-      id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      lead_score: 0,
-      temperature: 'hot',
-      contact_status: 'new',
-      is_blacklisted: false,
-      assigned_to: assigneeId,
-      assigned_to_name: form.assigned_to_name || myName,
-      assigned_to_names: form.assigned_to_names || [myName].filter(n => n !== '—'),
-      assigned_by_name: profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—',
-      created_by: profile?.id || null,
-      created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
-      campaign_interactions,
-      created_at: new Date().toISOString(),
-      last_activity_at: null,
-    };
+    // The `newContact` placeholder that used to live here (with a
+    // local_<ts> temp id) was unused — createContact builds its own
+    // payload from cleanForm in the try{} below. Removed; only myName
+    // stays because the next block still uses it.
     const cfValues = form._customFieldValues;
     const { _customFieldValues, ...cleanForm } = form;
     try {
