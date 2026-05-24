@@ -54,6 +54,10 @@ export default function CrmDashboardPage() {
   const [sourceBreakdown, setSourceBreakdown] = useState([]);
   const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [recentFeed, setRecentFeed] = useState([]);
+  // Map of {userId: {id, name, leads}} for contacts assigned + created
+  // this month. Combined with stats.opp.rawOpps below to rank top
+  // performers. Empty for sales_agent (they shouldn't see this section).
+  const [leadsByUser, setLeadsByUser] = useState({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
 
@@ -76,12 +80,14 @@ export default function CrmDashboardPage() {
       // + the day after. Excludes today (which has its own focus column).
       const upcomingEnd = new Date(new Date(todayEnd).getTime() + 48 * 3600000).toISOString();
 
+      const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+
       // Parallel-fetch every panel. Each one's failure is reported but
       // doesn't block the others — partial data is better than a blank page.
       const [
         contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
-        activityRes, sourceRes, upcomingRes, recentFeedRes,
+        activityRes, sourceRes, upcomingRes, recentFeedRes, leadsByUserRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
@@ -91,11 +97,10 @@ export default function CrmDashboardPage() {
         fetchTasks({ ...ctx, overdueOnly: true, status: 'pending', pageSize: 5, page: 1 }),
         loadStaleLeads(ctx, sevenDaysAgo),
         loadActivityByDay(ctx, fourteenDaysAgo),
-        ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role)
-          ? loadSourceBreakdown(ctx)
-          : Promise.resolve([]),
+        isManagerPlus ? loadSourceBreakdown(ctx) : Promise.resolve([]),
         fetchTasks({ ...ctx, dueDateFrom: todayEnd, dueDateTo: upcomingEnd, status: 'pending', pageSize: 5, page: 1 }),
         loadRecentActivityFeed(ctx),
+        isManagerPlus ? loadLeadsThisMonthByUser() : Promise.resolve({}),
       ]);
 
       setStats({
@@ -111,6 +116,7 @@ export default function CrmDashboardPage() {
       setSourceBreakdown(sourceRes.status === 'fulfilled' ? sourceRes.value : []);
       setUpcomingTasks(upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : []);
       setRecentFeed(recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : []);
+      setLeadsByUser(leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {});
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -134,6 +140,43 @@ export default function CrmDashboardPage() {
   const openValue = (stats.opp?.rawOpps || [])
     .filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage))
     .reduce((sum, o) => sum + (parseFloat(o.deal_value || o.budget) || 0), 0);
+
+  // Top Performers — only computed for manager+/admin/ops, otherwise the
+  // section never renders and the work is skipped. Combines leadsByUser
+  // (this month, from a dedicated query) with rawOpps (already fetched)
+  // to count open opportunities + wins per user. Ranking favours wins
+  // because closed deals matter most; leads tie-break.
+  const topPerformers = useMemo(() => {
+    const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+    if (!isManagerPlus) return [];
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const opps = stats.opp?.rawOpps || [];
+    const oppsByUser = {};
+    const winsByUser = {};
+    opps.forEach(o => {
+      if (!o.assigned_to) return;
+      oppsByUser[o.assigned_to] = (oppsByUser[o.assigned_to] || 0) + 1;
+      const closedAt = new Date(o.stage_changed_at || o.created_at).getTime();
+      if (o.stage === 'closed_won' && closedAt >= monthStart) {
+        winsByUser[o.assigned_to] = (winsByUser[o.assigned_to] || 0) + 1;
+      }
+    });
+    const userIds = new Set([
+      ...Object.keys(leadsByUser),
+      ...Object.keys(oppsByUser),
+    ]);
+    return [...userIds]
+      .map(id => ({
+        id,
+        name: leadsByUser[id]?.name || '—',
+        leads: leadsByUser[id]?.leads || 0,
+        opps: oppsByUser[id] || 0,
+        wins: winsByUser[id] || 0,
+      }))
+      .filter(r => r.leads + r.opps + r.wins > 0)
+      .sort((a, b) => (b.wins * 3 + b.opps + b.leads * 0.5) - (a.wins * 3 + a.opps + a.leads * 0.5))
+      .slice(0, 5);
+  }, [profile?.role, leadsByUser, stats.opp?.rawOpps]);
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return isRTL ? 'صباح الخير' : 'Good morning';
@@ -382,6 +425,38 @@ export default function CrmDashboardPage() {
         </Section>
       )}
 
+      {/* Top Performers — managers+ only. Ranked by wins this month
+          (3x weight), open opps, and new leads (0.5x). Hidden when
+          there's no activity yet to rank. */}
+      {topPerformers.length > 0 && (
+        <Section title={isRTL ? 'الأفضل أداءً (هذا الشهر)' : 'Top Performers (This Month)'} icon={TrendingUp}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-content-muted dark:text-content-muted-dark border-b border-edge dark:border-edge-dark">
+                  <th className="text-start py-2 px-3 w-8">#</th>
+                  <th className="text-start py-2 px-3">{isRTL ? 'الموظف' : 'Member'}</th>
+                  <th className="text-end py-2 px-3">{isRTL ? 'عملاء جدد' : 'New Leads'}</th>
+                  <th className="text-end py-2 px-3">{isRTL ? 'فرص' : 'Opps'}</th>
+                  <th className="text-end py-2 px-3">{isRTL ? 'صفقات' : 'Wins'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPerformers.map((p, i) => (
+                  <tr key={p.id} className="border-b border-edge/30 dark:border-edge-dark/30">
+                    <td className="py-2 px-3 text-content-muted dark:text-content-muted-dark font-semibold">{i + 1}</td>
+                    <td className="py-2 px-3 font-medium text-content dark:text-content-dark">{p.name}</td>
+                    <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.leads}</td>
+                    <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.opps}</td>
+                    <td className="py-2 px-3 text-end font-semibold text-emerald-500">{p.wins}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
       {/* Source breakdown — managers+ only */}
       {sourceBreakdown.length > 0 && (
         <Section title={isRTL ? 'أداء المصادر' : 'Source Performance'} icon={TrendingUp}>
@@ -487,6 +562,36 @@ async function loadActivityByDay(ctx, sinceIso) {
     out.push({ day: key, count: byDay[key] || 0 });
   }
   return out;
+}
+
+// Group contacts created in the current calendar month by assigned_to.
+// Uses the denormalized assigned_to_name to avoid a users join. RLS
+// scopes which contacts come back (admin/ops see all; team-leaders +
+// managers see their team), so the totals naturally reflect the
+// viewer's permitted slice.
+async function loadLeadsThisMonthByUser() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('assigned_to, assigned_to_name')
+    .eq('is_deleted', false)
+    .gte('created_at', monthStart)
+    .not('assigned_to', 'is', null);
+  if (error) { reportError('CrmDashboardPage', 'loadLeadsThisMonthByUser', error); return {}; }
+  const byUser = {};
+  (data || []).forEach(c => {
+    if (!byUser[c.assigned_to]) {
+      byUser[c.assigned_to] = { id: c.assigned_to, name: c.assigned_to_name || '—', leads: 0 };
+    }
+    byUser[c.assigned_to].leads += 1;
+    // Fallback rescue if the first row had a null name but a later one
+    // for the same user has it filled in (drift recovery).
+    if (!byUser[c.assigned_to].name || byUser[c.assigned_to].name === '—') {
+      if (c.assigned_to_name) byUser[c.assigned_to].name = c.assigned_to_name;
+    }
+  });
+  return byUser;
 }
 
 // Last 15 activities ordered newest-first, with a batch contact-name
