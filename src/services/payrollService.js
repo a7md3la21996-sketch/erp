@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { requirePerm } from '../utils/permissionGuard';
+import { logAudit } from './auditService';
 import { P } from '../config/roles';
 
 // ── Payroll Runs ─────────────────────────────────────────────
@@ -14,6 +15,15 @@ export async function lockPayrollRun(runId, userId) {
     .select('*')
     .single();
   if (error) throw error;
+  // Locking a payroll run finalizes that month's payments. Audit so
+  // any later "who locked Feb" question has a clear answer.
+  logAudit({
+    action: 'lock',
+    entity: 'payroll_run',
+    entityId: runId,
+    entityName: `${data.month}/${data.year}`,
+    description: `Locked payroll run ${data.month}/${data.year}`,
+  });
   return data;
 }
 
@@ -28,6 +38,15 @@ export async function unlockPayrollRun(runId) {
     .select('*')
     .single();
   if (error) throw error;
+  // High-trust admin action — unlocking enables retroactive payroll
+  // edits. Always audit.
+  logAudit({
+    action: 'unlock',
+    entity: 'payroll_run',
+    entityId: runId,
+    entityName: `${data.month}/${data.year}`,
+    description: `Unlocked payroll run ${data.month}/${data.year}`,
+  });
   return data;
 }
 
@@ -135,6 +154,27 @@ export async function savePayrollRun(runData, items) {
 
   const { error: itemErr } = await supabase.from('payroll_items').insert(itemRows);
   if (itemErr) throw itemErr;
+
+  // Audit the headline event — saving a payroll run pays N employees
+  // a total of M. The per-employee item rows aren't individually
+  // audited (would explode the log); the totals + run id are enough
+  // for forensics and the payroll_items table is queryable from the id.
+  logAudit({
+    action: 'create',
+    entity: 'payroll_run',
+    entityId: run.id,
+    entityName: `${run.month}/${run.year}`,
+    newData: {
+      month: run.month,
+      year: run.year,
+      total_employees: run.total_employees,
+      total_gross: run.total_gross,
+      total_deductions: run.total_deductions,
+      total_net: run.total_net,
+      status: run.status,
+    },
+    description: `Saved payroll run ${run.month}/${run.year}: ${run.total_employees} employees, net ${run.total_net}`,
+  });
 
   // Sync loan balances for every employee with a deduction this run.
   // Runs idempotently: re-running payroll for the same month replaces items,
@@ -251,11 +291,26 @@ export async function createLoan(data) {
     .select('*')
     .single();
   if (error) throw error;
+  logAudit({
+    action: 'create',
+    entity: 'employee_loan',
+    entityId: loan.id,
+    entityName: loan.employee_name || loan.employee_id,
+    newData: loan,
+    description: `Created loan: ${loan.amount} over ${loan.installments} installments`,
+  });
   return loan;
 }
 
 export async function updateLoan(id, updates) {
   requirePerm(P.PAYROLL_MANAGE, 'Not allowed to update loans');
+  // Snapshot the old row first so the audit captures the diff. Loan
+  // edits can shift money — a clear before/after matters for disputes.
+  const { data: oldRow } = await supabase
+    .from('employee_loans')
+    .select('*')
+    .eq('id', id)
+    .single();
   const { data, error } = await supabase
     .from('employee_loans')
     .update(updates)
@@ -263,6 +318,15 @@ export async function updateLoan(id, updates) {
     .select('*')
     .single();
   if (error) throw error;
+  logAudit({
+    action: 'update',
+    entity: 'employee_loan',
+    entityId: id,
+    entityName: data.employee_name || data.employee_id,
+    oldData: oldRow,
+    newData: data,
+    description: `Updated loan`,
+  });
   return data;
 }
 
@@ -275,6 +339,12 @@ export async function deleteLoan(id, reason) {
     const { data: { user } } = await supabase.auth.getUser();
     deletedBy = user?.id || null;
   } catch { /* mock — leave null */ }
+  // Snapshot before delete for the audit row.
+  const { data: oldRow } = await supabase
+    .from('employee_loans')
+    .select('*')
+    .eq('id', id)
+    .single();
   const { error } = await supabase
     .from('employee_loans')
     .update({
@@ -285,6 +355,14 @@ export async function deleteLoan(id, reason) {
     })
     .eq('id', id);
   if (error) throw error;
+  logAudit({
+    action: 'delete',
+    entity: 'employee_loan',
+    entityId: id,
+    entityName: oldRow?.employee_name || oldRow?.employee_id || id,
+    oldData: oldRow,
+    description: `Cancelled loan${reason ? `: ${reason}` : ''}`,
+  });
 }
 
 // ── Adjustments (bonus, penalty, etc) ────────────────────────
@@ -306,11 +384,33 @@ export async function createAdjustment(data) {
     .select('*')
     .single();
   if (error) throw error;
+  logAudit({
+    action: 'create',
+    entity: 'payroll_adjustment',
+    entityId: adj.id,
+    entityName: `${adj.employee_name || adj.employee_id} · ${adj.type || 'adj'} · ${adj.month}/${adj.year}`,
+    newData: adj,
+    description: `Created ${adj.type || 'adjustment'} of ${adj.amount} for ${adj.month}/${adj.year}`,
+  });
   return adj;
 }
 
 export async function deleteAdjustment(id) {
   requirePerm(P.PAYROLL_MANAGE, 'Not allowed to delete payroll adjustments');
+  // Snapshot before delete so the trail shows what was removed.
+  const { data: oldRow } = await supabase
+    .from('payroll_adjustments')
+    .select('*')
+    .eq('id', id)
+    .single();
   const { error } = await supabase.from('payroll_adjustments').delete().eq('id', id);
   if (error) throw error;
+  logAudit({
+    action: 'delete',
+    entity: 'payroll_adjustment',
+    entityId: id,
+    entityName: oldRow ? `${oldRow.employee_name || oldRow.employee_id} · ${oldRow.type || 'adj'} · ${oldRow.month}/${oldRow.year}` : id,
+    oldData: oldRow,
+    description: `Deleted payroll adjustment`,
+  });
 }

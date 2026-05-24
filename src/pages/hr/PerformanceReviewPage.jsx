@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchEmployees } from '../../services/employeesService';
+import { logAudit } from '../../services/auditService';
 import { Star, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Modal, ModalFooter, Select, PageSkeleton } from '../../components/ui';
 import supabase from '../../lib/supabase';
@@ -85,6 +87,8 @@ export default function PerformanceReviewPage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const toast = useToast();
+  const { profile } = useAuth();
+  const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
   const now = new Date();
   const [yearFilter, setYearFilter] = useState(now.getFullYear());
@@ -196,14 +200,37 @@ export default function PerformanceReviewPage() {
         status: editingReview ? editingReview.status : 'draft',
       };
 
+      const employee = employees.find(e => e.id === form.employee_id);
+      const employeeLabel = employee?.full_name_en || employee?.full_name_ar || form.employee_id;
       if (editingReview) {
         const { data, error } = await supabase.from(REVIEW_TABLE).update(payload).eq('id', editingReview.id).select().single();
         if (error) throw error;
         setReviews(prev => prev.map(r => r.id === editingReview.id ? data : r));
+        // Audit — performance review edits affect promotion/compensation
+        // discussions, so retain a clear before/after trail.
+        logAudit({
+          action: 'update',
+          entity: 'performance_review',
+          entityId: editingReview.id,
+          entityName: `${employeeLabel} · ${form.period} ${form.year}`,
+          oldData: editingReview,
+          newData: data,
+          description: `Updated performance review for ${employeeLabel}`,
+          userName,
+        });
       } else {
         const { data, error } = await supabase.from(REVIEW_TABLE).insert(payload).select().single();
         if (error) throw error;
         setReviews(prev => [data, ...prev]);
+        logAudit({
+          action: 'create',
+          entity: 'performance_review',
+          entityId: data.id,
+          entityName: `${employeeLabel} · ${form.period} ${form.year}`,
+          newData: data,
+          description: `Created performance review for ${employeeLabel}: rating ${form.overall_rating}/5`,
+          userName,
+        });
       }
       setShowModal(false);
       toast.success(lang === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully');
@@ -216,9 +243,23 @@ export default function PerformanceReviewPage() {
 
   const handleDelete = async (id) => {
     try {
+      // Snapshot the review before delete so the audit captures who
+      // it belonged to and the rating that was removed.
+      const removed = reviews.find(r => r.id === id);
       const { error } = await supabase.from(REVIEW_TABLE).delete().eq('id', id);
       if (error) throw error;
       setReviews(prev => prev.filter(r => r.id !== id));
+      const emp = employees.find(e => e.id === removed?.employee_id);
+      const empLabel = emp?.full_name_en || emp?.full_name_ar || removed?.employee_id || id;
+      logAudit({
+        action: 'delete',
+        entity: 'performance_review',
+        entityId: id,
+        entityName: removed ? `${empLabel} · ${removed.period} ${removed.year}` : id,
+        oldData: removed || null,
+        description: `Deleted performance review for ${empLabel}`,
+        userName,
+      });
       setDeleteConfirm(null);
       toast.success(lang === 'ar' ? 'تم الحذف' : 'Deleted');
     } catch {

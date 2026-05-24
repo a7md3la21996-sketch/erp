@@ -1,5 +1,6 @@
 import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
+import { logAudit } from './auditService';
 // ── Commission Installments Service ─────────────────────────────────────
 // Tracks installment payments from developers to the company
 
@@ -90,6 +91,16 @@ export async function createInstallment(data) {
   try {
     const { data: sbData, error } = await supabase.from('commission_installments').insert([stripInternalFields(item)]).select('*').single();
     if (error) throw error;
+    // Financial audit — commission installments move money between
+    // developer and company. Always log creation.
+    logAudit({
+      action: 'create',
+      entity: 'commission_installment',
+      entityId: sbData.id,
+      entityName: `${sbData.developer_name || ''} · ${sbData.deal_name || ''} #${sbData.installment_number}`,
+      newData: sbData,
+      description: `Created commission installment ${sbData.installment_number}/${sbData.installments_total} = ${sbData.amount}`,
+    });
     return sbData;
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     return item;
@@ -104,12 +115,26 @@ export async function updateInstallment(id, updates) {
   const all = loadAll();
   const idx = all.findIndex(i => i.id === id);
   if (idx === -1) return null;
+  const oldSnapshot = { ...all[idx] };
   all[idx] = { ...all[idx], ...updates };
   saveAll(all);
   // Try Supabase
   try {
     const { data, error } = await supabase.from('commission_installments').update(stripInternalFields(updates)).eq('id', id).select('*').single();
     if (error) throw error;
+    // Status change to 'paid' is the financially-meaningful event here
+    // — but log every update so amount/due_date edits also leave a trail.
+    logAudit({
+      action: updates.status === 'paid' ? 'mark_paid' : 'update',
+      entity: 'commission_installment',
+      entityId: id,
+      entityName: `${data.developer_name || ''} · ${data.deal_name || ''} #${data.installment_number}`,
+      oldData: oldSnapshot,
+      newData: data,
+      description: updates.status === 'paid'
+        ? `Marked installment paid: ${data.amount}`
+        : `Updated commission installment`,
+    });
     return data;
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     return all[idx];
@@ -120,14 +145,24 @@ export async function updateInstallment(id, updates) {
  * Delete an installment
  */
 export async function deleteInstallment(id) {
-  // Delete from localStorage (optimistic)
+  // Delete from localStorage (optimistic). Snapshot the row before
+  // removal so the audit can record what was deleted.
   const all = loadAll();
+  const removed = all.find(i => i.id === id);
   const filtered = all.filter(i => i.id !== id);
   saveAll(filtered);
   // Try Supabase
   try {
     const { error } = await supabase.from('commission_installments').delete().eq('id', id);
     if (error) throw error;
+    logAudit({
+      action: 'delete',
+      entity: 'commission_installment',
+      entityId: id,
+      entityName: removed ? `${removed.developer_name || ''} · ${removed.deal_name || ''} #${removed.installment_number}` : id,
+      oldData: removed || null,
+      description: `Deleted commission installment`,
+    });
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     // localStorage already updated as fallback
   }

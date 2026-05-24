@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { requirePerm } from '../utils/permissionGuard';
+import { logAudit } from './auditService';
 import { P } from '../config/roles';
 
 let _cachedRules = null;
@@ -39,6 +40,14 @@ export async function updateRule(id, value) {
   // Payroll rule changes shift everyone's salary calculation — admin/HR only.
   requirePerm(P.PAYROLL_MANAGE, 'Not allowed to update payroll rules');
   clearRulesCache();
+  // Snapshot the old value first so the audit captures the diff. A
+  // single-character change to a payroll rule (e.g. tax rate) cascades
+  // to every employee, so old→new clarity matters.
+  const { data: oldRow } = await supabase
+    .from('payroll_rules')
+    .select('*')
+    .eq('id', id)
+    .single();
   const { data, error } = await supabase
     .from('payroll_rules')
     .update({ rule_value: value, updated_at: new Date().toISOString() })
@@ -46,5 +55,14 @@ export async function updateRule(id, value) {
     .select('*')
     .single();
   if (error) throw error;
+  logAudit({
+    action: 'update',
+    entity: 'payroll_rule',
+    entityId: id,
+    entityName: data.rule_key || id,
+    oldData: oldRow ? { rule_value: oldRow.rule_value } : null,
+    newData: { rule_value: value },
+    description: `Updated payroll rule ${data.rule_key}: ${oldRow?.rule_value} → ${value}`,
+  });
   return data;
 }
