@@ -135,19 +135,9 @@ export default function CrmDashboardPage() {
 
   useEffect(() => { loadAll(); }, [loadAll, refreshKey]);
 
-  if (loading && !stats.contact) return <PageSkeleton />;
-
-  // stageCounts is the raw {stage: count} map. Filter out closed stages so
-  // the pipeline pie reflects only opportunities still in play.
-  const pipelineData = stats.opp?.stageCounts
-    ? Object.entries(stats.opp.stageCounts)
-        .filter(([name]) => !['closed_won', 'closed_lost', 'cancelled'].includes(name))
-        .map(([name, value], i) => ({ name, value, fill: STAGE_COLORS[i % STAGE_COLORS.length] }))
-    : [];
-  // openValue = sum of budget across opps that aren't closed/cancelled.
-  const openValue = (stats.opp?.rawOpps || [])
-    .filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage))
-    .reduce((sum, o) => sum + (parseFloat(o.deal_value || o.budget) || 0), 0);
+  // ── derived values via hooks. All hooks must run on every render —
+  // keep them above the loading early-return below or React throws #310
+  // ("rendered more hooks than during the previous render").
 
   // Top Performers — only computed for manager+/admin/ops, otherwise the
   // section never renders and the work is skipped. Combines leadsByUser
@@ -219,6 +209,21 @@ export default function CrmDashboardPage() {
       })
       .sort((a, b) => b.count - a.count);
   }, [lostThisMonth, lostReasonsMap, isRTL]);
+
+  if (loading && !stats.contact) return <PageSkeleton />;
+
+  // stageCounts is the raw {stage: count} map. Filter out closed stages so
+  // the pipeline pie reflects only opportunities still in play.
+  const pipelineData = stats.opp?.stageCounts
+    ? Object.entries(stats.opp.stageCounts)
+        .filter(([name]) => !['closed_won', 'closed_lost', 'cancelled'].includes(name))
+        .map(([name, value], i) => ({ name, value, fill: STAGE_COLORS[i % STAGE_COLORS.length] }))
+    : [];
+  // openValue = sum of budget across opps that aren't closed/cancelled.
+  const openValue = (stats.opp?.rawOpps || [])
+    .filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage))
+    .reduce((sum, o) => sum + (parseFloat(o.deal_value || o.budget) || 0), 0);
+
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return isRTL ? 'صباح الخير' : 'Good morning';
