@@ -712,15 +712,29 @@ export default function CrmDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {topPerformers.map((p, i) => (
-                  <tr key={p.id} className="border-b border-edge/30 dark:border-edge-dark/30">
-                    <td className="py-2 px-3 text-content-muted dark:text-content-muted-dark font-semibold">{i + 1}</td>
-                    <td className="py-2 px-3 font-medium text-content dark:text-content-dark">{p.name}</td>
-                    <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.leads}</td>
-                    <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.opps}</td>
-                    <td className="py-2 px-3 text-end font-semibold text-emerald-500">{p.wins}</td>
-                  </tr>
-                ))}
+                {topPerformers.map((p, i) => {
+                  // Clickable when we have a real name to drill on. The
+                  // dashboard's "—" sentinel means the assigned_to_name
+                  // column was null for this user, so the smart filter
+                  // wouldn't match anything — skip the navigate in that case.
+                  const canDrill = p.name && p.name !== '—';
+                  return (
+                    <tr
+                      key={p.id}
+                      className={`border-b border-edge/30 dark:border-edge-dark/30 ${canDrill ? 'cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark' : ''}`}
+                      onClick={canDrill
+                        ? () => navigate('/contacts', { state: { drillDown: { field: 'assigned_to_name', value: p.name } } })
+                        : undefined}
+                      title={canDrill ? (isRTL ? `عرض عملاء ${p.name}` : `View leads assigned to ${p.name}`) : undefined}
+                    >
+                      <td className="py-2 px-3 text-content-muted dark:text-content-muted-dark font-semibold">{i + 1}</td>
+                      <td className="py-2 px-3 font-medium text-content dark:text-content-dark">{p.name}</td>
+                      <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.leads}</td>
+                      <td className="py-2 px-3 text-end text-content dark:text-content-dark">{p.opps}</td>
+                      <td className="py-2 px-3 text-end font-semibold text-emerald-500">{p.wins}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -768,7 +782,12 @@ export default function CrmDashboardPage() {
               </thead>
               <tbody>
                 {sourceBreakdown.map(s => (
-                  <tr key={s.source} className="border-b border-edge/30 dark:border-edge-dark/30">
+                  <tr
+                    key={s.source}
+                    className="border-b border-edge/30 dark:border-edge-dark/30 cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark"
+                    onClick={() => navigate('/contacts', { state: { drillDown: { field: 'source', value: s.source } } })}
+                    title={isRTL ? `عرض عملاء من مصدر ${s.source}` : `View leads from ${s.source}`}
+                  >
                     <td className="py-2 px-3 font-medium text-content dark:text-content-dark">{s.source}</td>
                     <td className="py-2 px-3 text-end text-content dark:text-content-dark">{s.leads}</td>
                     <td className="py-2 px-3 text-end text-content dark:text-content-dark">{s.opps}</td>

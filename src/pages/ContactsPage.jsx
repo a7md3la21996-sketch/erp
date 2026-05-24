@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef as useReactRef, useCallback, useReducer } from 'react';
 import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
@@ -103,6 +103,7 @@ export default function ContactsPage() {
   }, [isRTL]);
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const highlightId = searchParams.get('highlight');
 
   const [contacts, setContacts] = useState([]);
@@ -278,6 +279,27 @@ export default function ContactsPage() {
     setSmartFilters([]);
     setPage(1);
   }, [setSearchInput, setSearch, setFilterType, setShowBlacklisted, setSmartFilters, setPage]);
+
+  // Mount-only: consume drill-down state passed via react-router's
+  // location.state (e.g. clicking a Top Performer row on the CRM
+  // dashboard lands here with state.drillDown = {field, value}).
+  // Pushes the matching smart filter once, then clears history state
+  // so a refresh doesn't keep re-applying the same drill-down.
+  useEffect(() => {
+    const dd = location.state?.drillDown;
+    if (!dd?.field || !dd?.value) return;
+    const SUPPORTED = new Set(['source', 'assigned_to_name']);
+    if (!SUPPORTED.has(dd.field)) return;
+    setSmartFilters(prev => {
+      // Don't double-add if the same filter is already present.
+      const already = prev.some(f => f.field === dd.field && f.value === dd.value);
+      return already ? prev : [...prev, { field: dd.field, operator: 'is', value: dd.value }];
+    });
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Track whether highlight has been handled
   const highlightHandled = useReactRef(false);
