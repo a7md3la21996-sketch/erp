@@ -248,8 +248,8 @@ export default function App() {
                 <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
-                <Route path="/crm" element={<Guarded><CrmDashboardPage /></Guarded>} />
-                <Route path="/crm/dashboard" element={<Guarded><CrmDashboardPage /></Guarded>} />
+                <Route path="/crm" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
+                <Route path="/crm/dashboard" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
                 <Route path="/crm/master-leads" element={<Guarded><MasterLeadsPage /></Guarded>} />

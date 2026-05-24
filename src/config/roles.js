@@ -99,6 +99,11 @@ export const P = {
   ROLES_MANAGE: 'roles.manage',
   SLA_MANAGE: 'sla.manage',
   SCORING_MANAGE: 'scoring.manage',
+  // Preview-only gate for the CRM Dashboard while it's being built out.
+  // Granted implicitly to admin via Object.values(P) in the admin role
+  // below; not added to any other role, so the nav entry + route stay
+  // invisible to everyone else until the feature is officially released.
+  CRM_DASHBOARD_PREVIEW: 'crm.dashboard.preview',
   AUDIT_VIEW: 'audit.view',
 
   // Operations
