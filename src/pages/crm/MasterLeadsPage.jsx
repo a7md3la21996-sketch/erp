@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink, Megaphone, Globe } from 'lucide-react';
-import { fetchMasterLeads, fetchMasterLeadsByInvolvement } from '../../services/masterLeadsService';
+import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -242,27 +242,13 @@ export default function MasterLeadsPage() {
     if (!canView) return;
     setLoading(true);
     try {
-      // When an owner is selected, switch to the "involvement" loader —
-      // it pulls every family the agent touched (assigned, created, or
-      // has activities on) instead of the narrower "currently owner".
-      // Status filter is applied inside the loader so we send only one
-      // round trip; client-side filter still handles the no-owner case.
-      const isInvolvementMode = !!ownerId;
-      const result = isInvolvementMode
-        ? await fetchMasterLeadsByInvolvement({
-            userId: ownerId,
-            search: debouncedSearch || null,
-            minClones,
-            statusFilter: statusFilter || null,
-          })
-        : await fetchMasterLeads({
-            search: debouncedSearch || null,
-            minClones,
-            ownerId: null,
-            page,
-            pageSize,
-          });
-      const { rows: r, total: t, error } = result;
+      const { rows: r, total: t, error } = await fetchMasterLeads({
+        search: debouncedSearch || null,
+        minClones,
+        ownerId: ownerId || null,
+        page,
+        pageSize,
+      });
       if (error) {
         toastRef.current.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load data');
       }
@@ -271,7 +257,7 @@ export default function MasterLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [canView, debouncedSearch, minClones, ownerId, statusFilter, page, pageSize]);
+  }, [canView, debouncedSearch, minClones, ownerId, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -311,16 +297,21 @@ export default function MasterLeadsPage() {
     setSelectedPhones(new Set());
   }, [debouncedSearch, minClones, ownerId, statusFilter]);
 
-  // When an owner is selected, the loader switches to the involvement
-  // service which already applies both the owner + status filters
-  // server-side — no extra client work needed. When no owner is set,
-  // we still apply the status filter on the current page client-side.
+  // Status filter strictly narrows to families where the selected agent's
+  // own copy is in the chosen status. The agent MUST hold a copy (RPC
+  // already filtered for that via p_owner_id when ownerId is set) AND
+  // that specific copy's contact_status must match the dropdown. If no
+  // owner is selected, the status filter matches any copy in the family.
   const displayRows = useMemo(() => {
-    if (ownerId) return rows;
     if (!statusFilter) return rows;
-    return rows.filter(family =>
-      (family.copies || []).some(c => (c.status || 'new') === statusFilter)
-    );
+    return rows.filter(family => {
+      const copies = Array.isArray(family.copies) ? family.copies : [];
+      if (ownerId) {
+        // Owner is set — the agent's own copy must be in this status.
+        return copies.some(c => c.owner_id === ownerId && (c.status || 'new') === statusFilter);
+      }
+      return copies.some(c => (c.status || 'new') === statusFilter);
+    });
   }, [rows, statusFilter, ownerId]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
