@@ -8,6 +8,109 @@
 import supabase from '../lib/supabase';
 import { reportError } from '../utils/errorReporter';
 
+// Master Leads scoped to families where the agent currently holds at
+// least one copy (original or clone). The built-in master_leads_list
+// RPC's p_owner_id surfaces only one copy per family, so clones held
+// by the agent — but where the original sits elsewhere — get silently
+// dropped. This loader bypasses that by:
+//   1. Pulling every phone the agent is currently assigned_to.
+//   2. Fetching every contact sharing one of those phones (so the
+//      family is complete — agent's copies + everyone else's).
+//   3. Grouping into the same family shape the RPC returns.
+// Status filter is strict: the agent's own copy must be in the chosen
+// status, not just any copy in the family.
+export async function fetchMasterLeadsByOwner({
+  userId,
+  search = null,
+  minClones = 1,
+  statusFilter = null,
+} = {}) {
+  if (!userId) return { rows: [], total: 0 };
+  try {
+    // Step 1 — phones the agent currently owns (any status).
+    const { data: ownPhonesRaw, error: phonesErr } = await supabase
+      .from('contacts')
+      .select('phone')
+      .eq('assigned_to', userId)
+      .eq('is_deleted', false)
+      .not('phone', 'is', null);
+    if (phonesErr) throw phonesErr;
+    const phones = [...new Set((ownPhonesRaw || []).map(r => r.phone))];
+    if (phones.length === 0) return { rows: [], total: 0 };
+
+    // Step 2 — every contact sharing one of those phones, chunked to
+    // stay under PostgREST URL length limits.
+    const CHUNK = 200;
+    const allContacts = [];
+    for (let i = 0; i < phones.length; i += CHUNK) {
+      const chunk = phones.slice(i, i + CHUNK);
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, phone, full_name, assigned_to, assigned_to_name, contact_status, source, campaign_name, created_at, last_activity_at, created_by')
+        .in('phone', chunk)
+        .eq('is_deleted', false);
+      if (error) throw error;
+      allContacts.push(...(data || []));
+    }
+
+    // Step 3 — group into families by phone.
+    const byPhone = new Map();
+    allContacts.forEach(c => {
+      if (!byPhone.has(c.phone)) byPhone.set(c.phone, []);
+      byPhone.get(c.phone).push(c);
+    });
+    let families = [...byPhone.entries()].map(([phone, contacts]) => {
+      const sorted = [...contacts].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      const first = sorted[0];
+      const lastAct = contacts.reduce((max, c) =>
+        (c.last_activity_at && (!max || c.last_activity_at > max)) ? c.last_activity_at : max, null);
+      return {
+        phone,
+        primary_name: first?.full_name || null,
+        family_count: contacts.length,
+        first_created_at: first?.created_at || null,
+        last_activity_at: lastAct,
+        copies: sorted.map(c => ({
+          contact_id: c.id,
+          owner_id: c.assigned_to,
+          owner_name: c.assigned_to_name,
+          status: c.contact_status,
+          created_at: c.created_at,
+          last_activity_at: c.last_activity_at,
+          source: c.source,
+          campaign_name: c.campaign_name,
+          created_by: c.created_by,
+        })),
+      };
+    });
+
+    // Step 4 — apply optional filters in JS.
+    if (minClones && minClones > 1) {
+      families = families.filter(f => f.family_count >= minClones);
+    }
+    if (search) {
+      const s = String(search).toLowerCase().trim();
+      families = families.filter(f =>
+        (f.phone || '').toLowerCase().includes(s)
+        || (f.primary_name || '').toLowerCase().includes(s)
+      );
+    }
+    if (statusFilter) {
+      // Strict: the agent's own copy must be in the chosen status.
+      families = families.filter(f =>
+        (f.copies || []).some(c => c.owner_id === userId && (c.status || 'new') === statusFilter)
+      );
+    }
+    families.sort((a, b) =>
+      (b.last_activity_at || b.first_created_at || '').localeCompare(a.last_activity_at || a.first_created_at || '')
+    );
+    return { rows: families, total: families.length };
+  } catch (err) {
+    reportError('masterLeadsService', 'fetchMasterLeadsByOwner', err);
+    return { rows: [], total: 0, error: err };
+  }
+}
+
 export async function fetchMasterLeads({
   search = null,
   minClones = 1,

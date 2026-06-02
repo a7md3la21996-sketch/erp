@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink, Megaphone, Globe } from 'lucide-react';
-import { fetchMasterLeads } from '../../services/masterLeadsService';
+import { fetchMasterLeads, fetchMasterLeadsByOwner } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -242,13 +242,26 @@ export default function MasterLeadsPage() {
     if (!canView) return;
     setLoading(true);
     try {
-      const { rows: r, total: t, error } = await fetchMasterLeads({
-        search: debouncedSearch || null,
-        minClones,
-        ownerId: ownerId || null,
-        page,
-        pageSize,
-      });
+      // Owner selected → use our owner-scoped loader. The RPC's
+      // p_owner_id surfaces only one copy per family, missing clones
+      // the agent holds when the original sits elsewhere. Our loader
+      // pulls every phone the agent currently owns, then rebuilds the
+      // full family for each so clones the agent holds are visible.
+      const result = ownerId
+        ? await fetchMasterLeadsByOwner({
+            userId: ownerId,
+            search: debouncedSearch || null,
+            minClones,
+            statusFilter: statusFilter || null,
+          })
+        : await fetchMasterLeads({
+            search: debouncedSearch || null,
+            minClones,
+            ownerId: null,
+            page,
+            pageSize,
+          });
+      const { rows: r, total: t, error } = result;
       if (error) {
         toastRef.current.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load data');
       }
@@ -257,7 +270,7 @@ export default function MasterLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [canView, debouncedSearch, minClones, ownerId, page, pageSize]);
+  }, [canView, debouncedSearch, minClones, ownerId, statusFilter, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
