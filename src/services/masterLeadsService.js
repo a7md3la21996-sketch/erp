@@ -27,20 +27,31 @@ export async function fetchMasterLeadsByOwner({
 } = {}) {
   if (!userId) return { rows: [], total: 0 };
   try {
-    // Step 1 — phones the agent currently owns (any status).
-    const { data: ownPhonesRaw, error: phonesErr } = await supabase
-      .from('contacts')
-      .select('phone')
-      .eq('assigned_to', userId)
-      .eq('is_deleted', false)
-      .not('phone', 'is', null);
-    if (phonesErr) throw phonesErr;
-    const phones = [...new Set((ownPhonesRaw || []).map(r => r.phone))];
+    // Step 1 — phones the agent currently owns (any status). Page
+    // through the result so the Supabase 1000-row default doesn't
+    // silently cap a large book of business.
+    const PAGE = 1000;
+    const ownPhones = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('phone')
+        .eq('assigned_to', userId)
+        .eq('is_deleted', false)
+        .not('phone', 'is', null)
+        .range(offset, offset + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      ownPhones.push(...data.map(r => r.phone));
+      if (data.length < PAGE) break;
+    }
+    const phones = [...new Set(ownPhones)];
     if (phones.length === 0) return { rows: [], total: 0 };
 
-    // Step 2 — every contact sharing one of those phones, chunked to
-    // stay under PostgREST URL length limits.
-    const CHUNK = 200;
+    // Step 2 — every contact sharing one of those phones. Chunk small
+    // enough to stay well under the 1000-row default per request even
+    // when phones have multiple copies each.
+    const CHUNK = 100;
     const allContacts = [];
     for (let i = 0; i < phones.length; i += CHUNK) {
       const chunk = phones.slice(i, i + CHUNK);
@@ -48,7 +59,8 @@ export async function fetchMasterLeadsByOwner({
         .from('contacts')
         .select('id, phone, full_name, assigned_to, assigned_to_name, contact_status, source, campaign_name, created_at, last_activity_at, created_by')
         .in('phone', chunk)
-        .eq('is_deleted', false);
+        .eq('is_deleted', false)
+        .range(0, 9999);
       if (error) throw error;
       allContacts.push(...(data || []));
     }
