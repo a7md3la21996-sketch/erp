@@ -27,19 +27,21 @@ export async function fetchMasterLeadsByOwner({
 } = {}) {
   if (!userId) return { rows: [], total: 0 };
   try {
-    // Step 1 — phones the agent currently owns (any status). Page
-    // through the result so the Supabase 1000-row default doesn't
-    // silently cap a large book of business.
+    // Step 1 — phones the agent owns. If a status filter is active we
+    // narrow the DB query to that status (typically a much smaller set:
+    // ~470 contacted vs ~7400 total for a busy agent). When no status
+    // is set we still need every phone, so page through 1000 at a time.
     const PAGE = 1000;
     const ownPhones = [];
     for (let offset = 0; ; offset += PAGE) {
-      const { data, error } = await supabase
+      let q = supabase
         .from('contacts')
         .select('phone')
         .eq('assigned_to', userId)
         .eq('is_deleted', false)
-        .not('phone', 'is', null)
-        .range(offset, offset + PAGE - 1);
+        .not('phone', 'is', null);
+      if (statusFilter) q = q.eq('contact_status', statusFilter);
+      const { data, error } = await q.range(offset, offset + PAGE - 1);
       if (error) throw error;
       if (!data || data.length === 0) break;
       ownPhones.push(...data.map(r => r.phone));
