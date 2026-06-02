@@ -5,7 +5,7 @@
 //
 // Backed by master_leads_list / master_leads_count RPCs.
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -91,6 +91,10 @@ export default function MasterLeadsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [minClones, setMinClones] = useState(1);
   const [ownerId, setOwnerId] = useState('');
+  // Status filter — combined with ownerId, lets the admin ask "show me
+  // every phone where Yassin has a copy in 'contacted' status". Applied
+  // client-side on the current page so the RPC contract stays unchanged.
+  const [statusFilter, setStatusFilter] = useState('');
 
   const [agents, setAgents] = useState([]);
   const [expanded, setExpanded] = useState(new Set());
@@ -291,7 +295,25 @@ export default function MasterLeadsPage() {
   useEffect(() => {
     setPage(1);
     setSelectedPhones(new Set());
-  }, [debouncedSearch, minClones, ownerId]);
+  }, [debouncedSearch, minClones, ownerId, statusFilter]);
+
+  // Client-side status filter — narrows the current page's rows to those
+  // where at least one copy matches the selected status. Combined with the
+  // owner dropdown above, the user can ask "phones where Yassin has a
+  // 'contacted' copy". The filter intentionally runs on rows already
+  // returned by the RPC so pagination still works on the unfiltered set —
+  // the user sees fewer rows per page but the page navigation is stable.
+  const displayRows = useMemo(() => {
+    if (!statusFilter) return rows;
+    return rows.filter(family => {
+      const copies = Array.isArray(family.copies) ? family.copies : [];
+      return copies.some(c => {
+        const statusMatches = (c.status || 'new') === statusFilter;
+        const ownerMatches = !ownerId || c.owner_id === ownerId;
+        return statusMatches && ownerMatches;
+      });
+    });
+  }, [rows, statusFilter, ownerId]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -367,9 +389,27 @@ export default function MasterLeadsPage() {
             </option>
           ))}
         </select>
+        {/* Status — combines with Owner above to narrow to "owner X with
+            status Y". Applied client-side on the current page. */}
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[160px]"
+        >
+          <option value="">{isRTL ? 'كل الحالات' : 'Any status'}</option>
+          {Object.keys(STATUS_LABELS).map(k => (
+            <option key={k} value={k}>
+              {isRTL ? STATUS_LABELS[k].ar : STATUS_LABELS[k].en}
+            </option>
+          ))}
+        </select>
         {/* Total */}
         <div className="flex items-center px-3 text-xs text-content-muted dark:text-content-muted-dark">
-          {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${total.toLocaleString()} ${isRTL ? 'عيلة' : 'families'}`}
+          {loading
+            ? (isRTL ? 'جاري التحميل...' : 'Loading...')
+            : statusFilter
+              ? `${displayRows.length.toLocaleString()} ${isRTL ? 'من' : 'of'} ${total.toLocaleString()} ${isRTL ? 'عيلة' : 'families'}`
+              : `${total.toLocaleString()} ${isRTL ? 'عيلة' : 'families'}`}
         </div>
       </div>
 
@@ -380,8 +420,8 @@ export default function MasterLeadsPage() {
           <div className="flex items-center justify-center">
             <input
               type="checkbox"
-              checked={rows.length > 0 && rows.every(r => selectedPhones.has(r.phone))}
-              ref={el => { if (el) el.indeterminate = !rows.every(r => selectedPhones.has(r.phone)) && rows.some(r => selectedPhones.has(r.phone)); }}
+              checked={displayRows.length > 0 && displayRows.every(r => selectedPhones.has(r.phone))}
+              ref={el => { if (el) el.indeterminate = !displayRows.every(r => selectedPhones.has(r.phone)) && displayRows.some(r => selectedPhones.has(r.phone)); }}
               onChange={toggleSelectAllOnPage}
               className="w-4 h-4 cursor-pointer accent-brand-500"
               title={isRTL ? 'تحديد الكل' : 'Select all on page'}
@@ -396,11 +436,15 @@ export default function MasterLeadsPage() {
         </div>
 
         {/* Rows */}
-        {!loading && rows.length === 0 ? (
+        {!loading && displayRows.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-content-muted dark:text-content-muted-dark">
-            {isRTL ? 'لا يوجد نتائج' : 'No results'}
+            {statusFilter && rows.length > 0
+              ? (isRTL
+                  ? 'لا توجد عيلات بهذه الحالة في الصفحة الحالية. جرّب صفحة أخرى أو غيّر الفلتر.'
+                  : 'No families with this status on the current page. Try another page or change the filter.')
+              : (isRTL ? 'لا يوجد نتائج' : 'No results')}
           </div>
-        ) : rows.map(family => {
+        ) : displayRows.map(family => {
           const isOpen = expanded.has(family.phone);
           const copies = Array.isArray(family.copies) ? family.copies : [];
           const lastActDays = daysSince(family.last_activity_at);
