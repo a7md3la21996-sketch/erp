@@ -1,4 +1,5 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -7,31 +8,30 @@ import {
   Save, Settings, Palette, Globe, User, Building2, Phone, Mail, MapPin,
   DollarSign, Clock, Image, Upload, Users, Shield, FileText, Zap, SlidersHorizontal,
   Briefcase, GitBranch, ThumbsDown, Lock, Database, Activity, BarChart2, Megaphone,
-  Eye, Printer,
-} from 'lucide-react';
+  Eye, Printer } from 'lucide-react';
 import { Button, Card, Input } from '../../components/ui';
 import { PageSkeleton } from '../../components/ui/PageSkeletons';
 
 // Lazy load sub-pages
-const SystemConfigPage = lazy(() => import('./SystemConfigPage'));
-const UsersPage = lazy(() => import('./UsersPage'));
-const TeamHierarchyPage = lazy(() => import('./TeamHierarchyPage'));
-const ImportExportLogPage = lazy(() => import('./ImportExportLogPage'));
-const RolesPage = lazy(() => import('./RolesPage'));
-const AuditLogPage = lazy(() => import('./AuditLogPage'));
-const TriggersPage = lazy(() => import('./TriggersPage'));
-const CustomFieldsPage = lazy(() => import('./CustomFieldsPage'));
-const WorkflowBuilderPage = lazy(() => import('./WorkflowBuilderPage'));
-const SMSTemplatesPage = lazy(() => import('./SMSTemplatesPage'));
-const PrintSettingsPage = lazy(() => import('./PrintSettingsPage'));
-const ScheduledReportsPage = lazy(() => import('./ScheduledReportsPage'));
-const SecurityPage = lazy(() => import('./SecurityPage'));
-const BackupPage = lazy(() => import('./BackupPage'));
-const UserTrackingPage = lazy(() => import('./UserTrackingPage'));
-const SystemHealthPage = lazy(() => import('./SystemHealthPage'));
-const APIDocsPage = lazy(() => import('./APIDocsPage'));
-const SLAManagementPage = lazy(() => import('./SLAManagementPage'));
-const AdsIntegrationPage = lazy(() => import('./AdsIntegrationPage'));
+const SystemConfigPage = lazyRetry(() => import('./SystemConfigPage'));
+const UsersPage = lazyRetry(() => import('./UsersPage'));
+const TeamHierarchyPage = lazyRetry(() => import('./TeamHierarchyPage'));
+const ImportExportLogPage = lazyRetry(() => import('./ImportExportLogPage'));
+const RolesPage = lazyRetry(() => import('./RolesPage'));
+const AuditLogPage = lazyRetry(() => import('./AuditLogPage'));
+const TriggersPage = lazyRetry(() => import('./TriggersPage'));
+const CustomFieldsPage = lazyRetry(() => import('./CustomFieldsPage'));
+const WorkflowBuilderPage = lazyRetry(() => import('./WorkflowBuilderPage'));
+const SMSTemplatesPage = lazyRetry(() => import('./SMSTemplatesPage'));
+const PrintSettingsPage = lazyRetry(() => import('./PrintSettingsPage'));
+const ScheduledReportsPage = lazyRetry(() => import('./ScheduledReportsPage'));
+const SecurityPage = lazyRetry(() => import('./SecurityPage'));
+const BackupPage = lazyRetry(() => import('./BackupPage'));
+const UserTrackingPage = lazyRetry(() => import('./UserTrackingPage'));
+const SystemHealthPage = lazyRetry(() => import('./SystemHealthPage'));
+const APIDocsPage = lazyRetry(() => import('./APIDocsPage'));
+const SLAManagementPage = lazyRetry(() => import('./SLAManagementPage'));
+const AdsIntegrationPage = lazyRetry(() => import('./AdsIntegrationPage'));
 
 const CURRENCIES = [
   { value: 'EGP', label_ar: 'جنيه مصري (EGP)', label_en: 'Egyptian Pound (EGP)' },

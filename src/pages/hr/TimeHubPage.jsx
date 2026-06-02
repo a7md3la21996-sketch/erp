@@ -1,16 +1,17 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Clock, CalendarDays, CalendarOff, PartyPopper, Zap, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { PageSkeleton } from '../../components/ui';
 
-const TimeHubOverview    = lazy(() => import('./TimeHubOverview'));
-const AttendancePage     = lazy(() => import('./AttendancePage'));
-const ShiftsPage         = lazy(() => import('./ShiftsPage'));
-const HolidaysPage       = lazy(() => import('./HolidaysPage'));
-const LeavePage          = lazy(() => import('./LeavePage'));
-const LeaveCarryoverPage = lazy(() => import('./LeaveCarryoverPage'));
-const OvertimePage       = lazy(() => import('./OvertimePage'));
+const TimeHubOverview    = lazyRetry(() => import('./TimeHubOverview'));
+const AttendancePage     = lazyRetry(() => import('./AttendancePage'));
+const ShiftsPage         = lazyRetry(() => import('./ShiftsPage'));
+const HolidaysPage       = lazyRetry(() => import('./HolidaysPage'));
+const LeavePage          = lazyRetry(() => import('./LeavePage'));
+const LeaveCarryoverPage = lazyRetry(() => import('./LeaveCarryoverPage'));
+const OvertimePage       = lazyRetry(() => import('./OvertimePage'));
 
 const TABS = [
   { key: 'overview',   icon: TrendingUp,    label_ar: 'نظرة عامة',       label_en: 'Overview' },

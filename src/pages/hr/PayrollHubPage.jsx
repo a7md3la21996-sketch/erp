@@ -1,15 +1,14 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  fetchPayrollRun, fetchPayrollRuns, fetchActiveLoans, fetchAdjustments,
-} from '../../services/payrollService';
+  fetchPayrollRun, fetchPayrollRuns, fetchActiveLoans, fetchAdjustments } from '../../services/payrollService';
 import {
   DollarSign, Calendar, CreditCard, Plus, Settings, Receipt,
   Archive, ChevronRight, Lock, AlertTriangle, CheckCircle2,
-  Play, FileText, TrendingUp, Clock,
-} from 'lucide-react';
+  Play, FileText, TrendingUp, Clock } from 'lucide-react';
 import { Card, KpiCard, Button, PageSkeleton } from '../../components/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -20,12 +19,12 @@ import { Card, KpiCard, Button, PageSkeleton } from '../../components/ui';
 ───────────────────────────────────────────────────────────────────────── */
 
 // Lazy-load existing pages so we don't pay their cost when on Overview
-const PayrollPage      = lazy(() => import('./PayrollPage'));
-const PayrollClose     = lazy(() => import('./PayrollClose'));
-const LoansPage        = lazy(() => import('./LoansPage'));
-const BonusesPage      = lazy(() => import('./BonusesPage'));
-const PayrollRulesPage = lazy(() => import('./PayrollRulesPage'));
-const ExpenseClaimsPage = lazy(() => import('./ExpenseClaimsPage'));
+const PayrollPage      = lazyRetry(() => import('./PayrollPage'));
+const PayrollClose     = lazyRetry(() => import('./PayrollClose'));
+const LoansPage        = lazyRetry(() => import('./LoansPage'));
+const BonusesPage      = lazyRetry(() => import('./BonusesPage'));
+const PayrollRulesPage = lazyRetry(() => import('./PayrollRulesPage'));
+const ExpenseClaimsPage = lazyRetry(() => import('./ExpenseClaimsPage'));
 
 const TABS = [
   { key: 'overview',   icon: TrendingUp, label_ar: 'نظرة عامة',     label_en: 'Overview' },
@@ -163,8 +162,7 @@ function PayrollOverview({ profile, isRTL, lang }) {
   const loanStats = useMemo(() => ({
     count: activeLoans.length,
     monthlyTotal: activeLoans.reduce((s, l) => s + (Number(l.monthly_deduction) || 0), 0),
-    outstanding: activeLoans.reduce((s, l) => s + Math.max(0, (Number(l.amount) || 0) - (Number(l.balance_paid) || 0)), 0),
-  }), [activeLoans]);
+    outstanding: activeLoans.reduce((s, l) => s + Math.max(0, (Number(l.amount) || 0) - (Number(l.balance_paid) || 0)), 0) }), [activeLoans]);
 
   const adjStats = useMemo(() => {
     const bonuses = adjustments.filter(a => ['addition', 'bonus', 'commission'].includes(a.type));
@@ -173,8 +171,7 @@ function PayrollOverview({ profile, isRTL, lang }) {
       bonusCount: bonuses.length,
       bonusTotal: bonuses.reduce((s, a) => s + (Number(a.amount) || 0), 0),
       penaltyCount: penalties.length,
-      penaltyTotal: penalties.reduce((s, a) => s + (Number(a.amount) || 0), 0),
-    };
+      penaltyTotal: penalties.reduce((s, a) => s + (Number(a.amount) || 0), 0) };
   }, [adjustments]);
 
   if (loading) return <PageSkeleton hasKpis tableRows={4} />;

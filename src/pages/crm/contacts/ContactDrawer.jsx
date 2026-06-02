@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import lazyRetry from '../../../utils/lazyRetry';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
@@ -8,7 +9,9 @@ import { addRecentItem } from '../../../services/recentItemsService';
 import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download, Building2 } from 'lucide-react';
 
 // Lazy-loaded so the recharts vendor chunk doesn't ship with every contact open.
-const CampaignHistoryChart = lazy(() => import('./CampaignHistoryChart'));
+// Wrapped with lazyRetry so stale chunk references after a deploy auto-recover
+// via reload instead of surfacing "text/html is not a valid JS MIME type".
+const CampaignHistoryChart = lazyRetry(() => import('./CampaignHistoryChart'));
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {

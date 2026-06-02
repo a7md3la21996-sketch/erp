@@ -1,15 +1,16 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, Briefcase, Package, Shield, BookMarked, TrendingUp } from 'lucide-react';
 import { PageSkeleton } from '../../components/ui';
 
-const AdminHubOverview = lazy(() => import('./AdminHubOverview'));
-const DocumentsPage    = lazy(() => import('./DocumentsPage'));
-const ContractsPage    = lazy(() => import('./ContractsPage'));
-const AssetsPage       = lazy(() => import('./AssetsPage'));
-const HRPoliciesPage   = lazy(() => import('./HRPoliciesPage'));
-const DisciplinaryPage = lazy(() => import('./DisciplinaryPage'));
+const AdminHubOverview = lazyRetry(() => import('./AdminHubOverview'));
+const DocumentsPage    = lazyRetry(() => import('./DocumentsPage'));
+const ContractsPage    = lazyRetry(() => import('./ContractsPage'));
+const AssetsPage       = lazyRetry(() => import('./AssetsPage'));
+const HRPoliciesPage   = lazyRetry(() => import('./HRPoliciesPage'));
+const DisciplinaryPage = lazyRetry(() => import('./DisciplinaryPage'));
 
 const TABS = [
   { key: 'overview',     icon: TrendingUp,  label_ar: 'نظرة عامة',   label_en: 'Overview' },

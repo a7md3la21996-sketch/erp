@@ -1,13 +1,14 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Briefcase, Users, UserPlus, TrendingUp } from 'lucide-react';
 import { PageSkeleton } from '../../components/ui';
 
-const TalentHubOverview = lazy(() => import('./TalentHubOverview'));
-const ATSPage           = lazy(() => import('./ATSPage'));
-const RecruitmentPage   = lazy(() => import('./RecruitmentPage'));
-const OnboardingPage    = lazy(() => import('./OnboardingPage'));
+const TalentHubOverview = lazyRetry(() => import('./TalentHubOverview'));
+const ATSPage           = lazyRetry(() => import('./ATSPage'));
+const RecruitmentPage   = lazyRetry(() => import('./RecruitmentPage'));
+const OnboardingPage    = lazyRetry(() => import('./OnboardingPage'));
 
 const TABS = [
   { key: 'overview',    icon: TrendingUp, label_ar: 'نظرة عامة',  label_en: 'Overview' },

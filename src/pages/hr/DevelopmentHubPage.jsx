@@ -1,13 +1,14 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import lazyRetry from '../../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Award, TrendingUp, Target, BookOpen, Star } from 'lucide-react';
 import { PageSkeleton } from '../../components/ui';
 
-const DevelopmentHubOverview = lazy(() => import('./DevelopmentHubOverview'));
-const PerformanceReviewPage  = lazy(() => import('./PerformanceReviewPage'));
-const CompetenciesPage       = lazy(() => import('./CompetenciesPage'));
-const TrainingPage           = lazy(() => import('./TrainingPage'));
+const DevelopmentHubOverview = lazyRetry(() => import('./DevelopmentHubOverview'));
+const PerformanceReviewPage  = lazyRetry(() => import('./PerformanceReviewPage'));
+const CompetenciesPage       = lazyRetry(() => import('./CompetenciesPage'));
+const TrainingPage           = lazyRetry(() => import('./TrainingPage'));
 
 const TABS = [
   { key: 'overview',     icon: TrendingUp, label_ar: 'نظرة عامة',     label_en: 'Overview' },

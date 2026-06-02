@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import lazyRetry from '../utils/lazyRetry';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,16 +26,15 @@ import {
   computeActivitySummary, computeRevenueByMonth, computeTopPerformers, computeDealCycle,
   computeAttendance, computeLeaveBalance, computePayroll, computeHeadcount,
   computePnl, computeExpenseBreakdown, computeInvoiceAging, computeCashflow,
-  computeDealPipeline, computePaymentsSummary, computeHandoverStatus, computeTicketsSummary,
-} from '../services/reportsDataService';
+  computeDealPipeline, computePaymentsSummary, computeHandoverStatus, computeTicketsSummary } from '../services/reportsDataService';
 import { PageSkeleton } from '../components/ui/PageSkeletons';
 
 // ── Lazy-loaded section pages ────────────────────────────────────
-const ComparisonReportsPage = lazy(() => import('./ComparisonReportsPage').catch(() => ({ default: () => null })));
-const HeatmapPage = lazy(() => import('./HeatmapPage').catch(() => ({ default: () => null })));
-const AnalyticsPage = lazy(() => import('./AnalyticsPage').catch(() => ({ default: () => null })));
-const ChartBuilderPage = lazy(() => import('./ChartBuilderPage').catch(() => ({ default: () => null })));
-const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage').catch(() => ({ default: () => null })));
+const ComparisonReportsPage = lazyRetry(() => import('./ComparisonReportsPage').catch(() => ({ default: () => null })));
+const HeatmapPage = lazyRetry(() => import('./HeatmapPage').catch(() => ({ default: () => null })));
+const AnalyticsPage = lazyRetry(() => import('./AnalyticsPage').catch(() => ({ default: () => null })));
+const ChartBuilderPage = lazyRetry(() => import('./ChartBuilderPage').catch(() => ({ default: () => null })));
+const SalesForecastPage = lazyRetry(() => import('./sales/SalesForecastPage').catch(() => ({ default: () => null })));
 
 // ── Section-level tabs (top bar) ─────────────────────────────────
 // Five top-level tabs. Previously nine views (six section + three inner)
@@ -81,8 +81,7 @@ const REPORT_CATEGORIES = [
       { key: 'leads_conversion', ar: 'معدل تحويل الليدز', en: 'Leads Conversion Rate', desc_ar: 'تتبع تحويل الليدز عبر مراحل البيع', desc_en: 'Track lead conversion through sales stages', icon: TrendingUp, data: [] },
       { key: 'pipeline', ar: 'تحليل خط الأنابيب', en: 'Pipeline Analysis', desc_ar: 'قيمة وعدد الصفقات في كل مرحلة', desc_en: 'Deal count and value at each pipeline stage', icon: BarChart3, data: [] },
       { key: 'activity_summary', ar: 'ملخص النشاط', en: 'Activity Summary', desc_ar: 'إجمالي الأنشطة: مكالمات، اجتماعات، متابعات', desc_en: 'Total activities: calls, meetings, follow-ups', icon: Activity, data: [] },
-    ],
-  },
+    ] },
   {
     key: 'sales', ar: 'تقارير المبيعات', en: 'Sales Reports', icon: DollarSign, color: '#4A7AAB',
     desc_ar: 'الإيرادات الشهرية، تحقيق الأهداف، أداء الفريق، ودورة الصفقة', desc_en: 'Revenue, targets, performers, deal cycle',
@@ -91,8 +90,7 @@ const REPORT_CATEGORIES = [
       { key: 'target_achievement', ar: 'تحقيق الأهداف', en: 'Target Achievement', desc_ar: 'أداء أفضل البائعين مقابل الأهداف', desc_en: 'Top performers achievement against targets', icon: TrendingUp, data: [] },
       { key: 'top_performers', ar: 'أفضل البائعين', en: 'Top Performers', desc_ar: 'ترتيب البائعين حسب الإيرادات والصفقات', desc_en: 'Ranking of sellers by revenue and deals', icon: Users, data: [] },
       { key: 'deal_cycle', ar: 'دورة الصفقة', en: 'Deal Cycle Time', desc_ar: 'متوسط الوقت لإغلاق الصفقات', desc_en: 'Average time to close deals by range', icon: Clock, data: [] },
-    ],
-  },
+    ] },
   {
     key: 'hr', ar: 'تقارير الموارد البشرية', en: 'HR Reports', icon: Briefcase, color: '#6B8DB5',
     desc_ar: 'الحضور، الإجازات، الرواتب، وتوزيع الموظفين', desc_en: 'Attendance, leave, payroll, headcount',
@@ -101,8 +99,7 @@ const REPORT_CATEGORIES = [
       { key: 'leave_balance', ar: 'رصيد الإجازات', en: 'Leave Balance', desc_ar: 'الرصيد المتبقي والمستخدم لكل موظف', desc_en: 'Remaining and used leave per employee', icon: Calendar, data: [] },
       { key: 'payroll', ar: 'ملخص الرواتب', en: 'Payroll Summary', desc_ar: 'إجمالي ومستقطعات وصافي رواتب كل قسم', desc_en: 'Gross, deductions and net payroll per dept', icon: CreditCard, data: [] },
       { key: 'headcount', ar: 'عدد الموظفين حسب القسم', en: 'Headcount by Department', desc_ar: 'توزيع الموظفين على الأقسام', desc_en: 'Employee distribution across departments', icon: Building2, data: [] },
-    ],
-  },
+    ] },
   {
     key: 'finance', ar: 'التقارير المالية', en: 'Finance Reports', icon: FileBarChart, color: '#2B4C6F',
     desc_ar: 'قائمة الدخل، المصروفات، أعمار الفواتير، والتدفق النقدي', desc_en: 'P&L, expenses, invoice aging, cash flow',
@@ -111,8 +108,7 @@ const REPORT_CATEGORIES = [
       { key: 'expense_breakdown', ar: 'تفصيل المصروفات', en: 'Expense Breakdown', desc_ar: 'توزيع المصروفات على الفئات', desc_en: 'Expense distribution across categories', icon: PieChart, data: [] },
       { key: 'invoice_aging', ar: 'أعمار الفواتير', en: 'Invoice Aging', desc_ar: 'الفواتير المستحقة حسب فترة التأخير', desc_en: 'Outstanding invoices by aging period', icon: Clock, data: [] },
       { key: 'cashflow', ar: 'التدفق النقدي', en: 'Cash Flow', desc_ar: 'التدفقات النقدية الداخلة والخارجة', desc_en: 'Cash inflows and outflows by month', icon: TrendingUp, data: [] },
-    ],
-  },
+    ] },
   {
     key: 'operations', ar: 'تقارير العمليات', en: 'Operations Reports', icon: Briefcase, color: '#1B3347',
     desc_ar: 'خط سير الصفقات، المدفوعات، التسليمات، وتذاكر الدعم', desc_en: 'Deal pipeline, payments, handover, tickets',
@@ -121,8 +117,7 @@ const REPORT_CATEGORIES = [
       { key: 'payments_summary', ar: 'ملخص المدفوعات', en: 'Payments Summary', desc_ar: 'إجمالي المدفوع والمستحق والمتأخر', desc_en: 'Total paid, due and overdue payments', icon: CreditCard, data: [] },
       { key: 'handover_status', ar: 'حالة التسليمات', en: 'Handover Status', desc_ar: 'توزيع التسليمات حسب الحالة', desc_en: 'Handover distribution by status', icon: Building2, data: [] },
       { key: 'tickets_summary', ar: 'ملخص التذاكر', en: 'Tickets Summary', desc_ar: 'التذاكر المفتوحة والمحلولة حسب النوع', desc_en: 'Open and resolved tickets by type', icon: Activity, data: [] },
-    ],
-  },
+    ] },
 ];
 
 function renderReportTable(reportKey, data, lang) {
@@ -702,8 +697,7 @@ export default function ReportsPage() {
         category_label_ar: cat.ar,
         category_label_en: cat.en,
         name_en: r.en,
-        name_ar: r.ar,
-      }))
+        name_ar: r.ar }))
     );
   }, []);
 
@@ -762,8 +756,7 @@ export default function ReportsPage() {
       deal_pipeline: computeDealPipeline(liveData.opsDeals || []),
       payments_summary: computePaymentsSummary(liveData.opsInstallments || []),
       handover_status: computeHandoverStatus(liveData.opsHandovers || []),
-      tickets_summary: computeTicketsSummary(liveData.opsTickets || []),
-    };
+      tickets_summary: computeTicketsSummary(liveData.opsTickets || []) };
   }, [liveData, dateRange]);
 
   // Get report data — use live data when loaded, return empty array if no data (never fake data)
@@ -786,8 +779,7 @@ export default function ReportsPage() {
 
     let cats = REPORT_CATEGORIES.map(cat => ({
       ...cat,
-      reports: cat.reports.filter(r => !hasSmartFilter || smartKeys.has(r.key)),
-    })).filter(cat => cat.reports.length > 0);
+      reports: cat.reports.filter(r => !hasSmartFilter || smartKeys.has(r.key)) })).filter(cat => cat.reports.length > 0);
 
     if (deptFilter !== 'all') {
       const catKey = DEPT_TO_CATEGORY[deptFilter];
@@ -1166,8 +1158,7 @@ export default function ReportsPage() {
                       dateRange !== 'all'
                         ? (lang === 'ar' ? DATE_RANGES.find(d => d.id === dateRange)?.ar : DATE_RANGES.find(d => d.id === dateRange)?.en)
                         : `${dateFrom || '—'} → ${dateTo || '—'}`
-                    ] : [],
-                  });
+                    ] : [] });
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-brand-500/20 bg-brand-500/[0.08] text-brand-500 hover:bg-brand-500/[0.15]"
                 style={{ fontFamily: 'inherit' }}

@@ -1,4 +1,5 @@
-import { Component, lazy, Suspense, useEffect, useState } from 'react';
+import { Component, Suspense, useEffect, useState } from 'react';
+import lazyRetry from './utils/lazyRetry';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -29,31 +30,6 @@ function VersionChecker() {
   return <UpdateBanner onUpdate={reloadForUpdate} />;
 }
 
-// ── Chunk-load retry: if a lazy chunk 404s after deploy, reload the page ────
-function lazyRetry(importFn) {
-  return lazy(() =>
-    importFn().catch((err) => {
-      const msg = err?.message || '';
-      const isChunkError = msg.includes('Failed to fetch') || msg.includes('Loading chunk')
-        || msg.includes('MIME type') || msg.includes('Importing a module')
-        || msg.includes('dynamically imported') || err?.name === 'ChunkLoadError';
-      if (isChunkError) {
-        // Force reload — clear caches and reload
-        const lastReload = Number(sessionStorage.getItem('chunk_reload') || '0');
-        if (Date.now() - lastReload > 10000) {
-          sessionStorage.setItem('chunk_reload', String(Date.now()));
-          // Try clearing caches first
-          if ('caches' in window) {
-            caches.keys().then(names => names.forEach(n => caches.delete(n))).catch(() => {});
-          }
-          window.location.reload(true);
-          return new Promise(() => {});
-        }
-      }
-      throw err;
-    })
-  );
-}
 
 // Lazy-loaded pages
 const DashboardPage = lazyRetry(() => import('./pages/dashboard/DashboardPage'));
