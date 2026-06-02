@@ -297,21 +297,20 @@ export default function MasterLeadsPage() {
     setSelectedPhones(new Set());
   }, [debouncedSearch, minClones, ownerId, statusFilter]);
 
-  // Client-side status filter — narrows the current page's rows to those
-  // where at least one copy matches the selected status. Combined with the
-  // owner dropdown above, the user can ask "phones where Yassin has a
-  // 'contacted' copy". The filter intentionally runs on rows already
-  // returned by the RPC so pagination still works on the unfiltered set —
-  // the user sees fewer rows per page but the page navigation is stable.
+  // Client-side family filter — narrows the current page's rows to
+  // families where the selected owner has any copy AND any copy in the
+  // family is in the selected status. The owner copy and the status
+  // copy don't have to be the same — the lead might have moved from one
+  // agent to another; what matters is that the family touches the
+  // selected agent somewhere AND surfaces in the selected column
+  // somewhere. Both filters are optional.
   const displayRows = useMemo(() => {
-    if (!statusFilter) return rows;
+    if (!statusFilter && !ownerId) return rows;
     return rows.filter(family => {
       const copies = Array.isArray(family.copies) ? family.copies : [];
-      return copies.some(c => {
-        const statusMatches = (c.status || 'new') === statusFilter;
-        const ownerMatches = !ownerId || c.owner_id === ownerId;
-        return statusMatches && ownerMatches;
-      });
+      const ownerHasCopy = !ownerId || copies.some(c => c.owner_id === ownerId);
+      const familyHasStatus = !statusFilter || copies.some(c => (c.status || 'new') === statusFilter);
+      return ownerHasCopy && familyHasStatus;
     });
   }, [rows, statusFilter, ownerId]);
 
@@ -407,7 +406,7 @@ export default function MasterLeadsPage() {
         <div className="flex items-center px-3 text-xs text-content-muted dark:text-content-muted-dark">
           {loading
             ? (isRTL ? 'جاري التحميل...' : 'Loading...')
-            : statusFilter
+            : (statusFilter || ownerId)
               ? `${displayRows.length.toLocaleString()} ${isRTL ? 'من' : 'of'} ${total.toLocaleString()} ${isRTL ? 'عيلة' : 'families'}`
               : `${total.toLocaleString()} ${isRTL ? 'عيلة' : 'families'}`}
         </div>
@@ -438,10 +437,10 @@ export default function MasterLeadsPage() {
         {/* Rows */}
         {!loading && displayRows.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-content-muted dark:text-content-muted-dark">
-            {statusFilter && rows.length > 0
+            {(statusFilter || ownerId) && rows.length > 0
               ? (isRTL
-                  ? 'لا توجد عيلات بهذه الحالة في الصفحة الحالية. جرّب صفحة أخرى أو غيّر الفلتر.'
-                  : 'No families with this status on the current page. Try another page or change the filter.')
+                  ? 'لا توجد عيلات مطابقة في الصفحة الحالية. جرّب صفحة أخرى أو غيّر الفلتر.'
+                  : 'No matching families on the current page. Try another page or change the filter.')
               : (isRTL ? 'لا يوجد نتائج' : 'No results')}
           </div>
         ) : displayRows.map(family => {
