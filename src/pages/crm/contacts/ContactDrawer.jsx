@@ -645,7 +645,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         // Parent already surfaced its own toast.error + rolled back; just bail.
         return;
       }
-      // Log status change in timeline (best-effort — the status itself saved).
+      // Log status change in timeline. The status itself already saved
+      // above; if the activity insert fails (RLS, network, schema drift)
+      // we surface a non-blocking warning so the rep knows the timeline
+      // didn't capture the change, plus a Sentry report — previously
+      // this was a bare `catch {}` and timeline drift was invisible.
       try {
         const statusLabels = { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
         const act = await createActivity({
@@ -659,7 +663,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           created_at: new Date().toISOString(),
         });
         setActivities(prev => [act, ...prev]);
-      } catch {}
+      } catch (err) {
+        reportError('ContactDrawer', 'handleStatusChange:activity', err);
+        toast.warning(isRTL
+          ? 'تم تحديث الحالة، لكن فشل تسجيلها في السجل'
+          : 'Status updated, but timeline entry failed to save');
+      }
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
   };
@@ -687,7 +696,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         created_at: new Date().toISOString(),
       });
       setActivities(prev => [act, ...prev]);
-    } catch {}
+    } catch (err) {
+      reportError('ContactDrawer', 'handleTemperatureChange:activity', err);
+      toast.warning(isRTL
+        ? 'تم تحديث الحرارة، لكن فشل تسجيلها في السجل'
+        : 'Temperature updated, but timeline entry failed to save');
+    }
     toast.success(isRTL ? 'تم تحديث الحرارة' : 'Temperature updated');
   };
 
