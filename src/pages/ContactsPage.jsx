@@ -1242,6 +1242,18 @@ export default function ContactsPage() {
       if (!isNoOpps && showNoOpps) { setShowNoOpps(false); setNoOppsIds(null); }
       if (!isSingleAgent && showSingleAgent) { setShowSingleAgent(false); setSingleAgentIds(null); }
 
+      // If a task-based follow-up filter is active but its contact-id list
+      // hasn't been fetched yet (null), skip this load. Otherwise we'd run an
+      // UNFILTERED query (every lead) — and a slow unfiltered response could
+      // even land after the filtered one and clobber it. The dedicated
+      // id-fetch effects re-trigger this load once the ids are ready.
+      const followupIdsPending =
+        (isOverdueTasks && overdueContactIds == null) ||
+        (isTodayFollowup && todayFollowupIds == null) ||
+        (isNoOpps && noOppsIds == null) ||
+        (isSingleAgent && singleAgentIds == null);
+      if (followupIdsPending) { setLoading(false); setSearching(false); return; }
+
       // Extract server-side filters from smartFilters (skip special ones).
       // is / is_not / in / not_in all need to be sent to the server, otherwise
       // the page falls back to client-side filtering on the visible page only
@@ -1297,7 +1309,13 @@ export default function ContactsPage() {
           smartPhone: phoneFilter?.value || undefined,
           smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
           smartCampaign: campaignFilter?.value || undefined,
-          contactIds: stageContactIds || overdueContactIds || todayFollowupIds || undefined,
+          // When an overdue/today follow-up filter is active but resolved to an
+          // empty set, send a never-matching sentinel so the list shows NOTHING
+          // (not everything). fetchContacts treats an empty array as "no filter".
+          contactIds: stageContactIds
+            || (isOverdueTasks ? (overdueContactIds?.length ? overdueContactIds : ['00000000-0000-0000-0000-000000000000']) : null)
+            || (isTodayFollowup ? (todayFollowupIds?.length ? todayFollowupIds : ['00000000-0000-0000-0000-000000000000']) : null)
+            || undefined,
           // Union every active exclude source instead of falling through with
           // `||` — the old chain silently dropped every list past the first
           // non-null one, so toggling "no activity by X" + "no opps" applied
