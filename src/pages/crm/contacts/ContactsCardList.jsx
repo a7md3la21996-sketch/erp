@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, X as XIcon } from 'lucide-react';
-import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell } from './constants';
+import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge } from './constants';
 import { Pagination } from '../../../components/ui';
 
 // Mobile-first card view of the contacts list. Same data and handlers as
@@ -78,6 +78,7 @@ export default function ContactsCardList({
   togglePin,
   MAX_PINS,
   setLogCallTarget,
+  setReminderTarget,
   setBlacklistTarget,
   setDisqualifyModal,
   setDqReason,
@@ -374,11 +375,17 @@ export default function ContactsCardList({
                   >
                     {statusLabels[status] || status}
                   </span>
-                  {typeof c.lead_score === 'number' && c.lead_score > 0 && (
-                    <span className="text-[11px] font-bold text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">
-                      {c.lead_score}/100
+                  <div className="flex items-center gap-2">
+                    {/* Next pending follow-up — overdue / today / upcoming. */}
+                    <span onClick={e => e.stopPropagation()} className="inline-flex">
+                      <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                     </span>
-                  )}
+                    {typeof c.lead_score === 'number' && c.lead_score > 0 && (
+                      <span className="text-[11px] font-bold text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">
+                        {c.lead_score}/100
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Meta: agent (only when relevant) + last activity */}

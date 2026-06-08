@@ -7,7 +7,7 @@ import {
   TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, ScorePill, getDeptStages, deptStageLabel,
-  agentInitials,
+  agentInitials, NextActionBadge,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -125,7 +125,7 @@ export default function ContactsTable({
     (paged || []).forEach(c => map.set(c.id, getAgentsView(c, agentName)));
     return map;
   }, [paged, agentName]);
-  const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'];
+  const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'];
   const hasCol = (id) => cols.includes(id);
   const menuActions = deptView?.menuActions || null;
   const hasMenuAction = (id) => !menuActions || menuActions.includes(id);
@@ -300,6 +300,7 @@ export default function ContactsTable({
               {hasCol('lead_score') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'النقاط' : 'Score'}</th>}
               {hasCol('source_date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
+              {hasCol('next_action') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
               {hasCol('actions') && <th className={`${thCls} text-center`}>{t('common.actions')}</th>}
             </tr>
           </thead>
@@ -573,6 +574,12 @@ export default function ContactsTable({
                       </div>
                     </div>
                   ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                </td>}
+
+                {/* Next Action — earliest pending follow-up (overdue / today /
+                    upcoming). Click schedules/reschedules without opening the drawer. */}
+                {hasCol('next_action') && <td className={`${tdCls} hidden md:table-cell`} onClick={e => e.stopPropagation()}>
+                  <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                 </td>}
 
                 {/* Actions — visible buttons + menu */}

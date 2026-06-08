@@ -8,14 +8,13 @@ import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock } from 'lucide-react';
 import {
-  fetchContacts, createContact, updateContact, deleteContact,
+  fetchContacts, createContact, updateContact, deleteContact, restoreContact,
   createActivity, recordAssignment,
   checkDuplicate,
 } from '../services/contactsService';
 import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
-import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchTeamAgents } from '../services/opportunitiesService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
@@ -177,11 +176,11 @@ export default function ContactsPage() {
   const [allAgentNames, setAllAgentNames] = useState(null);
   useEffect(() => {
     if (!profile) return;
-    import('../services/opportunitiesService').then(({ fetchTeamAgents }) => {
-      fetchTeamAgents({ role: profile.role, userId: profile.id, teamId: profile.team_id }).then(data => {
-        setAllAgentNames((data || []).map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
-      }).catch(() => {});
-    });
+    // fetchTeamAgents is already statically imported above — no need for a
+    // second dynamic import of the same module.
+    fetchTeamAgents({ role: profile.role, userId: profile.id, teamId: profile.team_id })
+      .then(data => setAllAgentNames((data || []).map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort()))
+      .catch(() => {});
   }, [profile?.role, profile?.id, profile?.team_id]);
 
   // Build the live UUID → name map so list rows don't trust the stale
@@ -280,6 +279,18 @@ export default function ContactsPage() {
     setPage(1);
   }, [setSearchInput, setSearch, setFilterType, setShowBlacklisted, setSmartFilters, setPage]);
 
+  // Follow-up chips toggle the same special smart filters the quick-filter
+  // buttons use (__overdue_tasks / __today_followup), kept mutually exclusive
+  // so the list always reflects exactly one follow-up bucket at a time.
+  const isFollowupActive = (value) => smartFilters.some(f => f.value === value);
+  const toggleFollowupFilter = (value) => {
+    setSmartFilters(prev => {
+      if (prev.some(f => f.value === value)) return prev.filter(f => f.value !== value);
+      const cleaned = prev.filter(f => f.value !== '__overdue_tasks' && f.value !== '__today_followup');
+      return [...cleaned, { field: 'contact_status', operator: 'is', value }];
+    });
+  };
+
   // Mount-only: consume drill-down state passed via react-router's
   // location.state (e.g. clicking a Top Performer row on the CRM
   // dashboard lands here with state.drillDown = {field, value}).
@@ -335,12 +346,31 @@ export default function ContactsPage() {
   const saveContactsLocal = () => {}; // OFFLINE_MODE disabled — Supabase is single source of truth
 
   const deletedContactsRef = useReactRef(null);
-  const restoreContacts = useCallback((deletedItems) => {
+  const restoreContacts = useCallback(async (deletedItems) => {
+    if (!deletedItems?.length) return;
+    // Optimistically re-add so the row reappears the instant the user clicks
+    // Undo (skip any that are somehow already back to avoid duplicate rows).
     setContacts(prev => {
-      const next = [...prev, ...deletedItems];
-            return next;
+      const existing = new Set(prev.map(c => c.id));
+      const toAdd = deletedItems.filter(c => !existing.has(c.id));
+      return toAdd.length ? [...toAdd, ...prev] : prev;
     });
-    toast.success(isRTL ? 'تم التراجع عن الحذف' : 'Delete undone');
+    // Persist the un-delete in the DB. Previously this handler ONLY mutated
+    // local state, so "Undo" looked like it worked but the rows stayed
+    // is_deleted=true and vanished again on the next realtime event / refetch.
+    const results = await Promise.allSettled(deletedItems.map(c => restoreContact(c.id)));
+    const failedIds = new Set();
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') { failedIds.add(deletedItems[i].id); reportError('ContactsPage', 'restoreContacts', r.reason); }
+    });
+    if (failedIds.size > 0) {
+      // Roll the rows we couldn't restore back out of the list so the UI
+      // matches the DB instead of showing a row that's still soft-deleted.
+      setContacts(prev => prev.filter(c => !failedIds.has(c.id)));
+      toast.error(isRTL ? `فشل استرجاع ${failedIds.size} عميل` : `Failed to restore ${failedIds.size} leads`);
+    } else {
+      toast.success(isRTL ? 'تم التراجع عن الحذف' : 'Delete undone');
+    }
   }, [isRTL]);
 
   const togglePin = (id) => {
@@ -709,6 +739,11 @@ export default function ContactsPage() {
         );
         const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
         if (failedIdx.length > 0) {
+          // Roll the failed rows back to their pre-reassign snapshot so the
+          // list reflects the DB — the optimistic setContacts above had
+          // already shown them as reassigned.
+          const failedIds = new Set(failedIdx.map(i => idsToUpdate[i]));
+          setContacts(prev => prev.map(c => (failedIds.has(c.id) && allSelectedById.has(c.id)) ? allSelectedById.get(c.id) : c));
           const failedNames = failedIdx.map(i => allSelectedById.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
           const preview = failedNames.slice(0, 3).join(', ');
           const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
@@ -729,7 +764,16 @@ export default function ContactsPage() {
             : `Reassigned ${data} of ${idsToUpdate.length} (rest outside your scope)`);
         }
       }
-    } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); reportError('ContactsPage', 'bulkReassignRPC', err); }
+    } catch (err) {
+      // The RPC is all-or-nothing — on failure nothing changed server-side, so
+      // revert every optimistically-reassigned row back to its prior owner.
+      // Without this the list stayed visually reassigned forever (no realtime
+      // event fires for a write that never happened).
+      const selSet = new Set(idsToUpdate);
+      setContacts(prev => prev.map(c => (selSet.has(c.id) && allSelectedById.has(c.id)) ? allSelectedById.get(c.id) : c));
+      toast.error(isRTL ? 'فشل إعادة التعيين — تم التراجع' : 'Reassign failed — reverted');
+      reportError('ContactsPage', 'bulkReassignRPC', err);
+    }
     finally { setBulkProgress(null); }
   };
 
@@ -833,7 +877,9 @@ export default function ContactsPage() {
     if (succeeded.length > 0) {
       const succeededNames = succeeded.map(id => beforeSnapshot.get(id)?.full_name).filter(Boolean).join(', ');
       logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: succeeded.join(','), description: `Bulk changed ${field} to "${value}" for ${succeeded.length} contacts: ${succeededNames || names}`, newValue: value, userName: profile?.full_name_ar });
-      createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${succeeded.length} leads`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${succeeded.length} عميل`, for_user_id: 'all' });
+      // No `for_user_id:'all'` broadcast here — a routine operator action
+      // (changing Type/Source/Status on a batch) shouldn't ping every user in
+      // the org. The audit trail above already records who did what.
       toast.success(isRTL ? `تم تحديث ${succeeded.length} عميل` : `${succeeded.length} leads updated`);
     }
     setSelectedIds([]);
@@ -849,7 +895,8 @@ export default function ContactsPage() {
       const resultsList = Array.isArray(results) ? results : [];
       setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results: resultsList }));
       logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${resultsList.length} contacts`, userName: profile?.full_name_ar });
-      createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${resultsList.length} leads`, body_ar: `تم إرسال رسائل لـ ${resultsList.length} عميل`, for_user_id: 'all' });
+      // Same as bulk field change — no org-wide notification broadcast for a
+      // routine send; the audit row records it.
       toast.success(isRTL ? `تم إرسال ${resultsList.length} رسالة` : `${resultsList.length} messages sent`);
     } catch (err) {
       // Without this, a thrown bulkSend left the modal stuck on the spinner
@@ -881,7 +928,15 @@ export default function ContactsPage() {
   const exportCSVList = (list) => {
     const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Platform','Company','Created'];
     const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.platform || '', c.company || '', c.created_at || '']);
-    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    // Neutralize spreadsheet formula injection: a cell starting with = + - @
+    // (or a leading tab/CR) is evaluated as a formula by Excel/Sheets, so a
+    // contact named `=cmd|...` would execute on open. Prefix with ' to force text.
+    const csvCell = (v) => {
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -928,6 +983,11 @@ export default function ContactsPage() {
   ];
 
   const [totalContacts, setTotalContacts] = useState(0);
+  // Distinct leads needing a follow-up: overdue = a pending task due before now;
+  // today = a pending task due today. Same task query + role scope as the
+  // __overdue_tasks / __today_followup filters, so each chip count equals the
+  // list you get when you click it.
+  const [followupCounts, setFollowupCounts] = useState({ overdue: 0, today: 0 });
   const [showOverdueTasks, setShowOverdueTasks] = useState(false);
   const [overdueContactIds, setOverdueContactIds] = useState(null);
   const [showTodayFollowups, setShowTodayFollowups] = useState(false);
@@ -999,25 +1059,34 @@ export default function ContactsPage() {
     let cancelled = false;
     (async () => {
       try {
-        // Counts per stage (one query, group on the client).
+        // Counts per stage (group on the client).
         // Scope to the same dept/agent/role the contacts query uses so
         // chip counts and table totals always agree. Without these
         // filters the "Proposal 12" chip could be 12 opps across every
         // dept, while the table filtered to sales+Ahmed would show 8 —
         // the user clicked a number that didn't match what they got.
-        let query = supabase
-          .from('opportunities')
-          .select('contact_id, stage')
-          .not('contact_id', 'is', null);
         const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
-        if (deptFilter) query = query.eq('department', deptFilter);
         const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
-        if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
-        if (profile?.role === 'sales_agent' && profile?.id) {
-          query = query.eq('assigned_to', profile.id);
+        // Page through ALL matching opportunities. A plain .select() silently
+        // caps at 1000 rows, so on tenants with >1000 opps the stage-chip
+        // counts were wrong and stage filtering missed contacts (C-5).
+        const rows = [];
+        const CHUNK = 1000;
+        for (let offset = 0; ; offset += CHUNK) {
+          let query = supabase
+            .from('opportunities')
+            .select('contact_id, stage')
+            .not('contact_id', 'is', null);
+          if (deptFilter) query = query.eq('department', deptFilter);
+          if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
+          if (profile?.role === 'sales_agent' && profile?.id) query = query.eq('assigned_to', profile.id);
+          const { data, error } = await query.range(offset, offset + CHUNK - 1);
+          if (error) throw error;
+          if (cancelled) return;
+          if (!data?.length) break;
+          rows.push(...data);
+          if (data.length < CHUNK) break;
         }
-        const { data: rows } = await query;
-        if (cancelled) return;
         const counts = {};
         const idsByStage = {};
         (rows || []).forEach(r => {
@@ -1068,7 +1137,11 @@ export default function ContactsPage() {
       try {
         let q = supabase.from('activities').select('contact_id').not('contact_id', 'is', null);
         if (noActivityFilter.value !== '__anyone') {
-          q = q.or(`user_name_en.eq.${noActivityFilter.value},user_name_ar.eq.${noActivityFilter.value}`);
+          // Strip the PostgREST OR delimiters from the agent name before
+          // interpolating — a name containing a comma/paren would otherwise
+          // break the .or() tokenizer and widen the match unexpectedly.
+          const safe = String(noActivityFilter.value).replace(/[,()]/g, '');
+          q = q.or(`user_name_en.eq.${safe},user_name_ar.eq.${safe}`);
         }
         const { data } = await q.range(0, 9999);
         if (cancelled) return;
@@ -1122,6 +1195,30 @@ export default function ContactsPage() {
     })();
     return () => { cancelled = true; };
   }, [showSingleAgent]);
+
+  // Tally how many distinct leads have an overdue / due-today pending task.
+  // Uses the same task query shape + role scope as the __overdue_tasks /
+  // __today_followup filters so the chip numbers always match the filtered
+  // list. Refreshed on every list load (called from loadContactsData).
+  const loadFollowupCounts = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const nowIso = new Date().toISOString();
+      const todayStr = nowIso.slice(0, 10);
+      const baseSel = () => {
+        let q = supabase.from('tasks').select('contact_id')
+          .eq('status', 'pending').not('contact_id', 'is', null);
+        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
+        return q;
+      };
+      const [ov, td] = await Promise.all([
+        baseSel().lt('due_date', nowIso),
+        baseSel().gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
+      ]);
+      const distinct = (res) => new Set((res.data || []).map(t => t.contact_id).filter(Boolean)).size;
+      setFollowupCounts({ overdue: distinct(ov), today: distinct(td) });
+    } catch (err) { if (import.meta.env.DEV) console.warn('followup counts:', err); }
+  }, [profile?.role, profile?.id]);
 
   // Load contacts with server-side pagination
   const hasLoadedOnce = useReactRef(false);
@@ -1266,6 +1363,9 @@ export default function ContactsPage() {
       // Show contacts immediately, then load feedback in background
       setContacts(list);
       setTotalContacts(result?.count || list.length);
+      // Keep the follow-up chip tallies in sync with the list (after edits,
+      // reassigns, status changes, page/filter changes).
+      loadFollowupCounts();
 
       // Background: fetch feedback (non-blocking).
       // Auto-demote of stale `following` → `contacted` was REMOVED per
@@ -1320,6 +1420,18 @@ export default function ContactsPage() {
               setContacts(prev => prev.map(c => ({ ...c, _opp_count: countByContact[c.id] || 0 })));
             }
           }).catch(err => { if (import.meta.env.DEV) console.warn('fetch opp counts:', err); });
+
+        // Fetch the next pending follow-up per contact via aggregating RPC
+        // (non-blocking) so each row shows a Next Action badge (overdue /
+        // today / upcoming). RLS scopes the tasks to what the caller can see.
+        supabase.rpc('get_next_followup_per_contact', { p_contact_ids: ids })
+          .then(({ data: rows }) => {
+            if (rows?.length) {
+              const byContact = {};
+              rows.forEach(r => { byContact[r.contact_id] = { next_due: r.next_due || null, overdue_count: Number(r.overdue_count) || 0, pending_count: Number(r.pending_count) || 0 }; });
+              setContacts(prev => prev.map(c => ({ ...c, _nextFollowup: byContact[c.id] || null })));
+            }
+          }).catch(err => { if (import.meta.env.DEV) console.warn('fetch next followup:', err); });
       }
     } catch (err) {
       reportError('ContactsPage', 'loadContactsData', err);
@@ -1329,7 +1441,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds, loadFollowupCounts]);
 
   // Debounce filter/page-driven refetches by 250ms so rapid chip toggles
   // (status → temperature → activity → date in quick succession) collapse
@@ -1766,6 +1878,34 @@ export default function ContactsPage() {
         )}
       </div>
 
+      {/* Follow-up chips — overdue / due-today leads as one-click, counted
+          entry points. Mirrors (and previews) the per-row Next Action column. */}
+      {(followupCounts.overdue > 0 || followupCounts.today > 0 || isFollowupActive('__overdue_tasks') || isFollowupActive('__today_followup')) && (
+        <div className="flex gap-2 mb-3 flex-wrap items-center">
+          <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'المتابعات:' : 'Follow-ups:'}</span>
+          {(() => {
+            const ov = isFollowupActive('__overdue_tasks');
+            return (
+              <button onClick={() => toggleFollowupFilter('__overdue_tasks')}
+                className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${ov ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+                <Clock size={11} /> {isRTL ? 'متأخرة' : 'Overdue'}
+                <span className={`rounded-xl px-2 py-px text-[10px] ${ov ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{followupCounts.overdue}</span>
+              </button>
+            );
+          })()}
+          {(() => {
+            const td = isFollowupActive('__today_followup');
+            return (
+              <button onClick={() => toggleFollowupFilter('__today_followup')}
+                className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${td ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+                <Clock size={11} /> {isRTL ? 'النهاردة' : 'Today'}
+                <span className={`rounded-xl px-2 py-px text-[10px] ${td ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{followupCounts.today}</span>
+              </button>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
       {filterStatus === 'has_opportunity' && (() => {
         const stages = getDeptStages(globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : 'sales');
@@ -1987,6 +2127,7 @@ export default function ContactsPage() {
         togglePin={togglePin}
         MAX_PINS={MAX_PINS}
         setLogCallTarget={setLogCallTarget}
+        setReminderTarget={setReminderTarget}
         setDisqualifyModal={setDisqualifyModal}
         setDqReason={setDqReason}
         setDqNote={setDqNote}

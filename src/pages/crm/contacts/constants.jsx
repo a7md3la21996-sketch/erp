@@ -347,6 +347,51 @@ export function ScorePill({ score }) {
   );
 }
 
+// ── Next Action badge ──────────────────────────────────────────────────────
+// Renders the next pending follow-up for a lead from the `_nextFollowup`
+// blob set by the get_next_followup_per_contact RPC:
+//   { next_due, overdue_count, pending_count }
+// Red = overdue, amber = due today, grey = upcoming, muted prompt = none.
+// Clicking always opens the schedule/reminder flow (onClick).
+export function NextActionBadge({ nextFollowup, isRTL, onClick }) {
+  const nf = nextFollowup;
+  const stop = (e) => { e.stopPropagation(); onClick?.(); };
+  // No pending follow-up at all → nudge the rep to schedule one.
+  if (!nf || (!nf.next_due && !nf.pending_count)) {
+    return (
+      <button onClick={stop} className="text-[11px] text-content-muted/70 dark:text-content-muted-dark/70 hover:text-brand-500 bg-transparent border-none cursor-pointer whitespace-nowrap p-0">
+        {isRTL ? '— حدّد متابعة' : '— Set follow-up'}
+      </button>
+    );
+  }
+  const DAY = 86400000;
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const startMs = startOfToday.getTime();
+  const dueDayMs = nf.next_due ? new Date(nf.next_due).setHours(0, 0, 0, 0) : null;
+  let cls, label;
+  if (nf.overdue_count > 0 && dueDayMs != null) {
+    const days = Math.max(1, Math.round((startMs - dueDayMs) / DAY));
+    cls = 'bg-red-500/[0.1] text-red-600 dark:text-red-400 border border-red-500/30';
+    label = isRTL ? `متأخرة (${days}ي)` : `Overdue (${days}d)`;
+  } else if (dueDayMs != null && dueDayMs === startMs) {
+    cls = 'bg-amber-500/[0.1] text-amber-600 dark:text-amber-400 border border-amber-500/30';
+    label = isRTL ? 'النهاردة' : 'Today';
+  } else if (dueDayMs != null) {
+    const days = Math.max(1, Math.round((dueDayMs - startMs) / DAY));
+    cls = 'bg-slate-500/[0.08] text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark';
+    label = isRTL ? (days === 1 ? 'بكرة' : `بعد ${days}ي`) : (days === 1 ? 'Tomorrow' : `In ${days}d`);
+  } else {
+    // Pending task with no due date.
+    cls = 'bg-slate-500/[0.08] text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark';
+    label = isRTL ? 'متابعة' : 'Follow-up';
+  }
+  return (
+    <button onClick={stop} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold cursor-pointer whitespace-nowrap ${cls}`}>
+      {label}
+    </button>
+  );
+}
+
 // ── Phone Cell ─────────────────────────────────────────────────────────────
 export function PhoneCell({ phone, small = false }) {
   const { i18n } = useTranslation();

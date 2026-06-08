@@ -495,12 +495,17 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
             <div className="flex gap-2 mb-2">
               <div className="flex-1">
                 <label className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحالة' : 'Status'}</label>
+                {/* Values MUST match the contact_status enum (new / contacted /
+                    following / has_opportunity). The old 'active'/'inactive'
+                    options weren't valid statuses and failed the DB check
+                    constraint on every row. 'disqualified' is intentionally
+                    omitted — it requires a reason, handled by DisqualifyModal. */}
                 <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}
                   className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark">
                   <option value="">{isRTL ? 'بدون تغيير' : 'No change'}</option>
                   <option value="new">{isRTL ? 'جديد' : 'New'}</option>
-                  <option value="active">{isRTL ? 'نشط' : 'Active'}</option>
-                  <option value="inactive">{isRTL ? 'غير نشط' : 'Inactive'}</option>
+                  <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
+                  <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
                   <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opp'}</option>
                 </select>
               </div>
