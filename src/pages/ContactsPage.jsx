@@ -1973,8 +1973,9 @@ export default function ContactsPage() {
         onSortChange={setSortBy}
         resultsCount={totalContacts}
         quickFilters={[
-          { label: 'متابعة اليوم', labelEn: "Today's Follow-ups", filters: [{ field: 'contact_status', operator: 'is', value: '__today_followup' }] },
-          { label: 'مهام متأخرة', labelEn: 'Overdue Tasks', filters: [{ field: 'contact_status', operator: 'is', value: '__overdue_tasks' }] },
+          // 'Today's Follow-ups' / 'Overdue Tasks' moved to the dedicated
+          // "المتابعات" chip row above (with live counts) — removed here to
+          // avoid showing the same two follow-up filters twice.
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: 'contact_status', operator: 'is', value: '__no_opps' }] },
           ...(profile?.role !== 'sales_agent' ? [{ label: 'لم يتم نقله', labelEn: 'Never Reassigned', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
         ]}
