@@ -9,7 +9,7 @@ export const DEPT_VIEWS = {
     label_ar: 'المبيعات',
     label_en: 'Sales',
     // Table columns to show (ids match ContactsTable column slots)
-    columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'],
+    columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'],
     // Smart filter fields relevant to this department
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
@@ -33,7 +33,7 @@ export const DEPT_VIEWS = {
   hr: {
     label_ar: 'الموارد البشرية',
     label_en: 'HR',
-    columns: ['contact', 'phone', 'job_title', 'contact_status', 'source_date', 'actions'],
+    columns: ['contact', 'phone', 'job_title', 'contact_status', 'source_date', 'next_action', 'actions'],
     smartFilterIds: [
       'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', '_country', 'assigned_to_name',
@@ -49,7 +49,7 @@ export const DEPT_VIEWS = {
   finance: {
     label_ar: 'المالية',
     label_en: 'Finance',
-    columns: ['contact', 'phone', 'company', 'contact_status', 'source_date', 'actions'],
+    columns: ['contact', 'phone', 'company', 'contact_status', 'source_date', 'next_action', 'actions'],
     smartFilterIds: [
       'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', '_country', 'assigned_to_name',
@@ -65,7 +65,7 @@ export const DEPT_VIEWS = {
   marketing: {
     label_ar: 'التسويق',
     label_en: 'Marketing',
-    columns: ['contact', 'phone', 'source_date', 'lead_score', 'last_feedback', 'actions'],
+    columns: ['contact', 'phone', 'source_date', 'lead_score', 'last_feedback', 'next_action', 'actions'],
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
@@ -82,7 +82,7 @@ export const DEPT_VIEWS = {
   operations: {
     label_ar: 'العمليات',
     label_en: 'Operations',
-    columns: ['contact', 'phone', 'company', 'assigned_to', 'contact_status', 'source_date', 'actions'],
+    columns: ['contact', 'phone', 'company', 'assigned_to', 'contact_status', 'source_date', 'next_action', 'actions'],
     smartFilterIds: [
       'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', '_country', 'assigned_to_name',
@@ -105,7 +105,7 @@ export function getDeptView(dept) {
 export const ALL_DEPT_VIEW = {
   label_ar: 'الكل',
   label_en: 'All',
-  columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'],
+  columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'],
   smartFilterIds: null, // null = show all
   contactTypes: null,   // null = show all
   statusOptions: null,
