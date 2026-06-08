@@ -2234,7 +2234,7 @@ export default function ContactsPage() {
           if (previous) setContacts(prev => rollbackContact(prev, previous));
         });
       }} />}
-      {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
+      {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => { setReminderTarget(null); loadContactsData(); }} />}
       {/* Save Filter Modal — replaces the native prompt() that was used before. */}
       {saveFilterModalOpen && (
         <Modal

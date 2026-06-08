@@ -370,9 +370,13 @@ export function NextActionBadge({ nextFollowup, isRTL, onClick }) {
   const dueDayMs = nf.next_due ? new Date(nf.next_due).setHours(0, 0, 0, 0) : null;
   let cls, label;
   if (nf.overdue_count > 0 && dueDayMs != null) {
-    const days = Math.max(1, Math.round((startMs - dueDayMs) / DAY));
+    const days = Math.round((startMs - dueDayMs) / DAY);
     cls = 'bg-red-500/[0.1] text-red-600 dark:text-red-400 border border-red-500/30';
-    label = isRTL ? `متأخرة (${days}ي)` : `Overdue (${days}d)`;
+    // days < 1 = due earlier *today* (overdue by hours, not days) — don't
+    // mislabel it "(1d)"; show bare "Overdue".
+    label = days >= 1
+      ? (isRTL ? `متأخرة (${days}ي)` : `Overdue (${days}d)`)
+      : (isRTL ? 'متأخرة' : 'Overdue');
   } else if (dueDayMs != null && dueDayMs === startMs) {
     cls = 'bg-amber-500/[0.1] text-amber-600 dark:text-amber-400 border border-amber-500/30';
     label = isRTL ? 'النهاردة' : 'Today';
