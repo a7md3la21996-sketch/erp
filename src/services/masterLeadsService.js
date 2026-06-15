@@ -125,6 +125,105 @@ export async function fetchMasterLeadsByOwner({
   }
 }
 
+// Master Leads scoped to families that have at least one copy in the given
+// campaign(s). The master_leads_list RPC doesn't know about campaigns (campaign
+// is a per-copy contact field), so — like the by-owner loader — we resolve it
+// in JS: find the phones whose contacts carry the campaign, then rebuild the
+// full family for each so the admin sees the whole family, not just the matching
+// copy. `campaignNames` is matched as-stored (ar + en variants of one campaign).
+export async function fetchMasterLeadsByCampaign({
+  campaignNames,
+  ownerId = null,
+  search = null,
+  minClones = 1,
+  statusFilter = null,
+} = {}) {
+  const names = (Array.isArray(campaignNames) ? campaignNames : [campaignNames]).filter(Boolean);
+  if (names.length === 0) return { rows: [], total: 0 };
+  try {
+    // Step 1 — phones that have a contact in the selected campaign.
+    const PAGE = 1000;
+    const campPhones = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('phone')
+        .in('campaign_name', names)
+        .eq('is_deleted', false)
+        .not('phone', 'is', null)
+        .range(offset, offset + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      campPhones.push(...data.map(r => r.phone));
+      if (data.length < PAGE) break;
+    }
+    const phones = [...new Set(campPhones)];
+    if (phones.length === 0) return { rows: [], total: 0 };
+
+    // Step 2 — every contact sharing one of those phones (the full family).
+    const CHUNK = 100;
+    const allContacts = [];
+    for (let i = 0; i < phones.length; i += CHUNK) {
+      const chunk = phones.slice(i, i + CHUNK);
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, phone, full_name, assigned_to, assigned_to_name, contact_status, source, campaign_name, created_at, last_activity_at, created_by')
+        .in('phone', chunk)
+        .eq('is_deleted', false)
+        .range(0, 9999);
+      if (error) throw error;
+      allContacts.push(...(data || []));
+    }
+
+    // Step 3 — group into families by phone (same shape as the by-owner loader).
+    const byPhone = new Map();
+    allContacts.forEach(c => {
+      if (!byPhone.has(c.phone)) byPhone.set(c.phone, []);
+      byPhone.get(c.phone).push(c);
+    });
+    let families = [...byPhone.entries()].map(([phone, contacts]) => {
+      const sorted = [...contacts].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      const first = sorted[0];
+      const lastAct = contacts.reduce((max, c) =>
+        (c.last_activity_at && (!max || c.last_activity_at > max)) ? c.last_activity_at : max, null);
+      return {
+        phone,
+        primary_name: first?.full_name || null,
+        family_count: contacts.length,
+        first_created_at: first?.created_at || null,
+        last_activity_at: lastAct,
+        copies: sorted.map(c => ({
+          contact_id: c.id,
+          owner_id: c.assigned_to,
+          owner_name: c.assigned_to_name,
+          status: c.contact_status,
+          created_at: c.created_at,
+          last_activity_at: c.last_activity_at,
+          source: c.source,
+          campaign_name: c.campaign_name,
+          created_by: c.created_by,
+        })),
+      };
+    });
+
+    // Step 4 — optional filters in JS.
+    if (minClones && minClones > 1) families = families.filter(f => f.family_count >= minClones);
+    if (search) {
+      const s = String(search).toLowerCase().trim();
+      families = families.filter(f =>
+        (f.phone || '').toLowerCase().includes(s) || (f.primary_name || '').toLowerCase().includes(s));
+    }
+    if (ownerId) families = families.filter(f => (f.copies || []).some(c => c.owner_id === ownerId));
+    if (statusFilter) families = families.filter(f => (f.copies || []).some(c => (c.status || 'new') === statusFilter));
+    families.sort((a, b) =>
+      (b.last_activity_at || b.first_created_at || '').localeCompare(a.last_activity_at || a.first_created_at || ''));
+    return { rows: families, total: families.length };
+  } catch (err) {
+    reportError('masterLeadsService', 'fetchMasterLeadsByCampaign', err);
+    return { rows: [], total: 0, error: err };
+  }
+}
+
 export async function fetchMasterLeads({
   search = null,
   minClones = 1,

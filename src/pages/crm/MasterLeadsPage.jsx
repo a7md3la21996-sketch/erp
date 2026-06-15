@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink, Megaphone, Globe } from 'lucide-react';
-import { fetchMasterLeads, fetchMasterLeadsByOwner } from '../../services/masterLeadsService';
+import { fetchMasterLeads, fetchMasterLeadsByOwner, fetchMasterLeadsByCampaign } from '../../services/masterLeadsService';
+import { fetchCampaigns } from '../../services/marketingService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -95,6 +96,16 @@ export default function MasterLeadsPage() {
   // every phone where Yassin has a copy in 'contacted' status". Applied
   // client-side on the current page so the RPC contract stays unchanged.
   const [statusFilter, setStatusFilter] = useState('');
+  // Campaign filter — when set, the list shows only families that have a copy
+  // in that campaign (resolved in JS via fetchMasterLeadsByCampaign, since the
+  // RPC path doesn't know campaigns). Stores the selected campaign id.
+  const [campaignFilter, setCampaignFilter] = useState('');
+  const [campaigns, setCampaigns] = useState([]);
+  useEffect(() => {
+    fetchCampaigns()
+      .then(c => setCampaigns(Array.isArray(c) ? c : []))
+      .catch(() => {});
+  }, []);
 
   const [agents, setAgents] = useState([]);
   const [expanded, setExpanded] = useState(new Set());
@@ -247,7 +258,18 @@ export default function MasterLeadsPage() {
       // the agent holds when the original sits elsewhere. Our loader
       // pulls every phone the agent currently owns, then rebuilds the
       // full family for each so clones the agent holds are visible.
-      const result = ownerId
+      // Campaign filter takes the JS path (RPC can't filter by campaign), and
+      // still honours owner / search / status / minClones on top.
+      const selectedCampaign = campaignFilter ? campaigns.find(c => String(c.id) === String(campaignFilter)) : null;
+      const result = selectedCampaign
+        ? await fetchMasterLeadsByCampaign({
+            campaignNames: [selectedCampaign.name_ar, selectedCampaign.name_en],
+            ownerId: ownerId || null,
+            search: debouncedSearch || null,
+            minClones,
+            statusFilter: statusFilter || null,
+          })
+        : ownerId
         ? await fetchMasterLeadsByOwner({
             userId: ownerId,
             search: debouncedSearch || null,
@@ -270,7 +292,7 @@ export default function MasterLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [canView, debouncedSearch, minClones, ownerId, statusFilter, page, pageSize]);
+  }, [canView, debouncedSearch, minClones, ownerId, statusFilter, page, pageSize, campaignFilter, campaigns]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -308,7 +330,7 @@ export default function MasterLeadsPage() {
   useEffect(() => {
     setPage(1);
     setSelectedPhones(new Set());
-  }, [debouncedSearch, minClones, ownerId, statusFilter]);
+  }, [debouncedSearch, minClones, ownerId, statusFilter, campaignFilter]);
 
   // Status filter strictly narrows to families where the selected agent's
   // own copy is in the chosen status. The agent MUST hold a copy (RPC
@@ -415,6 +437,21 @@ export default function MasterLeadsPage() {
             </option>
           ))}
         </select>
+        {/* Campaign — shows only families with a copy in the chosen campaign. */}
+        {campaigns.length > 0 && (
+          <select
+            value={campaignFilter}
+            onChange={e => setCampaignFilter(e.target.value)}
+            className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[180px]"
+          >
+            <option value="">{isRTL ? 'كل الحملات' : 'Any campaign'}</option>
+            {campaigns.map(c => (
+              <option key={c.id} value={c.id}>
+                {isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}
+              </option>
+            ))}
+          </select>
+        )}
         {/* Total */}
         <div className="flex items-center px-3 text-xs text-content-muted dark:text-content-muted-dark">
           {loading
