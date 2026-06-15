@@ -254,8 +254,16 @@ export default function UsersPage() {
       return;
     }
     try {
-      const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPass });
+      // Changing a password needs the service_role key, which can't live in the
+      // browser — so this goes through the `admin-reset-password` Edge Function,
+      // which verifies the caller is an active admin server-side. The old code
+      // called auth.admin.* directly with the anon key, which ALWAYS failed
+      // (silently caught) so the password was never actually changed.
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { userId, newPassword: newPass },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Password reset failed');
       // High-trust admin action — record who reset whose password, when,
       // without recording the new password value itself (logAudit's
       // SENSITIVE_FIELDS strip catches it anyway, but we never pass it).
@@ -268,9 +276,9 @@ export default function UsersPage() {
         userName: profile?.full_name_ar || profile?.full_name_en || '',
       });
       toast.success(lang === 'ar' ? `تم تغيير كلمة المرور لـ ${userEmail}` : `Password reset for ${userEmail}`);
-    } catch {
-      // If admin API not available, try via service role or show manual instructions
-      toast.warning(lang === 'ar' ? 'غيّر الباسورد من Supabase Dashboard → Authentication → Users' : 'Change password from Supabase Dashboard → Authentication → Users');
+    } catch (err) {
+      const msg = err?.message || '';
+      toast.error((lang === 'ar' ? 'فشل تغيير كلمة المرور: ' : 'Password reset failed: ') + msg);
     }
   };
 
