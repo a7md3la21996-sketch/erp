@@ -317,6 +317,11 @@ export function AuthProvider({ children }) {
       id: data.user.id,
       email,
       ...profileData,
+      // New accounts are active by default. Without this the row relied on the
+      // column default, which could leave a freshly-created user unable to log
+      // in (the deactivation gate blocks status='inactive' / is_active=false).
+      status: 'active',
+      is_active: true,
     });
     if (insertError) throw insertError;
   };
