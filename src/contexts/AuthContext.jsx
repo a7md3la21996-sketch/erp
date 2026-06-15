@@ -20,32 +20,48 @@ const MOCK_USERS = import.meta.env.DEV ? {
 } : {}; // Empty in production — mock auth completely disabled
 
 // ── Helper: fetch profile from Supabase users table ─────────────────────────
+// True when the authoritative profile row says the account is deactivated.
+// Used as a hard gate on fresh login AND session restore AND token refresh —
+// previously only login checked it, so an already-logged-in user kept their
+// session after being deactivated.
+function isDeactivated(p) {
+  return p?.status === 'inactive' || p?.is_active === false;
+}
+
 async function fetchSupabaseProfile(userId, authUser = null) {
-  // Try DB query first (with timeout to avoid RLS deadlock)
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-      .abortSignal(controller.signal);
-    clearTimeout(timeout);
-    if (!error && data) {
-      return {
-        id: data.id,
-        email: data.email,
-        role: data.role,
-        department: data.department,
-        team_id: data.team_id,
-        full_name_ar: data.full_name_ar,
-        full_name_en: data.full_name_en,
-        status: data.status,
-        is_active: data.is_active,
-      };
-    }
-  } catch { /* DB query failed or timed out — fall through */ }
+  // Try the authoritative users row first. Retry once — a single RLS/network
+  // hiccup shouldn't drop us to the status-less metadata fallback, which is how
+  // deactivated accounts used to slip through (fallback carries no status).
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+        .abortSignal(controller.signal);
+      clearTimeout(timeout);
+      if (!error && data) {
+        return {
+          id: data.id,
+          email: data.email,
+          role: data.role,
+          department: data.department,
+          team_id: data.team_id,
+          full_name_ar: data.full_name_ar,
+          full_name_en: data.full_name_en,
+          status: data.status,
+          is_active: data.is_active,
+          // Marks this profile as coming from the authoritative DB row (so its
+          // status/is_active can be trusted). The metadata fallback below omits
+          // it — callers must not trust a fallback profile for the active check.
+          _fromDb: true,
+        };
+      }
+    } catch { /* timed out / aborted — retry once, then fall through */ }
+  }
 
   // Fallback: use auth user_metadata (always available, no RLS issues)
   if (authUser?.user_metadata) {
@@ -130,6 +146,18 @@ export function AuthProvider({ children }) {
           if (session?.user && isMounted) {
             try {
               const profileData = await fetchSupabaseProfile(session.user.id, session.user);
+              // Deactivation gate on session restore — without this, a user
+              // deactivated AFTER they logged in kept getting their session
+              // restored on every page load (the check only ran at login).
+              if (isDeactivated(profileData)) {
+                await supabase.auth.signOut();
+                setUser(null);
+                setProfile(null);
+                setPermissions([]);
+                try { localStorage.removeItem('platform_mock_user'); } catch { /* ignore */ }
+                if (isMounted) setLoading(false);
+                return;
+              }
               setUser({ id: session.user.id, email: session.user.email });
               setProfile(profileData);
               // Mirror to localStorage so service-layer permissionGuard can
@@ -178,9 +206,20 @@ export function AuthProvider({ children }) {
             return;
           }
 
-          // TOKEN_REFRESHED: update session silently
+          // TOKEN_REFRESHED: re-verify the account is still active. Supabase
+          // refreshes the token periodically, so this catches a deactivation
+          // that happens while the user is logged in — without a page reload.
           if (event === 'TOKEN_REFRESHED' && session?.user) {
-            // Session refreshed — profile is already loaded, no need to re-fetch
+            try {
+              const { data } = await supabase
+                .from('users')
+                .select('status, is_active')
+                .eq('id', session.user.id)
+                .maybeSingle();
+              if (data && (data.status === 'inactive' || data.is_active === false)) {
+                await supabase.auth.signOut();
+              }
+            } catch { /* transient — re-checked on the next refresh / reload */ }
             return;
           }
 
@@ -235,7 +274,7 @@ export function AuthProvider({ children }) {
         const profileData = await fetchSupabaseProfile(data.user.id, data.user);
 
         // Check if user is deactivated
-        if (profileData.status === 'inactive' || profileData.is_active === false) {
+        if (isDeactivated(profileData)) {
           await supabase.auth.signOut();
           throw new Error('تم تعطيل حسابك. تواصل مع المدير.');
         }
