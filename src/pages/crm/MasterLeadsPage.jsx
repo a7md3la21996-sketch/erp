@@ -69,6 +69,62 @@ function daysSince(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
+// Searchable campaign picker for the filter bar. A plain <select> is painful
+// once there are many campaigns, so this lets the admin type to filter the
+// list and pick.
+function CampaignFilterCombo({ campaigns, value, onChange, isRTL }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const label = (c) => (isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)) || '';
+  const selected = campaigns.find(c => String(c.id) === String(value));
+  const s = search.trim().toLowerCase();
+  const list = s
+    ? campaigns.filter(c => (c.name_ar || '').toLowerCase().includes(s) || (c.name_en || '').toLowerCase().includes(s))
+    : campaigns;
+  const inputCls = 'w-full px-3 py-2 pe-7 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none focus:border-brand-500';
+  return (
+    <div className="relative min-w-[200px]" ref={ref}>
+      <input
+        type="text"
+        value={open ? search : (selected ? label(selected) : '')}
+        onChange={e => { setSearch(e.target.value); setOpen(true); }}
+        onFocus={() => { setOpen(true); setSearch(''); }}
+        placeholder={isRTL ? 'كل الحملات...' : 'Any campaign...'}
+        className={inputCls}
+      />
+      {value && (
+        <button type="button" onClick={() => { onChange(''); setSearch(''); }}
+          className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'left-2' : 'right-2'} text-content-muted hover:text-red-500 bg-transparent border-none cursor-pointer p-0`}>
+          <X size={14} />
+        </button>
+      )}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-[260px] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg shadow-lg">
+          <button type="button" onClick={() => { onChange(''); setOpen(false); setSearch(''); }}
+            className="w-full text-start px-3 py-2 text-xs text-content-muted dark:text-content-muted-dark hover:bg-brand-500/[0.08] cursor-pointer border-none bg-transparent">
+            {isRTL ? 'كل الحملات' : 'Any campaign'}
+          </button>
+          {list.map(c => (
+            <button key={c.id} type="button" onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
+              className={`w-full text-start px-3 py-2 text-xs cursor-pointer border-none bg-transparent hover:bg-brand-500/[0.08] ${String(c.id) === String(value) ? 'text-brand-500 font-semibold' : 'text-content dark:text-content-dark'}`}>
+              {label(c)}
+            </button>
+          ))}
+          {list.length === 0 && (
+            <div className="px-3 py-2 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد نتائج' : 'No results'}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MasterLeadsPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -437,20 +493,10 @@ export default function MasterLeadsPage() {
             </option>
           ))}
         </select>
-        {/* Campaign — shows only families with a copy in the chosen campaign. */}
+        {/* Campaign — type-to-search; shows only families with a copy in the
+            chosen campaign. */}
         {campaigns.length > 0 && (
-          <select
-            value={campaignFilter}
-            onChange={e => setCampaignFilter(e.target.value)}
-            className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[180px]"
-          >
-            <option value="">{isRTL ? 'كل الحملات' : 'Any campaign'}</option>
-            {campaigns.map(c => (
-              <option key={c.id} value={c.id}>
-                {isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}
-              </option>
-            ))}
-          </select>
+          <CampaignFilterCombo campaigns={campaigns} value={campaignFilter} onChange={setCampaignFilter} isRTL={isRTL} />
         )}
         {/* Total */}
         <div className="flex items-center px-3 text-xs text-content-muted dark:text-content-muted-dark">
