@@ -12,7 +12,7 @@ import {
   PieChart, Calendar, Award, TrendingDown, CircleDollarSign,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination } from '../components/ui';
+import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination, Modal, ModalFooter } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignContacts, getCampaignInteractions } from '../services/marketingService';
 import { fetchContacts } from '../services/contactsService';
@@ -105,6 +105,7 @@ export default function MarketingPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('date_desc');
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
@@ -381,29 +382,49 @@ export default function MarketingPage() {
 
   // Handlers
   const handleSave = async (form) => {
-    if (editTarget) {
-      const updated = await updateCampaign(editTarget.id, form);
-      setCampaigns(prev => prev.map(c => c.id === editTarget.id ? updated : c));
-      toast.success(isRTL ? 'تم التحديث' : 'Updated');
-    } else {
-      const created = await createCampaign({ ...form, created_by: profile?.id || null, created_by_name: profile?.full_name_ar || profile?.full_name_en || null });
-      setCampaigns(prev => [created, ...prev]);
-      toast.success(isRTL ? 'تم الإضافة' : 'Created');
+    try {
+      if (editTarget) {
+        const updated = await updateCampaign(editTarget.id, form);
+        setCampaigns(prev => prev.map(c => c.id === editTarget.id ? updated : c));
+        toast.success(isRTL ? 'تم التحديث' : 'Updated');
+      } else {
+        const created = await createCampaign({ ...form, created_by: profile?.id || null, created_by_name: profile?.full_name_ar || profile?.full_name_en || null });
+        setCampaigns(prev => [created, ...prev]);
+        toast.success(isRTL ? 'تم الإضافة' : 'Created');
+      }
+      setModalOpen(false);
+      setEditTarget(null);
+    } catch (err) {
+      // Was unhandled: a failed save threw with no toast and left the modal
+      // open, so the user assumed it saved.
+      toast.error((isRTL ? 'فشل الحفظ: ' : 'Save failed: ') + (err?.message || ''));
     }
-    setModalOpen(false);
-    setEditTarget(null);
   };
 
-  const handleDelete = async (id) => {
+  // Gate + open the confirm modal (replaces the non-RTL window.confirm).
+  const handleDelete = (id) => {
     if (profile?.role !== 'admin' && profile?.role !== 'operations') {
       toast.error(isRTL ? 'ليس لديك صلاحية حذف الحملات' : 'You do not have permission to delete campaigns');
       return;
     }
-    if (!window.confirm(isRTL ? 'حذف هذه الحملة؟' : 'Delete this campaign?')) return;
-    await deleteCampaign(id);
-    setCampaigns(prev => prev.filter(c => c.id !== id));
-    if (selectedCampaign?.id === id) setSelectedCampaign(null);
-    toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+    const camp = campaigns.find(c => c.id === id);
+    if (camp) setDeleteConfirm(camp);
+  };
+
+  // Actual delete — now with error handling (was a silent failure before).
+  const confirmDelete = async () => {
+    const camp = deleteConfirm;
+    if (!camp) return;
+    try {
+      await deleteCampaign(camp.id);
+      setCampaigns(prev => prev.filter(c => c.id !== camp.id));
+      if (selectedCampaign?.id === camp.id) setSelectedCampaign(null);
+      toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+    } catch (err) {
+      toast.error((isRTL ? 'فشل الحذف: ' : 'Delete failed: ') + (err?.message || ''));
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   // Drawer nav
@@ -1377,6 +1398,21 @@ export default function MarketingPage() {
         onClose={() => { setModalOpen(false); setEditTarget(null); }}
         onSave={handleSave}
       />}
+
+      {/* ═══ Delete confirm (replaces window.confirm — RTL + proper modal) ═══ */}
+      {deleteConfirm && (
+        <Modal open onClose={() => setDeleteConfirm(null)} title={isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}>
+          <p className="text-sm text-content dark:text-content-dark m-0">
+            {isRTL
+              ? `حذف حملة "${deleteConfirm.name_ar || deleteConfirm.name_en || ''}"؟ لا يمكن التراجع.`
+              : `Delete campaign "${deleteConfirm.name_en || deleteConfirm.name_ar || ''}"? This cannot be undone.`}
+          </p>
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+            <Button variant="danger" onClick={confirmDelete}>{isRTL ? 'حذف' : 'Delete'}</Button>
+          </ModalFooter>
+        </Modal>
+      )}
     </div>
   );
 }
