@@ -72,8 +72,11 @@ serve(async (req) => {
     const callerActive = !!callerRow &&
       callerRow.status !== "inactive" &&
       callerRow.is_active !== false;
-    if (!callerRow || callerRow.role !== "admin" || !callerActive) {
-      return json({ ok: false, error: "Admin privileges required" }, 200);
+    // Roles allowed to reset passwords — mirrors who holds USERS_MANAGE in the
+    // app (admin + operations). Keep in sync with src/config/roles.js.
+    const ALLOWED_ROLES = ["admin", "operations"];
+    if (!callerRow || !ALLOWED_ROLES.includes(callerRow.role) || !callerActive) {
+      return json({ ok: false, error: "User-management privileges required" }, 200);
     }
 
     // 3) Validate input.
