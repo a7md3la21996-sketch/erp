@@ -64,6 +64,16 @@ const STATUS_DEFS = [
   { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
 ];
 
+// Local-day boundaries (the user's calendar day) as ISO timestamps. Shared by
+// the follow-up count RPC AND the overdue/today/upcoming filters so the chip
+// number always equals the filtered list — no UTC-vs-local drift (which made
+// the count and the table disagree by one near midnight).
+function followupDayBounds() {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  return { todayStart: todayStart.toISOString(), tomorrowStart: tomorrowStart.toISOString() };
+}
+
 export default function ContactsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -980,13 +990,12 @@ export default function ContactsPage() {
     if (!showOverdueTasks) { setOverdueContactIds(null); return; }
     const fetchOverdue = async () => {
       try {
-        // Calendar-based: due before the start of today (matches the dropdown's
-        // mutually-exclusive overdue/today/upcoming buckets).
-        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        // Same local-day boundaries as the count RPC + the other buckets.
+        const { todayStart } = followupDayBounds();
         let q = supabase.from('tasks')
           .select('contact_id')
           .eq('status', 'pending')
-          .lt('due_date', todayStart.toISOString())
+          .lt('due_date', todayStart)
           .not('contact_id', 'is', null);
         // Role filter: sales_agent sees only their tasks
         if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
@@ -1005,12 +1014,13 @@ export default function ContactsPage() {
     if (!showTodayFollowups) { setTodayFollowupIds(null); return; }
     const fetchToday = async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        // Same local-day boundaries as the count RPC: [today 00:00, tomorrow 00:00).
+        const { todayStart, tomorrowStart } = followupDayBounds();
         let q = supabase.from('tasks')
           .select('contact_id')
           .eq('status', 'pending')
-          .gte('due_date', today + 'T00:00:00')
-          .lte('due_date', today + 'T23:59:59')
+          .gte('due_date', todayStart)
+          .lt('due_date', tomorrowStart)
           .not('contact_id', 'is', null);
         if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
         const { data } = await q;
@@ -1028,11 +1038,12 @@ export default function ContactsPage() {
     if (!showUpcomingFollowups) { setUpcomingContactIds(null); return; }
     const fetchUpcoming = async () => {
       try {
-        const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1);
+        // Same local-day boundary as the count RPC: due on/after tomorrow 00:00.
+        const { tomorrowStart } = followupDayBounds();
         let q = supabase.from('tasks')
           .select('contact_id')
           .eq('status', 'pending')
-          .gte('due_date', tomorrow.toISOString())
+          .gte('due_date', tomorrowStart)
           .not('contact_id', 'is', null);
         if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
         const { data } = await q;
@@ -1204,7 +1215,11 @@ export default function ContactsPage() {
       // Server-side distinct-contact counts (overdue / today / upcoming). The
       // old client tally fetched contact_ids and capped at 1000, so the overdue
       // number was wrong (real backlog is ~2200). RLS scopes it per role.
-      const { data, error } = await supabase.rpc('get_followup_counts');
+      const { todayStart, tomorrowStart } = followupDayBounds();
+      const { data, error } = await supabase.rpc('get_followup_counts', {
+        p_today_start: todayStart,
+        p_tomorrow_start: tomorrowStart,
+      });
       if (error) throw error;
       setFollowupCounts({
         overdue: Number(data?.overdue) || 0,
