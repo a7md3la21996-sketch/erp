@@ -35,7 +35,9 @@ async function fetchSupabaseProfile(userId, authUser = null) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      // 3s per attempt × 2 = 6s worst case — kept under the 8s auth safety
+      // timeout below so a slow read doesn't trip it (was 5s × 2 = 10s).
+      const timeout = setTimeout(() => controller.abort(), 3000);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -206,20 +208,27 @@ export function AuthProvider({ children }) {
             return;
           }
 
-          // TOKEN_REFRESHED: re-verify the account is still active. Supabase
-          // refreshes the token periodically, so this catches a deactivation
-          // that happens while the user is logged in — without a page reload.
+          // TOKEN_REFRESHED: re-verify the account is still active, so a
+          // deactivation takes effect within the refresh window without a
+          // reload. Run it DEFERRED (setTimeout) and never await inside the
+          // callback — gotrue may invoke this handler while holding the
+          // token-refresh lock, and awaiting a DB query here can hold that lock
+          // past its 5s watchdog ("Lock not released within 5000ms").
           if (event === 'TOKEN_REFRESHED' && session?.user) {
-            try {
-              const { data } = await supabase
+            const uid = session.user.id;
+            setTimeout(() => {
+              supabase
                 .from('users')
                 .select('status, is_active')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              if (data && (data.status === 'inactive' || data.is_active === false)) {
-                await supabase.auth.signOut();
-              }
-            } catch { /* transient — re-checked on the next refresh / reload */ }
+                .eq('id', uid)
+                .maybeSingle()
+                .then(({ data }) => {
+                  if (data && (data.status === 'inactive' || data.is_active === false)) {
+                    supabase.auth.signOut();
+                  }
+                })
+                .catch(() => { /* transient — re-checked on the next refresh */ });
+            }, 0);
             return;
           }
 
