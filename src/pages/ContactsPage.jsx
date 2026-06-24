@@ -283,15 +283,19 @@ export default function ContactsPage() {
     setPage(1);
   }, [setSearchInput, setSearch, setFilterType, setShowBlacklisted, setSmartFilters, setPage]);
 
-  // Follow-up chips toggle the same special smart filters the quick-filter
-  // buttons use (__overdue_tasks / __today_followup), kept mutually exclusive
-  // so the list always reflects exactly one follow-up bucket at a time.
+  // Follow-up dropdown — exactly one of overdue/today/upcoming active at a time
+  // (or none). Each maps to the special smart filter the list logic understands.
+  const FOLLOWUP_FILTER_VALUES = { overdue: '__overdue_tasks', today: '__today_followup', upcoming: '__upcoming_followup' };
   const isFollowupActive = (value) => smartFilters.some(f => f.value === value);
-  const toggleFollowupFilter = (value) => {
+  const followupFilterValue =
+    isFollowupActive('__overdue_tasks') ? 'overdue'
+    : isFollowupActive('__today_followup') ? 'today'
+    : isFollowupActive('__upcoming_followup') ? 'upcoming'
+    : 'all';
+  const setFollowupFilter = (key) => {
     setSmartFilters(prev => {
-      if (prev.some(f => f.value === value)) return prev.filter(f => f.value !== value);
-      const cleaned = prev.filter(f => f.value !== '__overdue_tasks' && f.value !== '__today_followup');
-      return [...cleaned, { field: 'contact_status', operator: 'is', value }];
+      const cleaned = prev.filter(f => !Object.values(FOLLOWUP_FILTER_VALUES).includes(f.value));
+      return key === 'all' ? cleaned : [...cleaned, { field: 'contact_status', operator: 'is', value: FOLLOWUP_FILTER_VALUES[key] }];
     });
   };
 
@@ -957,11 +961,13 @@ export default function ContactsPage() {
   // today = a pending task due today. Same task query + role scope as the
   // __overdue_tasks / __today_followup filters, so each chip count equals the
   // list you get when you click it.
-  const [followupCounts, setFollowupCounts] = useState({ overdue: 0, today: 0 });
+  const [followupCounts, setFollowupCounts] = useState({ overdue: 0, today: 0, upcoming: 0 });
   const [showOverdueTasks, setShowOverdueTasks] = useState(false);
   const [overdueContactIds, setOverdueContactIds] = useState(null);
   const [showTodayFollowups, setShowTodayFollowups] = useState(false);
   const [todayFollowupIds, setTodayFollowupIds] = useState(null);
+  const [showUpcomingFollowups, setShowUpcomingFollowups] = useState(false);
+  const [upcomingContactIds, setUpcomingContactIds] = useState(null);
   const [showNoOpps, setShowNoOpps] = useState(false);
   const [noOppsIds, setNoOppsIds] = useState(null);
   const [showSingleAgent, setShowSingleAgent] = useState(false);
@@ -974,10 +980,13 @@ export default function ContactsPage() {
     if (!showOverdueTasks) { setOverdueContactIds(null); return; }
     const fetchOverdue = async () => {
       try {
+        // Calendar-based: due before the start of today (matches the dropdown's
+        // mutually-exclusive overdue/today/upcoming buckets).
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
         let q = supabase.from('tasks')
           .select('contact_id')
           .eq('status', 'pending')
-          .lt('due_date', new Date().toISOString())
+          .lt('due_date', todayStart.toISOString())
           .not('contact_id', 'is', null);
         // Role filter: sales_agent sees only their tasks
         if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
@@ -1013,6 +1022,25 @@ export default function ContactsPage() {
     };
     fetchToday();
   }, [showTodayFollowups]);
+
+  // Fetch upcoming followup contact IDs (pending task due after today).
+  useEffect(() => {
+    if (!showUpcomingFollowups) { setUpcomingContactIds(null); return; }
+    const fetchUpcoming = async () => {
+      try {
+        const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1);
+        let q = supabase.from('tasks')
+          .select('contact_id')
+          .eq('status', 'pending')
+          .gte('due_date', tomorrow.toISOString())
+          .not('contact_id', 'is', null);
+        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
+        const { data } = await q;
+        if (data) setUpcomingContactIds([...new Set(data.map(t => t.contact_id).filter(Boolean))]);
+      } catch { setUpcomingContactIds([]); }
+    };
+    fetchUpcoming();
+  }, [showUpcomingFollowups]);
 
   // Stage sub-filter: when the user filters by has_opportunity, fetch
   // (1) per-stage counts to render numbers on the stage chips, and
@@ -1173,20 +1201,16 @@ export default function ContactsPage() {
   const loadFollowupCounts = useCallback(async () => {
     if (!profile) return;
     try {
-      const nowIso = new Date().toISOString();
-      const todayStr = nowIso.slice(0, 10);
-      const baseSel = () => {
-        let q = supabase.from('tasks').select('contact_id')
-          .eq('status', 'pending').not('contact_id', 'is', null);
-        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
-        return q;
-      };
-      const [ov, td] = await Promise.all([
-        baseSel().lt('due_date', nowIso),
-        baseSel().gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
-      ]);
-      const distinct = (res) => new Set((res.data || []).map(t => t.contact_id).filter(Boolean)).size;
-      setFollowupCounts({ overdue: distinct(ov), today: distinct(td) });
+      // Server-side distinct-contact counts (overdue / today / upcoming). The
+      // old client tally fetched contact_ids and capped at 1000, so the overdue
+      // number was wrong (real backlog is ~2200). RLS scopes it per role.
+      const { data, error } = await supabase.rpc('get_followup_counts');
+      if (error) throw error;
+      setFollowupCounts({
+        overdue: Number(data?.overdue) || 0,
+        today: Number(data?.today) || 0,
+        upcoming: Number(data?.upcoming) || 0,
+      });
     } catch (err) { if (import.meta.env.DEV) console.warn('followup counts:', err); }
   }, [profile?.role, profile?.id]);
 
@@ -1201,14 +1225,17 @@ export default function ContactsPage() {
       // Handle special quick filter values
       const isTodayFollowup = smartFilters.some(f => f.value === '__today_followup');
       const isOverdueTasks = smartFilters.some(f => f.value === '__overdue_tasks');
+      const isUpcomingFollowup = smartFilters.some(f => f.value === '__upcoming_followup');
       const isNoOpps = smartFilters.some(f => f.value === '__no_opps');
       const isSingleAgent = smartFilters.some(f => f.value === '__single_agent');
       if (isTodayFollowup && !showTodayFollowups) setShowTodayFollowups(true);
       if (isOverdueTasks && !showOverdueTasks) setShowOverdueTasks(true);
+      if (isUpcomingFollowup && !showUpcomingFollowups) setShowUpcomingFollowups(true);
       if (isNoOpps && !showNoOpps) setShowNoOpps(true);
       if (isSingleAgent && !showSingleAgent) setShowSingleAgent(true);
       if (!isTodayFollowup && showTodayFollowups) { setShowTodayFollowups(false); setTodayFollowupIds(null); }
       if (!isOverdueTasks && showOverdueTasks) { setShowOverdueTasks(false); setOverdueContactIds(null); }
+      if (!isUpcomingFollowup && showUpcomingFollowups) { setShowUpcomingFollowups(false); setUpcomingContactIds(null); }
       if (!isNoOpps && showNoOpps) { setShowNoOpps(false); setNoOppsIds(null); }
       if (!isSingleAgent && showSingleAgent) { setShowSingleAgent(false); setSingleAgentIds(null); }
 
@@ -1220,6 +1247,7 @@ export default function ContactsPage() {
       const followupIdsPending =
         (isOverdueTasks && overdueContactIds == null) ||
         (isTodayFollowup && todayFollowupIds == null) ||
+        (isUpcomingFollowup && upcomingContactIds == null) ||
         (isNoOpps && noOppsIds == null) ||
         (isSingleAgent && singleAgentIds == null);
       if (followupIdsPending) { setLoading(false); setSearching(false); return; }
@@ -1285,6 +1313,7 @@ export default function ContactsPage() {
           contactIds: stageContactIds
             || (isOverdueTasks ? (overdueContactIds?.length ? overdueContactIds : ['00000000-0000-0000-0000-000000000000']) : null)
             || (isTodayFollowup ? (todayFollowupIds?.length ? todayFollowupIds : ['00000000-0000-0000-0000-000000000000']) : null)
+            || (isUpcomingFollowup ? (upcomingContactIds?.length ? upcomingContactIds : ['00000000-0000-0000-0000-000000000000']) : null)
             || undefined,
           // Union every active exclude source instead of falling through with
           // `||` — the old chain silently dropped every list past the first
@@ -1429,7 +1458,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds, loadFollowupCounts]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, upcomingContactIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds, loadFollowupCounts]);
 
   // Debounce filter/page-driven refetches by 250ms so rapid chip toggles
   // (status → temperature → activity → date in quick succession) collapse
@@ -1866,33 +1895,22 @@ export default function ContactsPage() {
         )}
       </div>
 
-      {/* Follow-up chips — overdue / due-today leads as one-click, counted
-          entry points. Mirrors (and previews) the per-row Next Action column. */}
-      {(followupCounts.overdue > 0 || followupCounts.today > 0 || isFollowupActive('__overdue_tasks') || isFollowupActive('__today_followup')) && (
-        <div className="flex gap-2 mb-3 flex-wrap items-center">
-          <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'المتابعات:' : 'Follow-ups:'}</span>
-          {(() => {
-            const ov = isFollowupActive('__overdue_tasks');
-            return (
-              <button onClick={() => toggleFollowupFilter('__overdue_tasks')}
-                className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${ov ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-                <Clock size={11} /> {isRTL ? 'متأخرة' : 'Overdue'}
-                <span className={`rounded-xl px-2 py-px text-[10px] ${ov ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{followupCounts.overdue}</span>
-              </button>
-            );
-          })()}
-          {(() => {
-            const td = isFollowupActive('__today_followup');
-            return (
-              <button onClick={() => toggleFollowupFilter('__today_followup')}
-                className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${td ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-                <Clock size={11} /> {isRTL ? 'النهاردة' : 'Today'}
-                <span className={`rounded-xl px-2 py-px text-[10px] ${td ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{followupCounts.today}</span>
-              </button>
-            );
-          })()}
+      {/* Follow-up filter — one dropdown: overdue / today / upcoming, with live
+          (server-side, accurate) distinct-contact counts. */}
+      <div className="flex gap-2 mb-3 flex-wrap items-center">
+        <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1 flex items-center gap-1"><Clock size={11} /> {isRTL ? 'المتابعات:' : 'Follow-ups:'}</span>
+        <div className="relative inline-block">
+          <select value={followupFilterValue} onChange={e => setFollowupFilter(e.target.value)}
+            className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
+            style={followupFilterValue !== 'all' ? { borderColor: followupFilterValue === 'overdue' ? '#EF4444' : followupFilterValue === 'today' ? '#F59E0B' : '#6B8DB5', color: followupFilterValue === 'overdue' ? '#EF4444' : followupFilterValue === 'today' ? '#F59E0B' : '#6B8DB5' } : undefined}>
+            <option value="all">{isRTL ? 'كل المتابعات' : 'All follow-ups'}</option>
+            <option value="overdue">{isRTL ? `🔴 متأخرة (${followupCounts.overdue})` : `🔴 Overdue (${followupCounts.overdue})`}</option>
+            <option value="today">{isRTL ? `🟡 النهاردة (${followupCounts.today})` : `🟡 Today (${followupCounts.today})`}</option>
+            <option value="upcoming">{isRTL ? `⚪ قادمة (${followupCounts.upcoming})` : `⚪ Upcoming (${followupCounts.upcoming})`}</option>
+          </select>
+          <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
         </div>
-      )}
+      </div>
 
       {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
       {filterStatus === 'has_opportunity' && (() => {
