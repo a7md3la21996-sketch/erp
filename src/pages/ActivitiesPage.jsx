@@ -10,6 +10,7 @@ import {
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, updateActivity, ACTIVITY_TYPES } from '../services/activitiesService';
+import { localDateStr, localMonthStartStr } from '../utils/dateTime';
 import supabase from '../lib/supabase';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -160,7 +161,7 @@ export default function ActivitiesPage() {
   ], [uniqueUsers, uniqueEntities, auditFields]);
 
   const QUICK_FILTERS = useMemo(() => [
-    { label: 'اليوم', labelEn: 'Today', filters: [{ field: 'created_at', operator: 'is', value: new Date().toISOString().slice(0, 10) }] },
+    { label: 'اليوم', labelEn: 'Today', filters: [{ field: 'created_at', operator: 'is', value: localDateStr() }] },
     { label: 'هذا الأسبوع', labelEn: 'This Week', filters: [{ field: 'created_at', operator: 'this_week', value: '' }] },
     { label: 'هذا الشهر', labelEn: 'This Month', filters: [{ field: 'created_at', operator: 'this_month', value: '' }] },
     { label: 'مكالمات', labelEn: 'Calls', filters: [{ field: 'type', operator: 'is', value: 'call' }] },
@@ -189,9 +190,9 @@ export default function ActivitiesPage() {
         const now = new Date();
         const start = new Date(now);
         start.setDate(now.getDate() - now.getDay());
-        dateFrom = start.toISOString().slice(0, 10);
+        dateFrom = localDateStr(start);
       } else if (dateFilter.operator === 'this_month') {
-        dateFrom = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+        dateFrom = localMonthStartStr();
       } else if (dateFilter.operator === 'is' && v) {
         dateFrom = v;
         dateTo   = v + 'T23:59:59';
@@ -333,7 +334,7 @@ export default function ActivitiesPage() {
   // lives outside the callback so the KPI's sub-label can also reference it.
   const loadStats = useCallback(async () => {
     try {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = localDateStr();
       const [totalRes, todayRes, sampleRes] = await Promise.all([
         fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1 }),
         fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1, dateFrom: todayStr }),

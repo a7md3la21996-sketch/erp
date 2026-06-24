@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import supabase from '../../lib/supabase';
+import { localDateStr } from '../../utils/dateTime';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
@@ -539,7 +540,7 @@ function TeamActivityWidget({ lang, isRTL, profile, CardTitle }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = localDateStr();
         let query = supabase.from('activities').select('user_name_en, type').gte('created_at', todayStr + 'T00:00:00');
         // Role filter
         if (profile?.role === 'sales_agent') {
@@ -685,7 +686,7 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = localDateStr();
         const nowISO = new Date().toISOString();
         const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
@@ -1042,7 +1043,7 @@ export default function DashboardPage() {
     // a day fires 10 decay runs + 10 birthday checks. Should ideally
     // be a server-side cron, but session-day gating is the cheap fix.
     try {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = localDateStr();
       const decayKey = 'platform_temp_decay_run';
       const birthdayKey = `platform_birthday_check_${userId || 'anon'}`;
       if (localStorage.getItem(decayKey) !== todayStr) {

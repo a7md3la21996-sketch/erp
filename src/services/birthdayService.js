@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
+import { localDateStr } from '../utils/dateTime';
 
 /**
  * Birthday Greetings Service
@@ -10,12 +11,12 @@ import { createNotification } from './notificationsService';
 const CHECKED_KEY = 'platform_birthday_checked_date';
 
 function alreadyCheckedToday() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr();
   return localStorage.getItem(CHECKED_KEY) === today;
 }
 
 function markChecked() {
-  localStorage.setItem(CHECKED_KEY, new Date().toISOString().slice(0, 10));
+  localStorage.setItem(CHECKED_KEY, localDateStr());
 }
 
 /**

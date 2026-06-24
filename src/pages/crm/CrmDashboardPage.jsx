@@ -6,6 +6,7 @@ import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import supabase from '../../lib/supabase';
+import { localDateStr, localMonthStartStr } from '../../utils/dateTime';
 import {
   Users, Target, CheckSquare, Flame, AlertCircle, TrendingUp,
   Calendar, ChevronRight, RefreshCw, BarChart3, Activity,
@@ -1325,12 +1326,12 @@ function daysSince(iso) {
 // from/to URL params expect this format, so we shape it the same way.
 function isoDaysAgo(n) {
   const d = new Date(Date.now() - n * 86400000);
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function isoMonthStart() {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  return localMonthStartStr(now);
 }
 
 function formatDate(iso) {

@@ -970,7 +970,7 @@ export default function TasksPage() {
   // Shared filter args used by both loadTasks and loadStats so the KPIs
   // and the visible list always agree on what's currently filtered.
   const baseQueryArgs = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = localDateStr(new Date());
     return {
       role: profile?.role, userId: profile?.id, teamId: profile?.team_id,
       search: search || undefined,
@@ -979,7 +979,7 @@ export default function TasksPage() {
       dept: serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
       agentName: serverFilters.agentName || (agentFilter !== 'all' ? agentFilter : undefined) || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
       ...(dateFilter === 'today' ? { dueDateFrom: todayStr + 'T00:00:00', dueDateTo: todayStr + 'T23:59:59' } : {}),
-      ...(dateFilter === 'week' ? { dueDateFrom: todayStr + 'T00:00:00', dueDateTo: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) + 'T23:59:59' } : {}),
+      ...(dateFilter === 'week' ? { dueDateFrom: todayStr + 'T00:00:00', dueDateTo: localDateStr(new Date(Date.now() + 7 * 86400000)) + 'T23:59:59' } : {}),
       ...(dateFilter === 'overdue' ? { overdueOnly: true } : {}),
     };
   }, [profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.department, globalFilter?.agentName, statusFilter, priorityFilter, dateFilter, agentFilter]);
@@ -1059,7 +1059,7 @@ export default function TasksPage() {
   // Stats — from server
   const loadStats = useCallback(async () => {
     try {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = localDateStr(new Date());
       // Strip server-side narrowing fields so each stat slice can apply
       // its own (e.g. overdue-only ignores the status filter, total
       // ignores both). Everything else from baseQueryArgs (role, dept,

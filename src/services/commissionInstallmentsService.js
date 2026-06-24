@@ -5,6 +5,7 @@ import { logAudit } from './auditService';
 // Tracks installment payments from developers to the company
 
 import supabase from '../lib/supabase';
+import { localDateStr, localMonthEndStr } from '../utils/dateTime';
 
 const STORAGE_KEY = 'platform_commission_installments';
 
@@ -29,7 +30,7 @@ function generateId() {
  * Auto-mark overdue: any pending installment whose due_date < today
  */
 function autoMarkOverdue(list) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr();
   let changed = false;
   const updated = list.map(item => {
     if (item.status === 'pending' && item.due_date && item.due_date < today) {
@@ -182,8 +183,8 @@ export async function getInstallmentStats() {
     data = autoMarkOverdue(loadAll());
   }
   const today = new Date();
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
-  const todayStr = today.toISOString().slice(0, 10);
+  const endOfMonth = localMonthEndStr(today);
+  const todayStr = localDateStr(today);
 
   const totalDue = data
     .filter(d => d.status === 'pending' || d.status === 'overdue')
