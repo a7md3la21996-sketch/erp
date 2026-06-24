@@ -1830,6 +1830,28 @@ export default function ContactsPage() {
         </div>
       </div>
 
+      {/* Follow-up chips — top of the page. Overdue / Today / Upcoming with live,
+          server-side distinct-contact counts; each its own colour. Toggle to
+          filter the list (one bucket at a time). */}
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        {[
+          { key: 'overdue',  label: isRTL ? 'متأخرة' : 'Overdue',  count: followupCounts.overdue,  color: '#EF4444' },
+          { key: 'today',    label: isRTL ? 'النهاردة' : 'Today',   count: followupCounts.today,    color: '#F59E0B' },
+          { key: 'upcoming', label: isRTL ? 'قادمة' : 'Upcoming',   count: followupCounts.upcoming, color: '#3B82F6' },
+        ].map(c => {
+          const active = followupFilterValue === c.key;
+          return (
+            <button key={c.key} onClick={() => setFollowupFilter(active ? 'all' : c.key)}
+              className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              style={active ? { border: `1px solid ${c.color}`, background: `${c.color}15`, color: c.color } : undefined}>
+              <Clock size={11} /> {c.label}
+              <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Type Filter — dropdown style */}
       {(() => {
         const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
@@ -1893,23 +1915,6 @@ export default function ContactsPage() {
           <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
         </button>
         )}
-      </div>
-
-      {/* Follow-up filter — one dropdown: overdue / today / upcoming, with live
-          (server-side, accurate) distinct-contact counts. */}
-      <div className="flex gap-2 mb-3 flex-wrap items-center">
-        <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1 flex items-center gap-1"><Clock size={11} /> {isRTL ? 'المتابعات:' : 'Follow-ups:'}</span>
-        <div className="relative inline-block">
-          <select value={followupFilterValue} onChange={e => setFollowupFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
-            style={followupFilterValue !== 'all' ? { borderColor: followupFilterValue === 'overdue' ? '#EF4444' : followupFilterValue === 'today' ? '#F59E0B' : '#6B8DB5', color: followupFilterValue === 'overdue' ? '#EF4444' : followupFilterValue === 'today' ? '#F59E0B' : '#6B8DB5' } : undefined}>
-            <option value="all">{isRTL ? 'كل المتابعات' : 'All follow-ups'}</option>
-            <option value="overdue">{isRTL ? `🔴 متأخرة (${followupCounts.overdue})` : `🔴 Overdue (${followupCounts.overdue})`}</option>
-            <option value="today">{isRTL ? `🟡 النهاردة (${followupCounts.today})` : `🟡 Today (${followupCounts.today})`}</option>
-            <option value="upcoming">{isRTL ? `⚪ قادمة (${followupCounts.upcoming})` : `⚪ Upcoming (${followupCounts.upcoming})`}</option>
-          </select>
-          <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
-        </div>
       </div>
 
       {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
