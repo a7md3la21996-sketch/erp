@@ -150,6 +150,10 @@ export default function ContactsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
+  // Result of a bulk reassign that couldn't move some leads — { agentName,
+  // moved, skipped:[{contact_id,full_name,phone,reason}] }. Drives a modal that
+  // explains why and offers to send the skipped ones to a different agent.
+  const [reassignSkipped, setReassignSkipped] = useState(null);
   const [bulkCampaignModal, setBulkCampaignModal] = useState(false);
   const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false);
   const [bulkDropdownOpen, setBulkDropdownOpen] = useState(null);
@@ -659,19 +663,10 @@ export default function ContactsPage() {
     } : c);
     setContacts(updated);
         logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
-    // Record assignment history for each contact (uses fetched data so off-page rows are included).
-    // Pass UUIDs alongside names so the timeline renders current names — a
-    // later rename of either agent updates every historical row automatically.
+    // Reassignment activity rows are written server-side by reassign_contacts_smart
+    // (only for leads that actually move) — so no client/RPC double-write and no
+    // orphan activity for skipped ones.
     const reassignedContacts = allSelected;
-    reassignedContacts.forEach(c => {
-      recordAssignment(c.id, {
-        fromAgent: c.assigned_to_name,
-        toAgent: agentName,
-        fromAgentId: c.assigned_to || null,
-        toAgentId: agentId,
-        assignedBy: assignedByName,
-      });
-    });
     // Single notification for bulk assign (not one per lead)
     if (reassignedContacts.length === 1) {
       notifyLeadReassigned({ contactName: reassignedContacts[0].full_name || reassignedContacts[0].phone || '—', contactId: reassignedContacts[0].id, newAgentId: agentId, newAgentName: agentName, assignedBy: assignedByName });
@@ -704,12 +699,6 @@ export default function ContactsPage() {
         reportError('ContactsPage', 'undoBulkReassign', err);
       }
     };
-    toast.show({
-      type: 'success',
-      message: isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`,
-      duration: 8000,
-      action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoReassign },
-    });
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
@@ -719,60 +708,41 @@ export default function ContactsPage() {
       total: idsToUpdate.length,
     });
     try {
-      // Atomic single-RPC instead of N updateContact round-trips. The DB
-      // function inserts the activity rows + updates contacts in one
-      // transaction — either all rows update or none do (no half-state).
-      // Status/temperature extraUpdates aren't covered by the RPC; if they
-      // were sent, fall back to the per-row path so we don't drop them.
-      const hasExtras = Object.keys(extraUpdates).length > 0;
-      if (hasExtras) {
-        const results = await Promise.allSettled(
-          idsToUpdate.map(id => updateContact(id, {
-            assigned_to: agentId,
-            assigned_to_name: agentName,
-            assigned_to_names: [agentName],
-            assigned_by_name: assignedByName,
-            ...extraUpdates,
-          }).finally(() => {
-            setBulkProgress(p => p ? { ...p, done: p.done + 1 } : p);
-          }))
-        );
-        const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
-        if (failedIdx.length > 0) {
-          // Roll the failed rows back to their pre-reassign snapshot so the
-          // list reflects the DB — the optimistic setContacts above had
-          // already shown them as reassigned.
-          const failedIds = new Set(failedIdx.map(i => idsToUpdate[i]));
-          setContacts(prev => prev.map(c => (failedIds.has(c.id) && allSelectedById.has(c.id)) ? allSelectedById.get(c.id) : c));
-          const failedNames = failedIdx.map(i => allSelectedById.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
-          const preview = failedNames.slice(0, 3).join(', ');
-          const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
-          toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} contacts: ${preview}${more}`);
-          failedIdx.forEach(i => reportError('ContactsPage', 'bulkReassign', results[i].reason));
-        }
-      } else {
-        const { data, error } = await supabase.rpc('bulk_reassign_contacts', {
-          p_contact_ids: idsToUpdate,
-          p_to_user_id: agentId,
-          p_assigned_by_name: assignedByName,
-        });
-        if (error) throw error;
-        if (typeof data === 'number' && data < idsToUpdate.length) {
-          // Some rows skipped by RLS — surface the count so the user knows.
-          toast.warning(isRTL
-            ? `تم نقل ${data} من ${idsToUpdate.length} (الباقي خارج صلاحيتك)`
-            : `Reassigned ${data} of ${idsToUpdate.length} (rest outside your scope)`);
-        }
+      // One smart RPC: reassigns what it can, skips conflicts (recording why),
+      // and returns { moved, skipped:[{contact_id,full_name,phone,reason}] }.
+      // Replaces the old two-path mess (all-or-nothing RPC + slow per-row loop).
+      const { data, error } = await supabase.rpc('reassign_contacts_smart', {
+        p_contact_ids: idsToUpdate,
+        p_to_user_id: agentId,
+        p_assigned_by_name: assignedByName,
+        p_new_status: bulkStatus || null,
+        p_new_temperature: bulkTemp || null,
+      });
+      if (error) throw error;
+      const moved = Number(data?.moved) || 0;
+      const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
+      if (skipped.length > 0) {
+        // Roll the skipped rows back to their prior owner — the optimistic
+        // update above had shown them all as moved.
+        const skippedIds = new Set(skipped.map(s => s.contact_id));
+        setContacts(prev => prev.map(c => (skippedIds.has(c.id) && allSelectedById.has(c.id)) ? allSelectedById.get(c.id) : c));
       }
+      if (moved > 0) {
+        toast.show({
+          type: 'success',
+          message: isRTL ? `تم إعادة تعيين ${moved} عميل` : `${moved} leads reassigned`,
+          duration: 8000,
+          action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoReassign },
+        });
+      }
+      // Show the skipped ones with reasons + the "send to another agent" flow.
+      if (skipped.length > 0) setReassignSkipped({ agentName, moved, skipped });
     } catch (err) {
-      // The RPC is all-or-nothing — on failure nothing changed server-side, so
-      // revert every optimistically-reassigned row back to its prior owner.
-      // Without this the list stayed visually reassigned forever (no realtime
-      // event fires for a write that never happened).
+      // RPC failed entirely — revert every optimistically-reassigned row.
       const selSet = new Set(idsToUpdate);
       setContacts(prev => prev.map(c => (selSet.has(c.id) && allSelectedById.has(c.id)) ? allSelectedById.get(c.id) : c));
       toast.error(isRTL ? 'فشل إعادة التعيين — تم التراجع' : 'Reassign failed — reverted');
-      reportError('ContactsPage', 'bulkReassignRPC', err);
+      reportError('ContactsPage', 'bulkReassignSmartRPC', err);
     }
     finally { setBulkProgress(null); }
   };
@@ -2463,6 +2433,42 @@ export default function ContactsPage() {
         isRTL={isRTL}
         profile={profile}
       />
+
+      {/* Reassign — skipped leads result (why some didn't move + send to another agent) */}
+      {reassignSkipped && (
+        <Modal open onClose={() => setReassignSkipped(null)} title={isRTL ? 'ليدز ما اتنقلتش' : 'Skipped leads'}>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark m-0 mb-3">
+            {isRTL
+              ? `تم نقل ${reassignSkipped.moved}. الليدز دي ما اتنقلتش لـ ${reassignSkipped.agentName}:`
+              : `${reassignSkipped.moved} moved. These couldn't go to ${reassignSkipped.agentName}:`}
+          </p>
+          <div className="max-h-[260px] overflow-y-auto space-y-1.5">
+            {reassignSkipped.skipped.map(s => {
+              const reasonTxt = s.reason === 'duplicate_new'
+                ? (isRTL ? 'السيلز عنده الرقم ده كـ ليد جديد' : 'agent already has this number as a new lead')
+                : s.reason === 'already_owned'
+                ? (isRTL ? 'موجود عند السيلز بالفعل' : 'already owned by the agent')
+                : (isRTL ? 'محظور بقاعدة في النظام' : 'blocked by a system rule');
+              return (
+                <div key={s.contact_id} className="px-3 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark">
+                  <div className="text-xs font-semibold text-content dark:text-content-dark truncate">{s.full_name || s.phone || '—'}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{reasonTxt}</div>
+                </div>
+              );
+            })}
+          </div>
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => setReassignSkipped(null)}>{isRTL ? 'تمام' : 'OK'}</Button>
+            <Button onClick={() => {
+              // Send the skipped leads to a DIFFERENT agent: preselect them and
+              // reopen the reassign modal.
+              setSelectedIds(reassignSkipped.skipped.map(s => s.contact_id));
+              setReassignSkipped(null);
+              setBulkReassignModal(true);
+            }}>{isRTL ? 'وزّعهم لسيلز تاني' : 'Send to another agent'}</Button>
+          </ModalFooter>
+        </Modal>
+      )}
 
       {/* Bulk Campaign Modal */}
       <BulkCampaignModal
