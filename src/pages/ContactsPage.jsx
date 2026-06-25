@@ -985,73 +985,34 @@ export default function ContactsPage() {
 
   const globalFilter = useGlobalFilter();
 
-  // Fetch overdue task contact IDs when filter is toggled
+  // Fetch the contact IDs for a follow-up bucket via the same RPC the counts
+  // use, so the filtered list always matches the chip number. Buckets are
+  // mutually exclusive (a lead is classified by its EARLIEST pending task) — a
+  // lead with an overdue task won't show under "upcoming" too. RLS scopes per
+  // role; no 1000-row cap (the grouping is server-side).
+  const fetchFollowupBucket = useCallback(async (bucket) => {
+    const { todayStart, tomorrowStart } = followupDayBounds();
+    const { data, error } = await supabase.rpc('get_followup_contact_ids', {
+      p_bucket: bucket, p_today_start: todayStart, p_tomorrow_start: tomorrowStart,
+    });
+    if (error) throw error;
+    return (data || []).map(r => r.contact_id).filter(Boolean);
+  }, []);
+
   useEffect(() => {
     if (!showOverdueTasks) { setOverdueContactIds(null); return; }
-    const fetchOverdue = async () => {
-      try {
-        // Same local-day boundaries as the count RPC + the other buckets.
-        const { todayStart } = followupDayBounds();
-        let q = supabase.from('tasks')
-          .select('contact_id')
-          .eq('status', 'pending')
-          .lt('due_date', todayStart)
-          .not('contact_id', 'is', null);
-        // Role filter: sales_agent sees only their tasks
-        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
-        const { data } = await q;
-        if (data) {
-          const ids = [...new Set(data.map(t => t.contact_id).filter(Boolean))];
-          setOverdueContactIds(ids);
-        }
-      } catch { setOverdueContactIds([]); }
-    };
-    fetchOverdue();
-  }, [showOverdueTasks]);
+    fetchFollowupBucket('overdue').then(setOverdueContactIds).catch(() => setOverdueContactIds([]));
+  }, [showOverdueTasks, fetchFollowupBucket]);
 
-  // Fetch today's followup contact IDs
   useEffect(() => {
     if (!showTodayFollowups) { setTodayFollowupIds(null); return; }
-    const fetchToday = async () => {
-      try {
-        // Same local-day boundaries as the count RPC: [today 00:00, tomorrow 00:00).
-        const { todayStart, tomorrowStart } = followupDayBounds();
-        let q = supabase.from('tasks')
-          .select('contact_id')
-          .eq('status', 'pending')
-          .gte('due_date', todayStart)
-          .lt('due_date', tomorrowStart)
-          .not('contact_id', 'is', null);
-        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
-        const { data } = await q;
-        if (data) {
-          const ids = [...new Set(data.map(t => t.contact_id).filter(Boolean))];
-          setTodayFollowupIds(ids);
-        }
-      } catch { setTodayFollowupIds([]); }
-    };
-    fetchToday();
-  }, [showTodayFollowups]);
+    fetchFollowupBucket('today').then(setTodayFollowupIds).catch(() => setTodayFollowupIds([]));
+  }, [showTodayFollowups, fetchFollowupBucket]);
 
-  // Fetch upcoming followup contact IDs (pending task due after today).
   useEffect(() => {
     if (!showUpcomingFollowups) { setUpcomingContactIds(null); return; }
-    const fetchUpcoming = async () => {
-      try {
-        // Same local-day boundary as the count RPC: due on/after tomorrow 00:00.
-        const { tomorrowStart } = followupDayBounds();
-        let q = supabase.from('tasks')
-          .select('contact_id')
-          .eq('status', 'pending')
-          .gte('due_date', tomorrowStart)
-          .not('contact_id', 'is', null);
-        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
-        const { data } = await q;
-        if (data) setUpcomingContactIds([...new Set(data.map(t => t.contact_id).filter(Boolean))]);
-      } catch { setUpcomingContactIds([]); }
-    };
-    fetchUpcoming();
-  }, [showUpcomingFollowups]);
+    fetchFollowupBucket('upcoming').then(setUpcomingContactIds).catch(() => setUpcomingContactIds([]));
+  }, [showUpcomingFollowups, fetchFollowupBucket]);
 
   // Stage sub-filter: when the user filters by has_opportunity, fetch
   // (1) per-stage counts to render numbers on the stage chips, and
