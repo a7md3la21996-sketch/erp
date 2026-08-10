@@ -22,9 +22,9 @@ const FINISHING = [
 ];
 
 const STATUSES = [
-  { value: 'available', ar: 'متاحة',  en: 'Available', color: '#10B981' },
-  { value: 'reserved',  ar: 'محجوزة', en: 'Reserved',  color: '#F59E0B' },
-  { value: 'sold',      ar: 'مباعة',  en: 'Sold',      color: '#EF4444' },
+  { value: 'available', ar: 'متاحة',  en: 'Available', color: '#158A57' },
+  { value: 'reserved',  ar: 'محجوزة', en: 'Reserved',  color: '#C9860A' },
+  { value: 'sold',      ar: 'مباعة',  en: 'Sold',      color: '#D6403B' },
 ];
 
 const statusMap = Object.fromEntries(STATUSES.map(s => [s.value, s]));

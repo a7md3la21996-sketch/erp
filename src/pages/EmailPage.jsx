@@ -34,10 +34,10 @@ function loadOpportunities() {
 
 // ── Folder Config ──────────────────────────────────────────────
 const FOLDERS = [
-  { id: 'inbox',  icon: Inbox,    label: { ar: 'الوارد', en: 'Inbox' },   color: '#4A7AAB' },
-  { id: 'sent',   icon: Send,     label: { ar: 'المرسل', en: 'Sent' },    color: '#10B981' },
-  { id: 'draft',  icon: FileText, label: { ar: 'المسودات', en: 'Drafts' }, color: '#F59E0B' },
-  { id: 'trash',  icon: Trash2,   label: { ar: 'المحذوف', en: 'Trash' },  color: '#EF4444' },
+  { id: 'inbox',  icon: Inbox,    label: { ar: 'الوارد', en: 'Inbox' },   color: '#2F6BD3' },
+  { id: 'sent',   icon: Send,     label: { ar: 'المرسل', en: 'Sent' },    color: '#158A57' },
+  { id: 'draft',  icon: FileText, label: { ar: 'المسودات', en: 'Drafts' }, color: '#C9860A' },
+  { id: 'trash',  icon: Trash2,   label: { ar: 'المحذوف', en: 'Trash' },  color: '#D6403B' },
 ];
 
 // ── Main Component ─────────────────────────────────────────────
@@ -108,7 +108,7 @@ export default function EmailPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 80 }}>
-      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#4A7AAB', borderRadius: '50%' }} />
+      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2F6BD3', borderRadius: '50%' }} />
     </div>
   );
 
@@ -126,7 +126,7 @@ export default function EmailPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
-            background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+            background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Mail size={20} color="#fff" />
@@ -145,7 +145,7 @@ export default function EmailPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 20px', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+            background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)',
             color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
@@ -181,7 +181,7 @@ export default function EmailPage() {
                     ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)')
                     : 'transparent',
                   color: active
-                    ? '#4A7AAB'
+                    ? '#2F6BD3'
                     : (isDark ? '#94a3b8' : '#64748b'),
                   fontSize: 13, fontWeight: active ? 600 : 500,
                   textAlign: isRTL ? 'right' : 'left',
@@ -194,7 +194,7 @@ export default function EmailPage() {
                 {count > 0 && (
                   <span style={{
                     minWidth: 20, height: 20, borderRadius: 10,
-                    background: unread > 0 ? '#4A7AAB' : (isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'),
+                    background: unread > 0 ? '#2F6BD3' : (isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'),
                     color: unread > 0 ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
                     fontSize: 11, fontWeight: 600,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -256,7 +256,7 @@ export default function EmailPage() {
                   background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Mail size={24} style={{ color: '#4A7AAB', opacity: 0.5 }} />
+                  <Mail size={24} style={{ color: '#2F6BD3', opacity: 0.5 }} />
                 </div>
                 <p style={{ margin: 0, fontSize: 13, color: isDark ? '#64748b' : '#94a3b8' }}>
                   {isRTL ? 'لا توجد رسائل' : 'No emails found'}
@@ -282,7 +282,7 @@ export default function EmailPage() {
                   {/* Unread dot */}
                   <div style={{
                     width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 6,
-                    background: !email.read ? '#4A7AAB' : 'transparent',
+                    background: !email.read ? '#2F6BD3' : 'transparent',
                   }} />
 
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -319,7 +319,7 @@ export default function EmailPage() {
                     <button onClick={(e) => handleStar(e, email.id)} style={{
                       background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex',
                     }}>
-                      <Star size={14} fill={email.starred ? '#F59E0B' : 'none'} style={{ color: email.starred ? '#F59E0B' : (isDark ? '#475569' : '#cbd5e1') }} />
+                      <Star size={14} fill={email.starred ? '#C9860A' : 'none'} style={{ color: email.starred ? '#C9860A' : (isDark ? '#475569' : '#cbd5e1') }} />
                     </button>
                     <button onClick={(e) => handleDelete(e, email.id)} style={{
                       background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex',
@@ -348,7 +348,7 @@ export default function EmailPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+                    background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
                   }}>
@@ -376,7 +376,7 @@ export default function EmailPage() {
                   background: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Star size={15} fill={selectedEmail.starred ? '#F59E0B' : 'none'} style={{ color: selectedEmail.starred ? '#F59E0B' : (isDark ? '#64748b' : '#94a3b8') }} />
+                  <Star size={15} fill={selectedEmail.starred ? '#C9860A' : 'none'} style={{ color: selectedEmail.starred ? '#C9860A' : (isDark ? '#64748b' : '#94a3b8') }} />
                 </button>
                 <button onClick={() => handleToggleRead({ stopPropagation: () => {} }, selectedEmail.id)} style={{
                   width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -390,7 +390,7 @@ export default function EmailPage() {
                   background: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Trash2 size={15} style={{ color: '#EF4444' }} />
+                  <Trash2 size={15} style={{ color: '#D6403B' }} />
                 </button>
                 <button onClick={() => setSelectedEmail(null)} style={{
                   width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -454,7 +454,7 @@ export default function EmailPage() {
                   display: 'flex', alignItems: 'center', gap: 8,
                   padding: '10px 20px', borderRadius: 10, border: 'none',
                   background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
-                  color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  color: '#2F6BD3', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 <CornerUpLeft size={15} />
@@ -618,14 +618,14 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px', borderRadius: 8,
-              border: errors.to ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+              border: errors.to ? '1.5px solid #D6403B' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
               background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
             }}>
               {toName && (
                 <span style={{
                   padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                   background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
-                  color: '#4A7AAB', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                  color: '#2F6BD3', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
                 }}>
                   {toName}
                   <X size={12} style={{ cursor: 'pointer' }} onClick={() => { setTo(''); setToName(''); setContactId(''); }} />
@@ -674,7 +674,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
                   >
                     <div style={{
                       width: 28, height: 28, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+                      background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0,
                     }}>
@@ -692,7 +692,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
                 ))}
               </div>
             )}
-            {errors.to && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.to}</span>}
+            {errors.to && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.to}</span>}
           </div>
 
           {/* Subject */}
@@ -706,13 +706,13 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
               placeholder={isRTL ? 'موضوع الرسالة' : 'Email subject'}
               style={{
                 width: '100%', padding: '8px 12px', borderRadius: 8,
-                border: errors.subject ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                border: errors.subject ? '1.5px solid #D6403B' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
                 background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
                 fontSize: 13, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none',
                 boxSizing: 'border-box',
               }}
             />
-            {errors.subject && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.subject}</span>}
+            {errors.subject && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.subject}</span>}
           </div>
 
           {/* Template selector + Opportunity link (row) */}
@@ -774,14 +774,14 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
               placeholder={isRTL ? 'اكتب رسالتك هنا...' : 'Write your message here...'}
               style={{
                 flex: 1, minHeight: 180, padding: '10px 12px', borderRadius: 8,
-                border: errors.body ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                border: errors.body ? '1.5px solid #D6403B' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
                 background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
                 fontSize: 13, lineHeight: 1.6, color: isDark ? '#e2e8f0' : '#1e293b',
                 outline: 'none', resize: 'vertical', fontFamily: 'inherit',
                 boxSizing: 'border-box',
               }}
             />
-            {errors.body && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.body}</span>}
+            {errors.body && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.body}</span>}
           </div>
         </div>
 
@@ -802,7 +802,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
           <button onClick={handleSend} disabled={sending || !to.trim()} style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: (!to.trim() || sending) ? (isDark ? '#334155' : '#e2e8f0') : 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+            background: (!to.trim() || sending) ? (isDark ? '#334155' : '#e2e8f0') : 'linear-gradient(135deg, #2F6BD3, #2B4C6F)',
             color: (!to.trim() || sending) ? (isDark ? '#64748b' : '#94a3b8') : '#fff',
             fontSize: 13, fontWeight: 600,
             opacity: sending ? 0.7 : 1,

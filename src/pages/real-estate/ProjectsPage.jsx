@@ -16,13 +16,13 @@ const saveProjects = (data) => {
 // ── Status / Type configs ────────────────────────────────────
 const PROJECT_STATUS_CONFIG = {
   upcoming:   { ar: 'قريبا',     en: 'Upcoming',   color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
-  selling:    { ar: 'متاح للبيع', en: 'Selling',    color: '#4A7AAB', bg: 'rgba(74,122,171,0.15)' },
+  selling:    { ar: 'متاح للبيع', en: 'Selling',    color: '#2F6BD3', bg: 'rgba(74,122,171,0.15)' },
   sold_out:   { ar: 'نفد',       en: 'Sold Out',   color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)' },
   completed:  { ar: 'مكتمل',     en: 'Completed',  color: '#1B3347', bg: 'rgba(27,51,71,0.18)' },
 };
 
 const PROJECT_TYPE_CONFIG = {
-  residential: { ar: 'سكني',    en: 'Residential', color: '#4A7AAB' },
+  residential: { ar: 'سكني',    en: 'Residential', color: '#2F6BD3' },
   commercial:  { ar: 'تجاري',   en: 'Commercial',  color: '#2B4C6F' },
   mixed:       { ar: 'مختلط',   en: 'Mixed Use',   color: '#6B8DB5' },
   resort:      { ar: 'منتجع',   en: 'Resort',      color: '#1B3347' },
@@ -221,7 +221,7 @@ export default function ProjectsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KpiCard icon={Building2} label={isRTL ? 'إجمالي المشاريع' : 'Total Projects'} value={kpis.total} color="#4A7AAB" />
+        <KpiCard icon={Building2} label={isRTL ? 'إجمالي المشاريع' : 'Total Projects'} value={kpis.total} color="#2F6BD3" />
         <KpiCard icon={TrendingUp} label={isRTL ? 'متاح للبيع' : 'Selling'} value={kpis.selling} color="#2B4C6F" />
         <KpiCard icon={Layers} label={isRTL ? 'إجمالي الوحدات' : 'Total Units'} value={kpis.totalUnits.toLocaleString()} color="#1B3347" />
         <KpiCard icon={Package} label={isRTL ? 'وحدات متاحة' : 'Available Units'} value={kpis.availableUnits.toLocaleString()} color="#6B8DB5" />

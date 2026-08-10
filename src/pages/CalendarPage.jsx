@@ -17,9 +17,9 @@ const MONTHS_EN = ['January','February','March','April','May','June','July','Aug
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 const EVENT_COLORS = {
-  task: '#4A7AAB',
-  reminder: '#F59E0B',
-  activity: '#8B5CF6',
+  task: '#2F6BD3',
+  reminder: '#C9860A',
+  activity: '#5A63C4',
 };
 
 function isSameDay(d1, d2) {
@@ -211,7 +211,7 @@ export default function CalendarPage() {
   const monthLabel = isRTL ? MONTHS_AR[currentMonth] : MONTHS_EN[currentMonth];
 
   return (
-    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className={`flex items-center justify-between mb-5 flex-wrap gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -402,15 +402,15 @@ export default function CalendarPage() {
                         const priDef = TASK_PRIORITIES[t.priority];
                         return (
                           <div key={t.id} className={`flex items-start gap-2 mb-2 p-2 rounded-lg bg-gray-50 dark:bg-brand-500/[0.04] ${isRTL ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
-                            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: (priDef?.color || '#4A7AAB') + '18' }}>
-                              <CheckSquare size={11} color={priDef?.color || '#4A7AAB'} />
+                            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: (priDef?.color || '#2F6BD3') + '18' }}>
+                              <CheckSquare size={11} color={priDef?.color || '#2F6BD3'} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className={`text-xs font-semibold text-content dark:text-content-dark ${t.status === 'done' ? 'line-through opacity-60' : ''}`}>
                                 {t.title}
                               </div>
                               <div className={`flex items-center gap-1.5 mt-0.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                                <Badge size="sm" style={{ background: (priDef?.color || '#4A7AAB') + '18', color: priDef?.color || '#4A7AAB' }}>
+                                <Badge size="sm" style={{ background: (priDef?.color || '#2F6BD3') + '18', color: priDef?.color || '#2F6BD3' }}>
                                   {isRTL ? priDef?.ar : priDef?.en}
                                 </Badge>
                                 {t.contact_name && (

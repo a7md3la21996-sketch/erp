@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Filter, X } from 'lucide-react';
 import { useGlobalFilter } from '../../contexts/GlobalFilterContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
+import { getTeamMemberIds } from '../../utils/teamHelper';
 import supabase from '../../lib/supabase';
 
 const DEPARTMENTS = [
@@ -15,37 +16,60 @@ const DEPARTMENTS = [
   { value: 'operations', ar: 'العمليات', en: 'Operations' },
 ];
 
+// Module-scope so its identity is STABLE across renders. Defining it inside the
+// component made it a new component type every render, so React unmounted and
+// remounted the <select> elements on every state change — which destroyed the
+// selection mid-interaction (picking an agent/team appeared to do nothing).
+const LABEL_CLS = 'text-[10px] font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted-dark mb-1 block';
+function Field({ label, children }) {
+  return <div><span className={LABEL_CLS}>{label}</span>{children}</div>;
+}
+
+// Global "view as / filter by" control — lives in the top Header as a funnel
+// icon that opens a dropdown. Filters by department / manager / team / agent /
+// period and drives GlobalFilterContext, which data pages (Leads, Activities,
+// Tasks, Opportunities) read. Available on every page so you can always narrow
+// the whole app to a person/team/manager.
 export default function GlobalFilterBar() {
   const { i18n } = useTranslation();
-  const lang = i18n.language;
-  const isRTL = lang === 'ar';
+  const isRTL = i18n.language === 'ar';
   const { profile } = useAuth();
   const { department, setDepartment, managerId, setManagerId, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
 
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState([]);
-
   const [teamsMap, setTeamsMap] = useState({});
   const [allTeams, setAllTeams] = useState([]);
-
-  // Only fetch agents/teams when the filter bar is expanded
   const [dataLoaded, setDataLoaded] = useState(false);
+  const ref = useRef(null);
+
+  // Close on click-outside. Use `click` (not `mousedown`): a native <select>
+  // option click fires a document mousedown whose target is outside the panel,
+  // which closed the panel BEFORE the select's change committed — so picking an
+  // agent/team looked like it did nothing. Also ignore SELECT/OPTION targets.
   useEffect(() => {
-    if (!expanded && !dataLoaded) return; // defer until opened
-    if (dataLoaded) return; // already loaded
+    if (!open) return;
+    const handler = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'OPTION' || tag === 'SELECT') return;
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [open]);
+
+  // Load agents/teams the first time the menu opens.
+  useEffect(() => {
+    if (!open || dataLoaded) return;
     setDataLoaded(true);
     (async () => {
       const data = await fetchSalesAgents();
       let filtered = data || [];
-      if (profile?.role === 'sales_manager' && profile?.team_id) {
-        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-        const allowedTeams = new Set([profile.team_id, ...((children || []).map(c => c.id))]);
-        setAgents(filtered.filter(a => allowedTeams.has(a.team_id)));
-      } else if (profile?.role === 'team_leader' && profile?.team_id) {
-        // TL's team_id is the parent team. Their managed team has parent_id = TL's team_id
-        const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-        const managedTeamIds = new Set([profile.team_id, ...((childTeams || []).map(c => c.id))]);
-        setAgents(filtered.filter(a => managedTeamIds.has(a.team_id)));
+      if ((profile?.role === 'sales_manager' || profile?.role === 'team_leader') && profile?.team_id) {
+        // Same hierarchy expansion the rest of the app uses (manager = 2 levels)
+        // so agents in deeper teams aren't missing from the filter.
+        const memberIds = new Set(await getTeamMemberIds(profile.role, profile.team_id));
+        setAgents(filtered.filter(a => memberIds.has(a.id)));
       } else if (profile?.role === 'sales_agent') {
         setAgents(filtered.filter(a => a.id === profile.id));
       } else {
@@ -58,9 +82,8 @@ export default function GlobalFilterBar() {
       setTeamsMap(m);
       setAllTeams(data || []);
     });
-  }, [expanded, dataLoaded, profile?.role, profile?.team_id, profile?.id]);
+  }, [open, dataLoaded, profile?.role, profile?.team_id, profile?.id]);
 
-  // Managers = sales_manager role users (only visible to admin/operations)
   const managers = useMemo(() => {
     if (profile?.role === 'admin' || profile?.role === 'operations') {
       return (agents || []).filter(a => a.role === 'sales_manager');
@@ -68,19 +91,15 @@ export default function GlobalFilterBar() {
     return [];
   }, [agents, profile?.role]);
 
-  // Teams filtered by selected manager
   const visibleTeams = useMemo(() => {
     if (managerId === 'all') {
-      // Show all teams that have agents
       const teamIds = new Set();
       (agents || []).forEach(a => { if (a.team_id) teamIds.add(a.team_id); });
       return [...teamIds].sort((a, b) => (teamsMap[a]?.name_en || '').localeCompare(teamsMap[b]?.name_en || ''));
     }
-    // Find manager's team
     const manager = (agents || []).find(a => a.id === managerId);
     if (!manager?.team_id) return [];
     const managerTeamId = manager.team_id;
-    // Get manager's own team + child teams (where parent_id = manager's team)
     const childTeams = (allTeams || []).filter(t => t.parent_id === managerTeamId).map(t => t.id);
     return [managerTeamId, ...childTeams];
   }, [managerId, agents, allTeams, teamsMap]);
@@ -91,147 +110,95 @@ export default function GlobalFilterBar() {
       const teamIds = new Set(visibleTeams);
       list = list.filter(a => teamIds.has(a.team_id));
     }
-    if (teamId !== 'all') {
-      list = list.filter(a => a.team_id === teamId);
-    }
+    if (teamId !== 'all') list = list.filter(a => a.team_id === teamId);
     return list;
   }, [agents, managerId, teamId, visibleTeams]);
 
-  const selectClass = `
-    h-[28px] md:h-[30px] px-1.5 md:px-2 text-[11px] md:text-xs rounded-lg border border-edge dark:border-edge-dark
-    bg-surface-card dark:bg-surface-card-dark
-    text-content dark:text-content-dark
-    focus:outline-none focus:ring-1 focus:ring-brand-500/40
-    appearance-none cursor-pointer max-w-[110px] md:max-w-none
-  `.trim();
-
-  // If not expanded and not filtered, show just the toggle button
-  if (!expanded && !isFiltered) {
-    return (
-      <div
-        className={`flex items-center px-4 md:px-7 py-1.5 bg-surface-bg dark:bg-surface-bg-dark border-b border-edge/50 dark:border-edge-dark/50 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
-      >
-        <button
-          onClick={() => setExpanded(true)}
-          className={`flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark hover:text-brand-500 dark:hover:text-brand-400 transition-colors bg-transparent border-none cursor-pointer p-0 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
-        >
-          <Filter size={13} />
-          <span>{isRTL ? 'فلتر عام' : 'Global Filter'}</span>
-        </button>
-      </div>
-    );
-  }
+  const selectClass = 'w-full h-9 px-2.5 text-xs rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark focus:outline-none focus:ring-1 focus:ring-brand-500/40 cursor-pointer';
 
   return (
-    <div
-      className={`flex flex-wrap items-center gap-2 md:gap-3 px-4 md:px-7 py-2 bg-surface-card/60 dark:bg-surface-card-dark/60 border-b border-edge/50 dark:border-edge-dark/50 backdrop-blur-sm ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
-      dir={isRTL ? 'rtl' : 'ltr'}
-    >
-      {/* Filter icon */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        <Filter size={13} className={isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'} />
-        <span className={`text-xs font-medium hidden sm:inline ${isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
-          {isRTL ? 'فلتر عام' : 'Global Filter'}
-        </span>
-      </div>
-
-      {/* Department */}
-      <select
-        value={department}
-        onChange={e => { setDepartment(e.target.value); setAgentName('all'); }}
-        className={selectClass}
-        dir={isRTL ? 'rtl' : 'ltr'}
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title={isRTL ? 'فلتر عام (شخص/تيم/مانجر)' : 'Global filter (person/team/manager)'}
+        aria-label={isRTL ? 'فلتر عام' : 'Global filter'}
+        aria-expanded={open}
+        className={`relative p-2 rounded-lg border-none cursor-pointer bg-transparent ${isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}
       >
-        {DEPARTMENTS.map(d => (
-          <option key={d.value} value={d.value}>{isRTL ? d.ar : d.en}</option>
-        ))}
-      </select>
+        <Filter size={18} />
+        {isFiltered && <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-brand-500" />}
+      </button>
 
-      {/* Manager */}
-      {managers.length > 0 && (
-        <select
-          value={managerId}
-          onChange={e => { setManagerId(e.target.value); setTeamId('all'); setAgentName('all'); }}
-          className={selectClass}
+      {open && (
+        <div
           dir={isRTL ? 'rtl' : 'ltr'}
+          className="fixed top-16 inset-x-2 w-auto sm:absolute sm:top-full sm:mt-1 sm:end-0 sm:inset-x-auto sm:w-[260px] max-h-[80vh] overflow-y-auto z-[100] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg dark:shadow-2xl p-3 flex flex-col gap-2.5"
         >
-          <option value="all">{isRTL ? 'كل المديرين' : 'All Managers'}</option>
-          {managers.map(m => (
-            <option key={m.id} value={m.id}>{isRTL ? (m.full_name_ar || m.full_name_en) : (m.full_name_en || m.full_name_ar)}</option>
-          ))}
-        </select>
-      )}
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-semibold flex items-center gap-1.5 ${isFiltered ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
+              <Filter size={13} /> {isRTL ? 'فلتر عام' : 'Global filter'}
+            </span>
+            {isFiltered && (
+              <button onClick={clearFilters} className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/15 border-none rounded-md px-2 py-1 cursor-pointer transition-colors">
+                <X size={11} /> {isRTL ? 'مسح' : 'Clear'}
+              </button>
+            )}
+          </div>
 
-      {/* Team */}
-      <select
-        value={teamId}
-        onChange={e => { setTeamId(e.target.value); setAgentName('all'); }}
-        className={selectClass}
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
-        <option value="all">{isRTL ? 'كل الفرق' : 'All Teams'}</option>
-        {visibleTeams.map(t => (
-          <option key={t} value={t}>{isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t)}</option>
-        ))}
-      </select>
+          <Field label={isRTL ? 'القسم' : 'Department'}>
+            <select value={department} onChange={e => { setDepartment(e.target.value); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+              {DEPARTMENTS.map(d => <option key={d.value} value={d.value}>{isRTL ? d.ar : d.en}</option>)}
+            </select>
+          </Field>
 
-      {/* Agent */}
-      <select
-        value={agentName}
-        onChange={e => setAgentName(e.target.value)}
-        className={selectClass}
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
-        <option value="all">{isRTL ? 'كل الموظفين' : 'All Agents'}</option>
-        {filteredAgents.map(a => (
-          <option key={a.id} value={isRTL ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}>
-            {isRTL ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}
-          </option>
-        ))}
-      </select>
+          {managers.length > 0 && (
+            <Field label={isRTL ? 'المدير' : 'Manager'}>
+              <select value={managerId} onChange={e => { setManagerId(e.target.value); setTeamId('all'); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+                <option value="all">{isRTL ? 'كل المديرين' : 'All Managers'}</option>
+                {managers.map(m => <option key={m.id} value={m.id}>{isRTL ? (m.full_name_ar || m.full_name_en) : (m.full_name_en || m.full_name_ar)}</option>)}
+              </select>
+            </Field>
+          )}
 
-      {/* Period */}
-      <select value={period} onChange={e => setPeriod(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-        {[
-          { value: 'all', ar: 'كل الأوقات', en: 'All Time' },
-          { value: 'today', ar: 'اليوم', en: 'Today' },
-          { value: 'yesterday', ar: 'أمس', en: 'Yesterday' },
-          { value: 'this_week', ar: 'هذا الأسبوع', en: 'This Week' },
-          { value: 'this_month', ar: 'هذا الشهر', en: 'This Month' },
-          { value: 'last_7', ar: 'آخر 7 أيام', en: 'Last 7 Days' },
-          { value: 'last_30', ar: 'آخر 30 يوم', en: 'Last 30 Days' },
-          { value: 'custom', ar: 'فترة مخصصة', en: 'Custom Range' },
-        ].map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
-      </select>
+          <Field label={isRTL ? 'الفريق' : 'Team'}>
+            <select value={teamId} onChange={e => { setTeamId(e.target.value); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+              <option value="all">{isRTL ? 'كل الفرق' : 'All Teams'}</option>
+              {visibleTeams.map(t => <option key={t} value={t}>{isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t)}</option>)}
+            </select>
+          </Field>
 
-      {/* Custom date range */}
-      {period === 'custom' && (
-        <>
-          <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-            className={`${selectClass} w-[120px]`} />
-          <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-            className={`${selectClass} w-[120px]`} />
-        </>
-      )}
+          <Field label={isRTL ? 'الموظف' : 'Agent'}>
+            <select value={agentName} onChange={e => setAgentName(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+              <option value="all">{isRTL ? 'كل الموظفين' : 'All Agents'}</option>
+              {filteredAgents.map(a => {
+                const n = isRTL ? (a.full_name_ar || a.full_name_en) : (a.full_name_en || a.full_name_ar);
+                return <option key={a.id} value={n}>{n}</option>;
+              })}
+            </select>
+          </Field>
 
-      {/* Clear / Collapse */}
-      {isFiltered && (
-        <button
-          onClick={clearFilters}
-          className={`flex items-center gap-1 text-[11px] text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/15 border-none rounded-md px-2 py-1 cursor-pointer transition-colors ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
-        >
-          <X size={11} />
-          {isRTL ? 'مسح' : 'Clear'}
-        </button>
-      )}
+          <Field label={isRTL ? 'الفترة' : 'Period'}>
+            <select value={period} onChange={e => setPeriod(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+              {[
+                { value: 'all', ar: 'كل الأوقات', en: 'All Time' },
+                { value: 'today', ar: 'اليوم', en: 'Today' },
+                { value: 'yesterday', ar: 'أمس', en: 'Yesterday' },
+                { value: 'this_week', ar: 'هذا الأسبوع', en: 'This Week' },
+                { value: 'this_month', ar: 'هذا الشهر', en: 'This Month' },
+                { value: 'last_7', ar: 'آخر 7 أيام', en: 'Last 7 Days' },
+                { value: 'last_30', ar: 'آخر 30 يوم', en: 'Last 30 Days' },
+                { value: 'custom', ar: 'فترة مخصصة', en: 'Custom Range' },
+              ].map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
+            </select>
+          </Field>
 
-      {!isFiltered && (
-        <button
-          onClick={() => setExpanded(false)}
-          className="flex items-center text-[11px] text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark bg-transparent border-none cursor-pointer p-0 transition-colors"
-        >
-          <X size={13} />
-        </button>
+          {period === 'custom' && (
+            <div className="flex gap-2">
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className={selectClass} />
+              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className={selectClass} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

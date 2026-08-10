@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB', onClick, className: extraClass = '' }) {
+export default function KpiCard({ icon: Icon, label, value, sub, color = '#2F6BD3', onClick, className: extraClass = '' }) {
   // Safety: ensure value/label/sub are never objects (React error #310)
   const safeVal = (v) => (v != null && typeof v === 'object') ? JSON.stringify(v) : v;
   const [hov, setHov] = useState(false);

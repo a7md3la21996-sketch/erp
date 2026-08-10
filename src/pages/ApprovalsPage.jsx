@@ -14,15 +14,15 @@ import {
 import { Button, KpiCard, PageSkeleton, Pagination } from '../components/ui';
 
 const STATUS_CONFIG = {
-  pending:   { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)',  label: { ar: 'معلق',     en: 'Pending' },   icon: Clock },
-  approved:  { color: '#10B981', bg: 'rgba(16,185,129,0.1)',  label: { ar: 'موافق',     en: 'Approved' },  icon: CheckCircle },
-  rejected:  { color: '#EF4444', bg: 'rgba(239,68,68,0.1)',   label: { ar: 'مرفوض',     en: 'Rejected' },  icon: XCircle },
-  escalated: { color: '#F97316', bg: 'rgba(249,115,22,0.1)',  label: { ar: 'متصاعد',    en: 'Escalated' }, icon: AlertTriangle },
+  pending:   { color: '#C9860A', bg: 'rgba(245,158,11,0.1)',  label: { ar: 'معلق',     en: 'Pending' },   icon: Clock },
+  approved:  { color: '#158A57', bg: 'rgba(16,185,129,0.1)',  label: { ar: 'موافق',     en: 'Approved' },  icon: CheckCircle },
+  rejected:  { color: '#D6403B', bg: 'rgba(239,68,68,0.1)',   label: { ar: 'مرفوض',     en: 'Rejected' },  icon: XCircle },
+  escalated: { color: '#DD6327', bg: 'rgba(249,115,22,0.1)',  label: { ar: 'متصاعد',    en: 'Escalated' }, icon: AlertTriangle },
 };
 
 const PRIORITY_CONFIG = {
   normal: { color: '#64748B', label: { ar: 'عادي', en: 'Normal' } },
-  urgent: { color: '#EF4444', label: { ar: 'عاجل', en: 'Urgent' } },
+  urgent: { color: '#D6403B', label: { ar: 'عاجل', en: 'Urgent' } },
 };
 
 function fmtAmount(v) {
@@ -155,14 +155,14 @@ export default function ApprovalsPage() {
   const inputBg = isDark ? '#0f172a' : '#f8fafc';
   const inputBorder = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)';
   const hoverBg = isDark ? 'rgba(148,163,184,0.06)' : 'rgba(0,0,0,0.02)';
-  const brandColor = '#4A7AAB';
+  const brandColor = '#2F6BD3';
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={20} color="#fff" />
           </div>
           <div>
@@ -173,10 +173,10 @@ export default function ApprovalsPage() {
         {bulkMode && bulkSelected.size > 0 && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: textSecondary }}>{bulkSelected.size} {isRTL ? 'محدد' : 'selected'}</span>
-            <button onClick={handleBulkApprove} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#10B981', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={handleBulkApprove} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#158A57', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
               <CheckCircle size={14} /> {isRTL ? 'موافقة الكل' : 'Approve All'}
             </button>
-            <button onClick={handleBulkReject} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#EF4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={handleBulkReject} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#D6403B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
               <XCircle size={14} /> {isRTL ? 'رفض الكل' : 'Reject All'}
             </button>
           </div>
@@ -185,9 +185,9 @@ export default function ApprovalsPage() {
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <KpiCard icon={Clock} label={isRTL ? 'معلق' : 'Pending'} value={stats.pending || 0} color="#F59E0B" onClick={() => setStatusFilter('pending')} />
-        <KpiCard icon={CheckCircle} label={isRTL ? 'موافق اليوم' : 'Approved Today'} value={stats.approvedToday || 0} color="#10B981" onClick={() => setStatusFilter('approved')} />
-        <KpiCard icon={XCircle} label={isRTL ? 'مرفوض اليوم' : 'Rejected Today'} value={stats.rejectedToday || 0} color="#EF4444" onClick={() => setStatusFilter('rejected')} />
+        <KpiCard icon={Clock} label={isRTL ? 'معلق' : 'Pending'} value={stats.pending || 0} color="#C9860A" onClick={() => setStatusFilter('pending')} />
+        <KpiCard icon={CheckCircle} label={isRTL ? 'موافق اليوم' : 'Approved Today'} value={stats.approvedToday || 0} color="#158A57" onClick={() => setStatusFilter('approved')} />
+        <KpiCard icon={XCircle} label={isRTL ? 'مرفوض اليوم' : 'Rejected Today'} value={stats.rejectedToday || 0} color="#D6403B" onClick={() => setStatusFilter('rejected')} />
         <KpiCard icon={AlertTriangle} label={isRTL ? 'متوسط الاستجابة' : 'Avg Response'} value={stats.avgResponseHours ? `${stats.avgResponseHours}h` : '--'} color={brandColor} />
       </div>
 
@@ -322,7 +322,7 @@ export default function ApprovalsPage() {
                     <td style={{ padding: '12px 16px', color: textPrimary, fontWeight: 600 }}>{fmtAmount(a.amount)}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, #2F6BD3, #2B4C6F)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                           {(a.requester_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
                         <span style={{ color: textPrimary, fontSize: 13 }}>{a.requester_name || '--'}</span>
@@ -384,7 +384,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
   const cardBg = isDark ? '#1e293b' : '#fff';
   const panelBg = isDark ? '#0f172a' : '#f8fafc';
   const cardBorder = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)';
-  const brandColor = '#4A7AAB';
+  const brandColor = '#2F6BD3';
 
   const a = approval;
   const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.pending;
@@ -530,7 +530,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <TimelineItem
                 icon={<FileText size={12} />}
-                color="#4A7AAB"
+                color="#2F6BD3"
                 title={isRTL ? 'تم إنشاء الطلب' : 'Request created'}
                 detail={`${isRTL ? 'بواسطة' : 'by'} ${a.requester_name}`}
                 date={fmtDate(a.created_at)}
@@ -539,7 +539,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
               {a.status === 'approved' && (
                 <TimelineItem
                   icon={<CheckCircle size={12} />}
-                  color="#10B981"
+                  color="#158A57"
                   title={isRTL ? 'تمت الموافقة' : 'Approved'}
                   detail={`${isRTL ? 'بواسطة' : 'by'} ${a.approver_name}`}
                   date={fmtDate(a.resolved_at)}
@@ -549,7 +549,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
               {a.status === 'rejected' && (
                 <TimelineItem
                   icon={<XCircle size={12} />}
-                  color="#EF4444"
+                  color="#D6403B"
                   title={isRTL ? 'تم الرفض' : 'Rejected'}
                   detail={`${isRTL ? 'بواسطة' : 'by'} ${a.approver_name}${a.comments ? ` - ${a.comments}` : ''}`}
                   date={fmtDate(a.resolved_at)}
@@ -559,7 +559,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
               {a.status === 'escalated' && (
                 <TimelineItem
                   icon={<AlertTriangle size={12} />}
-                  color="#F97316"
+                  color="#DD6327"
                   title={isRTL ? 'تم التصعيد' : 'Escalated'}
                   detail={isRTL ? 'تجاوز وقت الانتظار المسموح' : 'Exceeded allowed wait time'}
                   date="--"
@@ -593,7 +593,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
                   onClick={() => onApprove(a.id, actionComment)}
                   style={{
                     flex: 1, padding: '10px 16px', borderRadius: 10, border: 'none',
-                    background: '#10B981', color: '#fff', fontSize: 14, fontWeight: 700,
+                    background: '#158A57', color: '#fff', fontSize: 14, fontWeight: 700,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >
@@ -603,7 +603,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
                   onClick={() => onReject(a.id, actionComment)}
                   style={{
                     flex: 1, padding: '10px 16px', borderRadius: 10, border: 'none',
-                    background: '#EF4444', color: '#fff', fontSize: 14, fontWeight: 700,
+                    background: '#D6403B', color: '#fff', fontSize: 14, fontWeight: 700,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >

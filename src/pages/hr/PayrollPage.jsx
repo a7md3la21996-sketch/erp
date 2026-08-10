@@ -394,7 +394,7 @@ export default function PayrollPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -454,7 +454,7 @@ export default function PayrollPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={DollarSign} label={lang === 'ar' ? 'صافي الرواتب' : 'Net Salaries'} value={(totalNet / 1000).toFixed(0) + 'K'} sub="EGP" color="#1B3347" />
-        <KpiCard icon={Users} label={lang === 'ar' ? 'عدد الموظفين' : 'Employees'} value={employees.length} color="#4A7AAB" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'عدد الموظفين' : 'Employees'} value={employees.length} color="#2F6BD3" />
         <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'متوسط الراتب' : 'Avg Salary'} value={(avgSalary / 1000).toFixed(1) + 'K'} sub="EGP" color="#6B8DB5" />
         <KpiCard icon={Clock} label={lang === 'ar' ? 'لديهم حضور' : 'With Attendance'} value={empWithAttendance} sub={`/ ${employees.length}`} color="#2B4C6F" />
       </div>
@@ -699,7 +699,7 @@ function PayrollDetailModal({ emp, config, onClose, lang, isRTL, month, year, MO
             .header{border-bottom:2px solid #1B3347;padding-bottom:15px;margin-bottom:20px}
             .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px}
             .row.total{border-top:2px solid #1B3347;border-bottom:none;font-weight:bold;font-size:15px;padding-top:12px}
-            .row.sub{background:#f8f8f8;font-weight:600}.add{color:#16a34a}.ded{color:#dc2626}
+            .row.sub{background:#f8f8f8;font-weight:600}.add{color:#117049}.ded{color:#B93531}
             .info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
             .info div{background:#f5f5f5;padding:10px;border-radius:8px;text-align:center}
             .info div span{display:block;font-size:11px;color:#888}.info div strong{font-size:14px}

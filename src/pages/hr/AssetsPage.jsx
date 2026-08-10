@@ -131,7 +131,7 @@ export default function AssetsPage() {
   const maintenance = assets.filter(a=>a.status==='maintenance').length;
   const totalValue = assets.reduce((s,a)=>s+a.value,0);
 
-  const statusColor = s => s==='active'?'#4A7AAB':s==='available'?'#6B8DB5':s==='maintenance'?'#EF4444':'#8BA8C8';
+  const statusColor = s => s==='active'?'#2F6BD3':s==='available'?'#6B8DB5':s==='maintenance'?'#D6403B':'#8BA8C8';
   const statusLabel = (s,lang) => ({active:lang==='ar'?'مستخدم':'Active',available:lang==='ar'?'متاح':'Available',maintenance:lang==='ar'?'صيانة':'Maintenance'}[s]||s);
 
   const filters = [
@@ -142,7 +142,7 @@ export default function AssetsPage() {
   ];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -175,9 +175,9 @@ export default function AssetsPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Package}      label={lang==='ar'?'إجمالي الأصول':'Total Assets'}   value={assets.length}  color="#1B3347" />
-        <KpiCard icon={CheckCircle2} label={lang==='ar'?'مستخدمة':'Active'}            value={active}         color="#4A7AAB" />
+        <KpiCard icon={CheckCircle2} label={lang==='ar'?'مستخدمة':'Active'}            value={active}         color="#2F6BD3" />
         <KpiCard icon={AlertCircle}  label={lang==='ar'?'متاحة':'Available'}          value={available}      color="#6B8DB5" />
-        <KpiCard icon={Clock}        label={lang==='ar'?'صيانة':'Maintenance'}        value={maintenance}    color="#EF4444" />
+        <KpiCard icon={Clock}        label={lang==='ar'?'صيانة':'Maintenance'}        value={maintenance}    color="#D6403B" />
       </div>
 
       <Card className="!rounded-xl overflow-hidden">
@@ -193,7 +193,7 @@ export default function AssetsPage() {
         {filtered.length === 0 ? (
           <div className="text-center py-16 px-5">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-              <Package size={24} color="#4A7AAB" />
+              <Package size={24} color="#2F6BD3" />
             </div>
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد أصول مسجلة':'No Assets Found'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>

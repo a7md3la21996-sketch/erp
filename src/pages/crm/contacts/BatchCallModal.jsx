@@ -13,11 +13,11 @@ import { Button } from '../../../components/ui';
 import { useToast } from '../../../contexts/ToastContext';
 
 const STATUS_DEFS = {
-  new:             { ar: 'جديد',        en: 'New',           color: '#4A7AAB' },
-  contacted:       { ar: 'تم التواصل',  en: 'Contacted',     color: '#F59E0B' },
-  following:       { ar: 'متابعة',      en: 'Following',     color: '#10B981' },
-  has_opportunity: { ar: 'لديه فرصة',   en: 'Has Opp',       color: '#059669' },
-  disqualified:    { ar: 'غير مؤهل',    en: 'DQ',            color: '#EF4444' },
+  new:             { ar: 'جديد',        en: 'New',           color: '#2F6BD3' },
+  contacted:       { ar: 'تم التواصل',  en: 'Contacted',     color: '#C9860A' },
+  following:       { ar: 'متابعة',      en: 'Following',     color: '#158A57' },
+  has_opportunity: { ar: 'لديه فرصة',   en: 'Has Opp',       color: '#117049' },
+  disqualified:    { ar: 'غير مؤهل',    en: 'DQ',            color: '#D6403B' },
 };
 
 export default function BatchCallModal({
@@ -55,12 +55,12 @@ export default function BatchCallModal({
   const total = batchContacts.length;
 
   const CALL_RESULTS = [
-    { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
-    { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
-    { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
+    { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#158A57' },
+    { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#C9860A' },
+    { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#D6403B' },
     { value: 'switched_off', label: isRTL ? 'مغلق' : 'Switched Off', color: '#6b7280' },
-    { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#9333EA' },
-    { value: 'callback', label: isRTL ? 'اتصل لاحقاً' : 'Call Back', color: '#4A7AAB' },
+    { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#4951A8' },
+    { value: 'callback', label: isRTL ? 'اتصل لاحقاً' : 'Call Back', color: '#2F6BD3' },
   ];
 
   // Summary view after finishing

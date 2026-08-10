@@ -72,10 +72,10 @@ export default function HeatmapPage() {
       }}>
         <div style={{
           width: 32, height: 32, borderRadius: 9,
-          background: (color || '#4A7AAB') + '18',
+          background: (color || '#2F6BD3') + '18',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Icon size={16} color={color || '#4A7AAB'} />
+          <Icon size={16} color={color || '#2F6BD3'} />
         </div>
         <span style={{
           fontSize: 11,
@@ -88,7 +88,7 @@ export default function HeatmapPage() {
       <div style={{
         fontSize: 22,
         fontWeight: 800,
-        color: color || '#4A7AAB',
+        color: color || '#2F6BD3',
         textAlign: isRTL ? 'right' : 'left',
       }}>
         {value}
@@ -120,10 +120,10 @@ export default function HeatmapPage() {
         }}>
           <div style={{
             width: 42, height: 42, borderRadius: 12,
-            background: '#4A7AAB18',
+            background: '#2F6BD318',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Activity size={22} color="#4A7AAB" />
+            <Activity size={22} color="#2F6BD3" />
           </div>
           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
             <h1 style={{
@@ -174,8 +174,8 @@ export default function HeatmapPage() {
                   gap: 6,
                   padding: '7px 14px',
                   borderRadius: 10,
-                  border: '1px solid ' + (isActive ? '#4A7AAB' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')),
-                  background: isActive ? '#4A7AAB' : (isDark ? '#1a2332' : '#ffffff'),
+                  border: '1px solid ' + (isActive ? '#2F6BD3' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')),
+                  background: isActive ? '#2F6BD3' : (isDark ? '#1a2332' : '#ffffff'),
                   color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
                   fontSize: 12,
                   fontWeight: isActive ? 700 : 500,
@@ -209,9 +209,9 @@ export default function HeatmapPage() {
                 style={{
                   padding: '6px 14px',
                   borderRadius: 8,
-                  border: '1px solid ' + (isActive ? '#4A7AAB' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')),
+                  border: '1px solid ' + (isActive ? '#2F6BD3' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')),
                   background: isActive ? 'rgba(74,122,171,0.12)' : 'transparent',
-                  color: isActive ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                  color: isActive ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                   fontSize: 12,
                   fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
@@ -252,7 +252,7 @@ export default function HeatmapPage() {
           icon={BarChart2}
           label={isRTL ? 'الإجمالي' : 'Total'}
           value={stats.total.toLocaleString()}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <StatCard
           icon={TrendingUp}
@@ -264,7 +264,7 @@ export default function HeatmapPage() {
           icon={Flame}
           label={isRTL ? 'أطول سلسلة' : 'Longest Streak'}
           value={stats.streak + (isRTL ? ' يوم' : ' days')}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <StatCard
           icon={Calendar}
@@ -272,13 +272,13 @@ export default function HeatmapPage() {
           value={stats.busiestDay
             ? new Date(stats.busiestDay.date + 'T00:00:00').toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })
             : '-'}
-          color="#10B981"
+          color="#158A57"
         />
         <StatCard
           icon={Clock}
           label={isRTL ? 'أكثر أسبوع' : 'Busiest Week'}
           value={stats.busiestWeek ? stats.busiestWeek.count + (isRTL ? ' نشاط' : ' acts') : '-'}
-          color="#8B5CF6"
+          color="#5A63C4"
         />
       </div>
 
@@ -317,10 +317,10 @@ export default function HeatmapPage() {
           }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
-              background: '#4A7AAB18',
+              background: '#2F6BD318',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Calendar size={18} color="#4A7AAB" />
+              <Calendar size={18} color="#2F6BD3" />
             </div>
             <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
               <div style={{
@@ -371,7 +371,7 @@ export default function HeatmapPage() {
                     height: 8,
                     borderRadius: 2,
                     background: i <= Math.min(5, Math.ceil(selectedDay.count / 3))
-                      ? '#4A7AAB'
+                      ? '#2F6BD3'
                       : (isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'),
                     transition: 'background 0.2s',
                   }}
@@ -381,7 +381,7 @@ export default function HeatmapPage() {
             <span style={{
               fontSize: 11,
               fontWeight: 700,
-              color: '#4A7AAB',
+              color: '#2F6BD3',
             }}>
               {selectedDay.count <= 2
                 ? (isRTL ? 'خفيف' : 'Light')

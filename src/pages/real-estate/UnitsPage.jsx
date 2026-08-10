@@ -12,9 +12,9 @@ const STORAGE_KEY = 'platform_re_units';
 
 // ── Status Config ────────────────────────────────────────────
 const UNIT_STATUS_CONFIG = {
-  available:          { ar: 'متاح',       en: 'Available',          color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
-  reserved:           { ar: 'محجوز',      en: 'Reserved',           color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
-  sold:               { ar: 'مباع',       en: 'Sold',               color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  available:          { ar: 'متاح',       en: 'Available',          color: '#158A57', bg: 'rgba(34,197,94,0.12)' },
+  reserved:           { ar: 'محجوز',      en: 'Reserved',           color: '#C9860A', bg: 'rgba(245,158,11,0.10)' },
+  sold:               { ar: 'مباع',       en: 'Sold',               color: '#D6403B', bg: 'rgba(239,68,68,0.12)' },
   under_construction: { ar: 'تحت الإنشاء', en: 'Under Construction', color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
 };
 
@@ -389,10 +389,10 @@ export default function UnitsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KpiCard icon={Layers}      label={isRTL ? 'إجمالي الوحدات' : 'Total Units'}   value={kpis.total}     color="#4A7AAB" />
-        <KpiCard icon={Package}     label={isRTL ? 'متاح' : 'Available'}               value={kpis.available} color="#22C55E" />
-        <KpiCard icon={Clock}       label={isRTL ? 'محجوز' : 'Reserved'}               value={kpis.reserved}  color="#F59E0B" />
-        <KpiCard icon={CheckCircle} label={isRTL ? 'مباع' : 'Sold'}                    value={kpis.sold}      color="#EF4444" />
+        <KpiCard icon={Layers}      label={isRTL ? 'إجمالي الوحدات' : 'Total Units'}   value={kpis.total}     color="#2F6BD3" />
+        <KpiCard icon={Package}     label={isRTL ? 'متاح' : 'Available'}               value={kpis.available} color="#158A57" />
+        <KpiCard icon={Clock}       label={isRTL ? 'محجوز' : 'Reserved'}               value={kpis.reserved}  color="#C9860A" />
+        <KpiCard icon={CheckCircle} label={isRTL ? 'مباع' : 'Sold'}                    value={kpis.sold}      color="#D6403B" />
       </div>
 
       {/* SmartFilter */}

@@ -14,6 +14,13 @@ serve(async () => {
   const nowISO = now.toISOString();
   const threeDaysAgo = new Date(now.getTime() - 3 * 86400000).toISOString();
   const twoDaysAgo = new Date(now.getTime() - 2 * 86400000).toISOString();
+  // End of "today" in Cairo — follow-ups are bucketed by the local business day
+  // (the app uses the Cairo day, not UTC), so "due today or overdue" = before the
+  // start of tomorrow in Cairo.
+  const cairoNow = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+  const cairoTomorrow = new Date(cairoNow); cairoTomorrow.setHours(24, 0, 0, 0);
+  const tzOffsetMs = now.getTime() - cairoNow.getTime();
+  const endOfTodayISO = new Date(cairoTomorrow.getTime() + tzOffsetMs).toISOString();
   const results: string[] = [];
 
   // Get all active sales users with their teams
@@ -55,12 +62,44 @@ serve(async () => {
       results.push(`${agentName}: ${overdueCount} overdue tasks`);
     }
 
-    // 2. Stale Leads (no activity > 3 days)
+    // 1b. Follow-ups due (overdue + today). Reads contacts.next_follow_up_at —
+    // the current home of follow-ups after they left the tasks table. This is
+    // why setting a follow-up date used to produce NO notification: the alert
+    // engine only looked at `tasks`, which follow-ups no longer populate.
+    const { count: followupCount } = await supabase
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_to", agent.id)
+      .not("next_follow_up_at", "is", null)
+      .lt("next_follow_up_at", endOfTodayISO)
+      .neq("contact_status", "disqualified")
+      .or("is_deleted.is.null,is_deleted.eq.false");
+
+    if (followupCount && followupCount > 0) {
+      await supabase.from("notifications").insert([{
+        type: "followups_due",
+        title_ar: "متابعات مستحقة",
+        title_en: "Follow-ups Due",
+        body_ar: `عندك ${followupCount} متابعة مستحقة النهاردة أو متأخرة`,
+        body_en: `You have ${followupCount} follow-ups due today or overdue`,
+        url: "/contacts?followup=overdue",
+        for_user_id: agent.id,
+        for_user_name: agentName,
+        created_at: nowISO,
+      }]);
+      results.push(`${agentName}: ${followupCount} follow-ups due`);
+    }
+
+    // 2. Stale Leads (no activity > 3 days). Was gated on contact_status='active'
+    // — a status that doesn't exist (valid: new/contacted/following/
+    // has_opportunity/disqualified) — so it never fired. Now: any live,
+    // non-disqualified lead with no activity for 3+ days.
     const { count: staleCount } = await supabase
       .from("contacts")
       .select("id", { count: "exact", head: true })
-      .filter("assigned_to_names", "cs", JSON.stringify([agentName]))
-      .eq("contact_status", "active")
+      .eq("assigned_to", agent.id)
+      .neq("contact_status", "disqualified")
+      .or("is_deleted.is.null,is_deleted.eq.false")
       .lt("last_activity_at", threeDaysAgo);
 
     if (staleCount && staleCount > 0) {
@@ -147,13 +186,15 @@ serve(async () => {
     }
   }
 
-  // 5. Hot Opportunities with no activity for 3+ days (grouped per agent, max 1 notification)
+  // 5. Hot leads with no activity for 3+ days (grouped per agent). Repointed from
+  // the retired `opportunities` table to hot-temperature contacts.
   const { data: hotOpps } = await supabase
-    .from("opportunities")
-    .select("id, contact_name, assigned_to_name, temperature, updated_at")
+    .from("contacts")
+    .select("id, full_name, assigned_to_name, temperature, last_activity_at")
     .eq("temperature", "hot")
-    .not("stage", "in", '("closed_won","closed_lost")')
-    .lt("updated_at", threeDaysAgo);
+    .neq("contact_status", "disqualified")
+    .or("is_deleted.is.null,is_deleted.eq.false")
+    .lt("last_activity_at", threeDaysAgo);
 
   const hotByAgent: Record<string, number> = {};
   (hotOpps || []).forEach((opp: any) => {
@@ -167,9 +208,9 @@ serve(async () => {
       type: "hot_opportunity",
       title_ar: "فرص ساخنة محتاجة متابعة",
       title_en: "Hot Opportunities Need Follow-up",
-      body_ar: `عندك ${count} فرصة ساخنة بدون نشاط من 3 أيام`,
-      body_en: `You have ${count} hot opportunities with no activity for 3 days`,
-      url: "/crm/opportunities",
+      body_ar: `عندك ${count} ليد ساخن بدون نشاط من 3 أيام`,
+      body_en: `You have ${count} hot leads with no activity for 3 days`,
+      url: "/contacts?temperature=hot",
       for_user_id: agent.id,
       for_user_name: agentName,
       created_at: nowISO,
@@ -191,17 +232,17 @@ serve(async () => {
       .gte("created_at", todayStart.toISOString());
 
     const { count: todayOpps } = await supabase
-      .from("opportunities")
+      .from("deals")
       .select("id", { count: "exact", head: true })
-      .in("assigned_to_name", teamAgents.map((a: any) => a.full_name_en).filter(Boolean))
+      .in("agent_en", teamAgents.map((a: any) => a.full_name_en).filter(Boolean))
       .gte("created_at", todayStart.toISOString());
 
     await supabase.from("notifications").insert([{
       type: "daily_summary",
       title_ar: "ملخص اليوم",
       title_en: "Daily Summary",
-      body_ar: `فريقك النهارده: ${todayActivities || 0} نشاط، ${todayOpps || 0} فرصة جديدة`,
-      body_en: `Your team today: ${todayActivities || 0} activities, ${todayOpps || 0} new opportunities`,
+      body_ar: `فريقك النهارده: ${todayActivities || 0} نشاط، ${todayOpps || 0} صفقة جديدة`,
+      body_en: `Your team today: ${todayActivities || 0} activities, ${todayOpps || 0} new deals`,
       url: "/dashboard",
       for_user_id: manager.id,
       for_user_name: manager.full_name_en,

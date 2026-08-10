@@ -201,7 +201,7 @@ export default function BackupPage() {
     padding: '8px 16px',
     borderRadius: 8,
     border: 'none',
-    background: '#4A7AAB',
+    background: '#2F6BD3',
     color: '#fff',
     fontSize: 13,
     fontWeight: 600,
@@ -210,7 +210,7 @@ export default function BackupPage() {
 
   const btnDanger = {
     ...btnPrimary,
-    background: '#ef4444',
+    background: '#D6403B',
   };
 
   const btnSecondary = {
@@ -274,7 +274,7 @@ export default function BackupPage() {
           zIndex: 9999,
           padding: '10px 20px',
           borderRadius: 10,
-          background: toast.type === 'error' ? '#ef4444' : '#10b981',
+          background: toast.type === 'error' ? '#D6403B' : '#158A57',
           color: '#fff',
           fontSize: 13,
           fontWeight: 600,
@@ -292,7 +292,7 @@ export default function BackupPage() {
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={iconWrap('rgba(74,122,171,0.12)')}>
-            <Database size={20} color="#4A7AAB" />
+            <Database size={20} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -311,9 +311,9 @@ export default function BackupPage() {
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
-        <div style={kpiCard('#4A7AAB')}>
+        <div style={kpiCard('#2F6BD3')}>
           <div style={iconWrap('rgba(74,122,171,0.12)')}>
-            <HardDrive size={20} color="#4A7AAB" />
+            <HardDrive size={20} color="#2F6BD3" />
           </div>
           <div>
             <p style={labelStyle}>{isRTL ? 'الحجم الكلي' : 'Total Size'}</p>
@@ -321,9 +321,9 @@ export default function BackupPage() {
           </div>
         </div>
 
-        <div style={kpiCard('#10b981')}>
+        <div style={kpiCard('#158A57')}>
           <div style={iconWrap('rgba(16,185,129,0.12)')}>
-            <Key size={20} color="#10b981" />
+            <Key size={20} color="#158A57" />
           </div>
           <div>
             <p style={labelStyle}>{isRTL ? 'عدد المفاتيح' : 'Total Keys'}</p>
@@ -331,9 +331,9 @@ export default function BackupPage() {
           </div>
         </div>
 
-        <div style={kpiCard('#f59e0b')}>
+        <div style={kpiCard('#C9860A')}>
           <div style={iconWrap('rgba(245,158,11,0.12)')}>
-            <Archive size={20} color="#f59e0b" />
+            <Archive size={20} color="#C9860A" />
           </div>
           <div>
             <p style={labelStyle}>{isRTL ? 'أكبر مفتاح' : 'Largest Key'}</p>
@@ -343,9 +343,9 @@ export default function BackupPage() {
           </div>
         </div>
 
-        <div style={kpiCard('#8b5cf6')}>
+        <div style={kpiCard('#5A63C4')}>
           <div style={iconWrap('rgba(139,92,246,0.12)')}>
-            <Shield size={20} color="#8b5cf6" />
+            <Shield size={20} color="#5A63C4" />
           </div>
           <div>
             <p style={labelStyle}>{isRTL ? 'المساحة المستخدمة' : 'Space Used'}</p>
@@ -369,7 +369,7 @@ export default function BackupPage() {
             height: '100%',
             borderRadius: 4,
             width: `${usedPercent}%`,
-            background: usedPercent > 80 ? '#ef4444' : usedPercent > 50 ? '#f59e0b' : '#10b981',
+            background: usedPercent > 80 ? '#D6403B' : usedPercent > 50 ? '#C9860A' : '#158A57',
             transition: 'width 0.3s',
           }} />
         </div>
@@ -380,7 +380,7 @@ export default function BackupPage() {
         {/* Backup */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Download size={18} color="#4A7AAB" />
+            <Download size={18} color="#2F6BD3" />
             <h3 style={headingStyle}>{isRTL ? 'تحميل نسخة احتياطية' : 'Download Backup'}</h3>
           </div>
           <p style={{ ...subtitleStyle, marginBottom: 12 }}>
@@ -409,7 +409,7 @@ export default function BackupPage() {
         {/* Restore */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Upload size={18} color="#f59e0b" />
+            <Upload size={18} color="#C9860A" />
             <h3 style={headingStyle}>{isRTL ? 'استعادة نسخة احتياطية' : 'Restore Backup'}</h3>
           </div>
           <p style={{ ...subtitleStyle, marginBottom: 12 }}>
@@ -457,7 +457,7 @@ export default function BackupPage() {
                 {isRTL ? 'الإصدار: ' : 'Version: '}{restorePreview.version} | {formatDate(restorePreview.created_at)}
               </p>
               <button
-                style={{ ...btnPrimary, marginTop: 10, background: '#f59e0b' }}
+                style={{ ...btnPrimary, marginTop: 10, background: '#C9860A' }}
                 onClick={() => setShowRestoreConfirm(true)}
                 disabled={restoring}
               >
@@ -476,7 +476,7 @@ export default function BackupPage() {
               borderRadius: 8,
               background: 'rgba(239,68,68,0.1)',
               border: '1px solid rgba(239,68,68,0.3)',
-              color: '#ef4444',
+              color: '#D6403B',
               fontSize: 12,
             }}>
               {restorePreview.error}
@@ -499,7 +499,7 @@ export default function BackupPage() {
                   : `Restored ${restoreResult.restored} keys`}
               </p>
               {restoreResult.errors?.length > 0 && (
-                <ul style={{ margin: '6px 0 0', paddingInlineStart: 16, color: '#ef4444' }}>
+                <ul style={{ margin: '6px 0 0', paddingInlineStart: 16, color: '#D6403B' }}>
                   {restoreResult.errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
               )}
@@ -565,7 +565,7 @@ export default function BackupPage() {
                       fontSize: 11,
                       fontWeight: 600,
                       background: u.sizeKB > 100 ? 'rgba(239,68,68,0.1)' : u.sizeKB > 10 ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-                      color: u.sizeKB > 100 ? '#ef4444' : u.sizeKB > 10 ? '#f59e0b' : '#10b981',
+                      color: u.sizeKB > 100 ? '#D6403B' : u.sizeKB > 10 ? '#C9860A' : '#158A57',
                     }}>
                       {u.sizeKB} KB
                     </span>
@@ -618,11 +618,11 @@ export default function BackupPage() {
       <div style={{
         ...card,
         borderColor: 'rgba(239,68,68,0.3)',
-        background: isDark ? '#1a1a2e' : '#fef2f2',
+        background: isDark ? '#1a1a2e' : '#FBEDEC',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <AlertTriangle size={18} color="#ef4444" />
-          <h3 style={{ ...headingStyle, color: '#ef4444' }}>
+          <AlertTriangle size={18} color="#D6403B" />
+          <h3 style={{ ...headingStyle, color: '#D6403B' }}>
             {isRTL ? 'منطقة الخطر' : 'Danger Zone'}
           </h3>
         </div>
@@ -642,7 +642,7 @@ export default function BackupPage() {
         <div style={overlayStyle} dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setShowRestoreConfirm(false)}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <AlertTriangle size={22} color="#f59e0b" />
+              <AlertTriangle size={22} color="#C9860A" />
               <h3 style={headingStyle}>{isRTL ? 'تأكيد الاستعادة' : 'Confirm Restore'}</h3>
             </div>
             <p style={{ ...subtitleStyle, marginBottom: 20 }}>
@@ -654,7 +654,7 @@ export default function BackupPage() {
               <button style={btnSecondary} onClick={() => setShowRestoreConfirm(false)}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
-              <button style={{ ...btnPrimary, background: '#f59e0b' }} onClick={handleRestore}>
+              <button style={{ ...btnPrimary, background: '#C9860A' }} onClick={handleRestore}>
                 <Upload size={14} />
                 {isRTL ? 'استعادة' : 'Restore'}
               </button>
@@ -668,8 +668,8 @@ export default function BackupPage() {
         <div style={overlayStyle} dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setShowClearConfirm(false)}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <AlertTriangle size={22} color="#ef4444" />
-              <h3 style={{ ...headingStyle, color: '#ef4444' }}>{isRTL ? 'حذف جميع البيانات' : 'Clear All Data'}</h3>
+              <AlertTriangle size={22} color="#D6403B" />
+              <h3 style={{ ...headingStyle, color: '#D6403B' }}>{isRTL ? 'حذف جميع البيانات' : 'Clear All Data'}</h3>
             </div>
             <p style={{ ...subtitleStyle, marginBottom: 20 }}>
               {isRTL
@@ -693,8 +693,8 @@ export default function BackupPage() {
         <div style={{ ...overlayStyle, zIndex: 210 }} dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setShowClearDoubleConfirm(false)}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Trash2 size={22} color="#ef4444" />
-              <h3 style={{ ...headingStyle, color: '#ef4444' }}>{isRTL ? 'تأكيد نهائي' : 'Final Confirmation'}</h3>
+              <Trash2 size={22} color="#D6403B" />
+              <h3 style={{ ...headingStyle, color: '#D6403B' }}>{isRTL ? 'تأكيد نهائي' : 'Final Confirmation'}</h3>
             </div>
             <p style={{ ...subtitleStyle, marginBottom: 20, fontWeight: 600 }}>
               {isRTL

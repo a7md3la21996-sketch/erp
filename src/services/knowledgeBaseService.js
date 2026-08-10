@@ -7,12 +7,12 @@ const MAX_ARTICLES = 500;
 
 // ── Categories ─────────────────────────────────────────────────────────
 export const CATEGORIES = {
-  sales_process:      { ar: 'عمليات المبيعات',    en: 'Sales Process',       color: '#4A7AAB', icon: 'TrendingUp' },
-  product_info:       { ar: 'معلومات المنتجات',    en: 'Product Info',        color: '#10B981', icon: 'Package' },
-  objection_handling: { ar: 'معالجة الاعتراضات',   en: 'Objection Handling',  color: '#F59E0B', icon: 'MessageCircle' },
-  onboarding:         { ar: 'تأهيل الموظفين',      en: 'Onboarding',         color: '#8B5CF6', icon: 'UserPlus' },
-  policies:           { ar: 'السياسات',            en: 'Policies',           color: '#EF4444', icon: 'Shield' },
-  faq:                { ar: 'الأسئلة الشائعة',     en: 'FAQ',                color: '#06B6D4', icon: 'HelpCircle' },
+  sales_process:      { ar: 'عمليات المبيعات',    en: 'Sales Process',       color: '#2F6BD3', icon: 'TrendingUp' },
+  product_info:       { ar: 'معلومات المنتجات',    en: 'Product Info',        color: '#158A57', icon: 'Package' },
+  objection_handling: { ar: 'معالجة الاعتراضات',   en: 'Objection Handling',  color: '#C9860A', icon: 'MessageCircle' },
+  onboarding:         { ar: 'تأهيل الموظفين',      en: 'Onboarding',         color: '#5A63C4', icon: 'UserPlus' },
+  policies:           { ar: 'السياسات',            en: 'Policies',           color: '#D6403B', icon: 'Shield' },
+  faq:                { ar: 'الأسئلة الشائعة',     en: 'FAQ',                color: '#2088A0', icon: 'HelpCircle' },
 };
 
 // ── localStorage helpers ───────────────────────────────────────────────

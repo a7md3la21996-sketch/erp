@@ -22,9 +22,9 @@ import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { exportToPrintableHTML } from '../services/reportExportService';
 
 // ── Constants ────────────────────────────────────────────────────
-const ACCENT = '#4A7AAB';
-const CHART_COLORS = ['#4A7AAB', '#6B8DB5', '#2B4C6F', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
-const PIE_COLORS = ['#4A7AAB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B8DB5', '#2B4C6F'];
+const ACCENT = '#2F6BD3';
+const CHART_COLORS = ['#2F6BD3', '#6B8DB5', '#2B4C6F', '#158A57', '#C9860A', '#D6403B', '#5A63C4', '#C14D7E'];
+const PIE_COLORS = ['#2F6BD3', '#158A57', '#C9860A', '#D6403B', '#5A63C4', '#C14D7E', '#6B8DB5', '#2B4C6F'];
 
 const TABS = [
   { id: 'funnel', icon: GitBranch, en: 'Conversion Funnel', ar: 'قمع التحويل' },
@@ -465,19 +465,19 @@ function FunnelTab({ data, trendData, isDark, isRTL, cardStyle, tableHeaderStyle
           label={isRTL ? 'معدل التحويل' : 'Overall Conversion'}
           value={`${data[data.length - 1]?.overallRate || 0}%`}
           icon={TrendingUp}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           label={isRTL ? 'أعلى تسرب' : 'Highest Drop-off'}
           value={`${Math.max(...data.map(d => d.dropOffPct))}%`}
           icon={ArrowDownRight}
-          color="#EF4444"
+          color="#D6403B"
         />
         <KpiCard
           label={isRTL ? 'الصفقات المغلقة' : 'Closed Won'}
           value={data[data.length - 1]?.count || 0}
           icon={Trophy}
-          color="#F59E0B"
+          color="#C9860A"
         />
       </div>
 
@@ -511,13 +511,13 @@ function FunnelTab({ data, trendData, isDark, isRTL, cardStyle, tableHeaderStyle
                   </div>
                 </div>
                 <div style={{ width: 70, flexShrink: 0, textAlign: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: stage.conversionRate >= 50 ? '#10B981' : stage.conversionRate >= 25 ? '#F59E0B' : '#EF4444' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: stage.conversionRate >= 50 ? '#158A57' : stage.conversionRate >= 25 ? '#C9860A' : '#D6403B' }}>
                     {stage.conversionRate}%
                   </span>
                 </div>
                 {i > 0 && (
                   <div style={{ width: 70, flexShrink: 0, textAlign: 'center' }}>
-                    <span style={{ fontSize: 11, color: '#EF4444' }}>-{stage.dropOff} ({stage.dropOffPct}%)</span>
+                    <span style={{ fontSize: 11, color: '#D6403B' }}>-{stage.dropOff} ({stage.dropOffPct}%)</span>
                   </div>
                 )}
               </div>
@@ -539,7 +539,7 @@ function FunnelTab({ data, trendData, isDark, isRTL, cardStyle, tableHeaderStyle
               <YAxis tick={{ fontSize: 11, fill: textSecondary }} stroke={axisColor} />
               <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
               <Area type="monotone" dataKey="newOpps" name={isRTL ? 'فرص جديدة' : 'New Opps'} stroke={ACCENT} fill={`${ACCENT}30`} strokeWidth={2} />
-              <Area type="monotone" dataKey="conversions" name={isRTL ? 'تحويلات' : 'Conversions'} stroke="#10B981" fill="#10B98130" strokeWidth={2} />
+              <Area type="monotone" dataKey="conversions" name={isRTL ? 'تحويلات' : 'Conversions'} stroke="#158A57" fill="#158A5730" strokeWidth={2} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -571,8 +571,8 @@ function FunnelTab({ data, trendData, isDark, isRTL, cardStyle, tableHeaderStyle
                   <td style={tableCellStyle}>
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                      background: stage.conversionRate >= 50 ? '#10B98118' : stage.conversionRate >= 25 ? '#F59E0B18' : '#EF444418',
-                      color: stage.conversionRate >= 50 ? '#10B981' : stage.conversionRate >= 25 ? '#F59E0B' : '#EF4444',
+                      background: stage.conversionRate >= 50 ? '#158A5718' : stage.conversionRate >= 25 ? '#C9860A18' : '#D6403B18',
+                      color: stage.conversionRate >= 50 ? '#158A57' : stage.conversionRate >= 25 ? '#C9860A' : '#D6403B',
                     }}>
                       {stage.conversionRate}%
                     </span>
@@ -607,9 +607,9 @@ function ROITab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellSty
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KpiCard label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={totalLeads.toLocaleString()} icon={Users} color={ACCENT} />
-        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#10B981" />
-        <KpiCard label={isRTL ? 'إجمالي التكلفة' : 'Total Cost'} value={fmtMoney(totalCost)} icon={TrendingDown} color="#EF4444" />
-        <KpiCard label={isRTL ? 'العائد الكلي' : 'Overall ROI'} value={`${overallROI}%`} icon={TrendingUp} color={overallROI > 0 ? '#10B981' : '#EF4444'} />
+        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#158A57" />
+        <KpiCard label={isRTL ? 'إجمالي التكلفة' : 'Total Cost'} value={fmtMoney(totalCost)} icon={TrendingDown} color="#D6403B" />
+        <KpiCard label={isRTL ? 'العائد الكلي' : 'Overall ROI'} value={`${overallROI}%`} icon={TrendingUp} color={overallROI > 0 ? '#158A57' : '#D6403B'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -625,8 +625,8 @@ function ROITab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellSty
                 <XAxis type="number" tick={{ fontSize: 11, fill: textSecondary }} stroke={axisColor} tickFormatter={fmtMoney} />
                 <YAxis type="category" dataKey="source" tick={{ fontSize: 11, fill: textSecondary }} width={80} stroke={axisColor} />
                 <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} formatter={fmtMoney} />} />
-                <Bar dataKey="revenue" name={isRTL ? 'الإيراد' : 'Revenue'} fill="#10B981" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="cost" name={isRTL ? 'التكلفة' : 'Cost'} fill="#EF4444" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" name={isRTL ? 'الإيراد' : 'Revenue'} fill="#158A57" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="cost" name={isRTL ? 'التكلفة' : 'Cost'} fill="#D6403B" radius={[0, 4, 4, 0]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </BarChart>
             </ResponsiveContainer>
@@ -683,8 +683,8 @@ function ROITab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellSty
                   <td style={tableCellStyle}>
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                      background: row.roi > 0 ? '#10B98118' : '#EF444418',
-                      color: row.roi > 0 ? '#10B981' : '#EF4444',
+                      background: row.roi > 0 ? '#158A5718' : '#D6403B18',
+                      color: row.roi > 0 ? '#158A57' : '#D6403B',
                     }}>
                       {row.roi > 0 ? '+' : ''}{row.roi}%
                     </span>
@@ -708,9 +708,9 @@ function CycleTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellS
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KpiCard label={isRTL ? 'متوسط الدورة' : 'Avg Cycle'} value={`${data.overallAvg} ${isRTL ? 'يوم' : 'days'}`} icon={Clock} color={ACCENT} />
-        <KpiCard label={isRTL ? 'أسرع وكيل' : 'Fastest Agent'} value={data.agentAvg[0]?.agent || '—'} sub={`${data.agentAvg[0]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Zap} color="#10B981" />
-        <KpiCard label={isRTL ? 'أبطأ وكيل' : 'Slowest Agent'} value={data.agentAvg[data.agentAvg.length - 1]?.agent || '—'} sub={`${data.agentAvg[data.agentAvg.length - 1]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Clock} color="#EF4444" />
-        <KpiCard label={isRTL ? 'المراحل' : 'Stages Tracked'} value={data.stageAvg.length} icon={Activity} color="#8B5CF6" />
+        <KpiCard label={isRTL ? 'أسرع وكيل' : 'Fastest Agent'} value={data.agentAvg[0]?.agent || '—'} sub={`${data.agentAvg[0]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Zap} color="#158A57" />
+        <KpiCard label={isRTL ? 'أبطأ وكيل' : 'Slowest Agent'} value={data.agentAvg[data.agentAvg.length - 1]?.agent || '—'} sub={`${data.agentAvg[data.agentAvg.length - 1]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Clock} color="#D6403B" />
+        <KpiCard label={isRTL ? 'المراحل' : 'Stages Tracked'} value={data.stageAvg.length} icon={Activity} color="#5A63C4" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -791,8 +791,8 @@ function CycleTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellS
                   <td style={tableCellStyle}>
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                      background: agent.avgDays <= data.overallAvg ? '#10B98118' : '#F59E0B18',
-                      color: agent.avgDays <= data.overallAvg ? '#10B981' : '#F59E0B',
+                      background: agent.avgDays <= data.overallAvg ? '#158A5718' : '#C9860A18',
+                      color: agent.avgDays <= data.overallAvg ? '#158A57' : '#C9860A',
                     }}>
                       {agent.avgDays <= data.overallAvg ? (isRTL ? 'سريع' : 'Fast') : (isRTL ? 'بطيء' : 'Slow')}
                     </span>
@@ -835,10 +835,10 @@ function WinLossTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCel
     <div>
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard label={isRTL ? 'نسبة الفوز' : 'Win Rate'} value={`${data.overallWinRate}%`} icon={Trophy} color="#10B981" />
+        <KpiCard label={isRTL ? 'نسبة الفوز' : 'Win Rate'} value={`${data.overallWinRate}%`} icon={Trophy} color="#158A57" />
         <KpiCard label={isRTL ? 'فرص مربوحة' : 'Total Won'} value={data.totalWon} icon={TrendingUp} color={ACCENT} />
-        <KpiCard label={isRTL ? 'فرص خاسرة' : 'Total Lost'} value={data.totalLost} icon={TrendingDown} color="#EF4444" />
-        <KpiCard label={isRTL ? 'أسباب الخسارة' : 'Loss Reasons'} value={data.lostReasons.length} icon={Target} color="#F59E0B" />
+        <KpiCard label={isRTL ? 'فرص خاسرة' : 'Total Lost'} value={data.totalLost} icon={TrendingDown} color="#D6403B" />
+        <KpiCard label={isRTL ? 'أسباب الخسارة' : 'Loss Reasons'} value={data.lostReasons.length} icon={Target} color="#C9860A" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -854,7 +854,7 @@ function WinLossTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCel
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: textSecondary }} stroke={axisColor} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: textSecondary }} stroke={axisColor} tickFormatter={v => `${v}%`} />
                 <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} formatter={fmtPct} />} />
-                <Line type="monotone" dataKey="winRate" name={isRTL ? 'نسبة الفوز' : 'Win Rate'} stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} />
+                <Line type="monotone" dataKey="winRate" name={isRTL ? 'نسبة الفوز' : 'Win Rate'} stroke="#158A57" strokeWidth={2} dot={{ r: 4, fill: '#158A57' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -925,8 +925,8 @@ function WinLossTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCel
                     {i === 0 ? <Trophy size={16} style={{ color: '#FFD700' }} /> : i === 1 ? <Award size={16} style={{ color: '#C0C0C0' }} /> : i + 1}
                   </td>
                   <td style={{ ...tableCellStyle, fontWeight: 500 }}>{agent.agent}</td>
-                  <td style={{ ...tableCellStyle, color: '#10B981' }}>{agent.won}</td>
-                  <td style={{ ...tableCellStyle, color: '#EF4444' }}>{agent.lost}</td>
+                  <td style={{ ...tableCellStyle, color: '#158A57' }}>{agent.won}</td>
+                  <td style={{ ...tableCellStyle, color: '#D6403B' }}>{agent.lost}</td>
                   <td style={tableCellStyle}>{agent.total}</td>
                   <td style={tableCellStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -937,10 +937,10 @@ function WinLossTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCel
                       }}>
                         <div style={{
                           width: `${agent.winRate}%`, height: '100%', borderRadius: 3,
-                          background: agent.winRate >= 60 ? '#10B981' : agent.winRate >= 40 ? '#F59E0B' : '#EF4444',
+                          background: agent.winRate >= 60 ? '#158A57' : agent.winRate >= 40 ? '#C9860A' : '#D6403B',
                         }} />
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: agent.winRate >= 60 ? '#10B981' : agent.winRate >= 40 ? '#F59E0B' : '#EF4444' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: agent.winRate >= 60 ? '#158A57' : agent.winRate >= 40 ? '#C9860A' : '#D6403B' }}>
                         {agent.winRate}%
                       </span>
                     </div>
@@ -975,11 +975,11 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KpiCard label={isRTL ? 'أفضل وكيل' : 'Top Agent'} value={topAgent?.agent || '—'} sub={fmtMoney(topAgent?.revenue || 0)} icon={Trophy} color="#FFD700" />
-        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#10B981" />
+        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#158A57" />
         <KpiCard label={isRTL ? 'متوسط التحويل' : 'Avg Conversion'} value={`${avgConversion}%`} icon={Target} color={ACCENT} />
-        <KpiCard label={isRTL ? 'صفقات رابحة' : 'Total Won'} value={totalWon} icon={Award} color="#10B981" />
-        <KpiCard label={isRTL ? 'صفقات خاسرة' : 'Total Lost'} value={totalLost} icon={TrendingDown} color="#EF4444" />
-        <KpiCard label={isRTL ? 'عدد الوكلاء' : 'Total Agents'} value={data.length} icon={Users} color="#8B5CF6" />
+        <KpiCard label={isRTL ? 'صفقات رابحة' : 'Total Won'} value={totalWon} icon={Award} color="#158A57" />
+        <KpiCard label={isRTL ? 'صفقات خاسرة' : 'Total Lost'} value={totalLost} icon={TrendingDown} color="#D6403B" />
+        <KpiCard label={isRTL ? 'عدد الوكلاء' : 'Total Agents'} value={data.length} icon={Users} color="#5A63C4" />
       </div>
 
       {/* Agent Cards */}
@@ -1014,13 +1014,13 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               {[
-                { label: isRTL ? 'فرص' : 'Opps', value: agent.opps, color: '#F59E0B' },
-                { label: isRTL ? 'رابحة' : 'Won', value: agent.deals, color: '#10B981' },
-                { label: isRTL ? 'خاسرة' : 'Lost', value: agent.lost || 0, color: '#EF4444' },
-                { label: isRTL ? 'تحويل' : 'Conv %', value: `${agent.conversionRate}%`, color: agent.conversionRate >= 20 ? '#10B981' : '#EF4444' },
+                { label: isRTL ? 'فرص' : 'Opps', value: agent.opps, color: '#C9860A' },
+                { label: isRTL ? 'رابحة' : 'Won', value: agent.deals, color: '#158A57' },
+                { label: isRTL ? 'خاسرة' : 'Lost', value: agent.lost || 0, color: '#D6403B' },
+                { label: isRTL ? 'تحويل' : 'Conv %', value: `${agent.conversionRate}%`, color: agent.conversionRate >= 20 ? '#158A57' : '#D6403B' },
                 { label: isRTL ? 'متوسط صفقة' : 'Avg Deal', value: fmtMoney(agent.avgDealSize || 0), color: ACCENT },
                 { label: isRTL ? 'دورة' : 'Cycle', value: `${agent.avgCycleDays}d`, color: '#6B8DB5' },
-                { label: isRTL ? 'أنشطة' : 'Activities', value: agent.totalActivities, color: '#8B5CF6' },
+                { label: isRTL ? 'أنشطة' : 'Activities', value: agent.totalActivities, color: '#5A63C4' },
                 { label: isRTL ? 'مكالمات' : 'Calls', value: agent.calls, color: '#2B4C6F' },
               ].map(stat => (
                 <div key={stat.label} style={{
@@ -1069,8 +1069,8 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
               <YAxis tick={{ fontSize: 11, fill: textSecondary }} stroke={axisColor} />
               <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
               <Bar dataKey="calls" name={isRTL ? 'مكالمات' : 'Calls'} fill={ACCENT} stackId="a" />
-              <Bar dataKey="meetings" name={isRTL ? 'اجتماعات' : 'Meetings'} fill="#8B5CF6" stackId="a" />
-              <Bar dataKey="emails" name={isRTL ? 'إيميلات' : 'Emails'} fill="#F59E0B" stackId="a" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="meetings" name={isRTL ? 'اجتماعات' : 'Meetings'} fill="#5A63C4" stackId="a" />
+              <Bar dataKey="emails" name={isRTL ? 'إيميلات' : 'Emails'} fill="#C9860A" stackId="a" radius={[6, 6, 0, 0]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
             </BarChart>
           </ResponsiveContainer>
@@ -1117,18 +1117,18 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
                     </div>
                   </td>
                   <td style={tableCellStyle}>{agent.opps}</td>
-                  <td style={{ ...tableCellStyle, color: '#10B981', fontWeight: 500 }}>{agent.deals}</td>
-                  <td style={{ ...tableCellStyle, color: '#EF4444', fontWeight: 500 }}>{agent.lost || 0}</td>
+                  <td style={{ ...tableCellStyle, color: '#158A57', fontWeight: 500 }}>{agent.deals}</td>
+                  <td style={{ ...tableCellStyle, color: '#D6403B', fontWeight: 500 }}>{agent.lost || 0}</td>
                   <td style={tableCellStyle}>
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                      background: agent.conversionRate >= 20 ? '#10B98118' : '#F59E0B18',
-                      color: agent.conversionRate >= 20 ? '#10B981' : '#F59E0B',
+                      background: agent.conversionRate >= 20 ? '#158A5718' : '#C9860A18',
+                      color: agent.conversionRate >= 20 ? '#158A57' : '#C9860A',
                     }}>
                       {agent.conversionRate}%
                     </span>
                   </td>
-                  <td style={{ ...tableCellStyle, fontWeight: 600, color: '#10B981' }}>{fmtMoney(agent.revenue)}</td>
+                  <td style={{ ...tableCellStyle, fontWeight: 600, color: '#158A57' }}>{fmtMoney(agent.revenue)}</td>
                   <td style={tableCellStyle}>{fmtMoney(agent.avgDealSize || 0)}</td>
                   <td style={tableCellStyle}>{agent.avgCycleDays} {isRTL ? 'يوم' : 'days'}</td>
                   <td style={tableCellStyle}>{agent.totalActivities}</td>

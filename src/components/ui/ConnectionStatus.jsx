@@ -59,13 +59,13 @@ export default function ConnectionStatus() {
     return (
       <div style={{
         ...bannerStyle,
-        background: isDark ? '#78350f' : '#fbbf24',
-        color: isDark ? '#fef3c7' : '#78350f',
+        background: isDark ? '#78350f' : '#D69A24',
+        color: isDark ? '#F6E6C0' : '#78350f',
       }}>
         <WifiOff size={14} />
         <span>
           {isRTL
-            ? 'أنت شغال offline — البيانات بتتحفظ محلياً'
+            ? 'غير متصل بالإنترنت — يتم حفظ البيانات محلياً'
             : "You're offline — data is saved locally"}
         </span>
       </div>
@@ -76,12 +76,12 @@ export default function ConnectionStatus() {
     return (
       <div style={{
         ...bannerStyle,
-        background: isDark ? '#064e3b' : '#34d399',
-        color: isDark ? '#d1fae5' : '#064e3b',
+        background: isDark ? '#064e3b' : '#5FB68F',
+        color: isDark ? '#C9E7D9' : '#064e3b',
       }}>
         <Wifi size={14} />
         <span>
-          {isRTL ? 'الاتصال رجع' : 'Connection restored'}
+          {isRTL ? 'تمت استعادة الاتصال' : 'Connection restored'}
         </span>
       </div>
     );

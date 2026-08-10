@@ -393,7 +393,7 @@ export default function ChartBuilderPage() {
     <div style={pageStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <BarChart3 size={26} style={{ color: '#4A7AAB' }} />
+        <BarChart3 size={26} style={{ color: '#2F6BD3' }} />
         <h1 style={titleStyle}>{isRTL ? 'منشئ الرسوم البيانية' : 'Chart Builder'}</h1>
         <Badge style={{ marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }}>
           {savedCharts.length} {isRTL ? 'رسم محفوظ' : 'saved'}
@@ -482,9 +482,9 @@ export default function ChartBuilderPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                    border: `1.5px solid ${active ? '#4A7AAB' : (isDark ? '#374151' : '#d1d5db')}`,
+                    border: `1.5px solid ${active ? '#2F6BD3' : (isDark ? '#374151' : '#d1d5db')}`,
                     background: active ? (isDark ? '#1a3a5c' : '#e8f0fe') : 'transparent',
-                    color: active ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                    color: active ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                     fontSize: 12, fontWeight: active ? 600 : 400,
                     transition: 'all 0.15s',
                   }}
@@ -510,7 +510,7 @@ export default function ChartBuilderPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                    border: `1.5px solid ${active ? '#4A7AAB' : (isDark ? '#374151' : '#d1d5db')}`,
+                    border: `1.5px solid ${active ? '#2F6BD3' : (isDark ? '#374151' : '#d1d5db')}`,
                     background: active ? (isDark ? '#1a3a5c' : '#e8f0fe') : 'transparent',
                     fontSize: 12, fontWeight: active ? 600 : 400,
                     color: isDark ? '#e2e8f0' : '#1e293b',
@@ -556,7 +556,7 @@ export default function ChartBuilderPage() {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '9px 20px', borderRadius: 8, cursor: 'pointer',
                 border: 'none',
-                background: (!chartName.trim() || !dataSource || !xAxis) ? (isDark ? '#374151' : '#d1d5db') : '#4A7AAB',
+                background: (!chartName.trim() || !dataSource || !xAxis) ? (isDark ? '#374151' : '#d1d5db') : '#2F6BD3',
                 color: '#fff', fontSize: 13, fontWeight: 600,
                 opacity: (!chartName.trim() || !dataSource || !xAxis) ? 0.5 : 1,
                 transition: 'all 0.15s',
@@ -638,7 +638,7 @@ export default function ChartBuilderPage() {
                     <button style={actionBtnStyle} onClick={() => handleEdit(chart)} title={isRTL ? 'تعديل' : 'Edit'}>
                       <Pencil size={15} />
                     </button>
-                    <button style={{ ...actionBtnStyle, color: '#ef4444' }} onClick={() => handleDelete(chart.id)} title={isRTL ? 'حذف' : 'Delete'}>
+                    <button style={{ ...actionBtnStyle, color: '#D6403B' }} onClick={() => handleDelete(chart.id)} title={isRTL ? 'حذف' : 'Delete'}>
                       <Trash2 size={15} />
                     </button>
                   </div>

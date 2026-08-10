@@ -382,12 +382,12 @@ export default function EmployeeAttendanceSummary() {
         </div>
       </div>
       <div class="kpi-grid">
-        <div class="kpi-box"><div class="val" style="color:#22c55e;">${kpis.presentDays}</div><div class="lbl">${isRTL ? 'أيام الحضور' : 'Present Days'}</div></div>
-        <div class="kpi-box"><div class="val" style="color:#ef4444;">${kpis.absentDays}</div><div class="lbl">${isRTL ? 'أيام الغياب' : 'Absent Days'}</div></div>
-        <div class="kpi-box"><div class="val" style="color:#3b82f6;">${kpis.leaveDays}</div><div class="lbl">${isRTL ? 'أيام الإجازة' : 'Leave Days'}</div></div>
-        <div class="kpi-box"><div class="val" style="color:#f59e0b;">${kpis.totalLateMinutes}</div><div class="lbl">${isRTL ? 'دقائق التأخير' : 'Late Minutes'}</div></div>
-        <div class="kpi-box"><div class="val" style="color:#4a7aab;">${kpis.totalHours}</div><div class="lbl">${isRTL ? 'إجمالي الساعات' : 'Total Hours'}</div></div>
-        <div class="kpi-box"><div class="val" style="color:#22c55e;">${kpis.rate}%</div><div class="lbl">${isRTL ? 'نسبة الحضور' : 'Attendance %'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#158A57;">${kpis.presentDays}</div><div class="lbl">${isRTL ? 'أيام الحضور' : 'Present Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#D6403B;">${kpis.absentDays}</div><div class="lbl">${isRTL ? 'أيام الغياب' : 'Absent Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#2F6BD3;">${kpis.leaveDays}</div><div class="lbl">${isRTL ? 'أيام الإجازة' : 'Leave Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#C9860A;">${kpis.totalLateMinutes}</div><div class="lbl">${isRTL ? 'دقائق التأخير' : 'Late Minutes'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#2F6BD3;">${kpis.totalHours}</div><div class="lbl">${isRTL ? 'إجمالي الساعات' : 'Total Hours'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#158A57;">${kpis.rate}%</div><div class="lbl">${isRTL ? 'نسبة الحضور' : 'Attendance %'}</div></div>
       </div>
       <h3 style="font-size:14px;margin:16px 0 4px;">${isRTL ? 'سجل الحضور اليومي' : 'Daily Attendance Record'}</h3>
       <table>
@@ -469,12 +469,12 @@ export default function EmployeeAttendanceSummary() {
         <>
           {/* ── KPI Cards ──────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <KpiCard icon={CheckCircle2} label={isRTL ? 'أيام الحضور' : 'Present Days'} value={String(kpis.presentDays || 0)} color="#22C55E" />
-            <KpiCard icon={XCircle} label={isRTL ? 'أيام الغياب' : 'Absent Days'} value={String(kpis.absentDays || 0)} color="#EF4444" />
-            <KpiCard icon={Calendar} label={isRTL ? 'أيام الإجازة' : 'Leave Days'} value={String(kpis.leaveDays || 0)} color="#3B82F6" />
-            <KpiCard icon={AlertCircle} label={isRTL ? 'دقائق التأخير' : 'Late Minutes'} value={String(kpis.totalLateMinutes || 0)} color="#F59E0B" />
-            <KpiCard icon={Clock} label={isRTL ? 'إجمالي الساعات' : 'Total Hours'} value={String(kpis.totalHours || 0)} color="#4A7AAB" />
-            <KpiCard icon={CheckCircle2} label={isRTL ? 'نسبة الحضور' : 'Attendance %'} value={String(kpis.rate || 0) + '%'} color="#22C55E" />
+            <KpiCard icon={CheckCircle2} label={isRTL ? 'أيام الحضور' : 'Present Days'} value={String(kpis.presentDays || 0)} color="#158A57" />
+            <KpiCard icon={XCircle} label={isRTL ? 'أيام الغياب' : 'Absent Days'} value={String(kpis.absentDays || 0)} color="#D6403B" />
+            <KpiCard icon={Calendar} label={isRTL ? 'أيام الإجازة' : 'Leave Days'} value={String(kpis.leaveDays || 0)} color="#2F6BD3" />
+            <KpiCard icon={AlertCircle} label={isRTL ? 'دقائق التأخير' : 'Late Minutes'} value={String(kpis.totalLateMinutes || 0)} color="#C9860A" />
+            <KpiCard icon={Clock} label={isRTL ? 'إجمالي الساعات' : 'Total Hours'} value={String(kpis.totalHours || 0)} color="#2F6BD3" />
+            <KpiCard icon={CheckCircle2} label={isRTL ? 'نسبة الحضور' : 'Attendance %'} value={String(kpis.rate || 0) + '%'} color="#158A57" />
           </div>
 
           {/* ── Attendance Chart ─────────────────────────────── */}

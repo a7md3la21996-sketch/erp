@@ -243,7 +243,7 @@ function BreakdownLines({ item, isRTL, lang }) {
 function BreakdownRow({ label, value, positive, isRTL }) {
   const isNeg = value < 0;
   const Icon = isNeg ? Minus : Plus;
-  const color = isNeg ? '#EF4444' : positive ? '#1B3347' : '#10B981';
+  const color = isNeg ? '#D6403B' : positive ? '#1B3347' : '#158A57';
   return (
     <div className={`flex items-center justify-between py-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
       <span className={`inline-flex items-center gap-1.5 text-xs text-content dark:text-content-dark ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -290,7 +290,7 @@ function SalaryTimeline({ emp, history, isRTL, lang }) {
               const change = prev ? Number(item.salary) - Number(prev.salary) : 0;
               const changePct = prev && prev.salary ? Math.round((change / Number(prev.salary)) * 100) : 0;
               const TrendIcon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : null;
-              const trendColor = change > 0 ? '#10B981' : change < 0 ? '#EF4444' : '#6B8DB5';
+              const trendColor = change > 0 ? '#158A57' : change < 0 ? '#D6403B' : '#6B8DB5';
               return (
                 <div key={item.id} className={`relative mb-4 last:mb-0 ${isRTL ? 'pr-3' : 'pl-3'}`}>
                   <div

@@ -85,7 +85,7 @@ export default function HRHomePage() {
   })();
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Greeting */}
       <div className={`mb-6 ${isRTL ? 'text-right' : 'text-left'}`}>
         <h1 className="m-0 text-2xl md:text-3xl font-bold text-content dark:text-content-dark">
@@ -99,9 +99,9 @@ export default function HRHomePage() {
       {/* Workforce KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
         <KpiCard icon={Users} label={isRTL ? 'الموظفين النشطين' : 'Active Headcount'} value={stats.activeCount} color="#1B3347" />
-        <KpiCard icon={Clock} label={isRTL ? 'في فترة التجربة' : 'On Probation'} value={stats.probation} color="#F59E0B" />
-        <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط مدة العمل' : 'Avg Tenure'} value={`${stats.avgTenure} ${isRTL ? 'سنة' : 'yrs'}`} color="#4A7AAB" />
-        <KpiCard icon={AlertTriangle} label={isRTL ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={stats.expiringContracts.length} color="#EF4444" />
+        <KpiCard icon={Clock} label={isRTL ? 'في فترة التجربة' : 'On Probation'} value={stats.probation} color="#C9860A" />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط مدة العمل' : 'Avg Tenure'} value={`${stats.avgTenure} ${isRTL ? 'سنة' : 'yrs'}`} color="#2F6BD3" />
+        <KpiCard icon={AlertTriangle} label={isRTL ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={stats.expiringContracts.length} color="#D6403B" />
       </div>
 
       {/* Two-column layout: Pending Actions + Upcoming */}
@@ -123,7 +123,7 @@ export default function HRHomePage() {
             <div className="px-5 py-3">
               <ActionRow
                 icon={CalendarOff}
-                color="#4A7AAB"
+                color="#2F6BD3"
                 count={pendingLeaves.length}
                 label={isRTL ? 'طلبات إجازة للموافقة' : 'Leave requests pending'}
                 to="/hr/leave"
@@ -131,7 +131,7 @@ export default function HRHomePage() {
               />
               <ActionRow
                 icon={Receipt}
-                color="#10B981"
+                color="#158A57"
                 count={pendingClaims.length}
                 label={isRTL ? 'طلبات مصروفات للموافقة' : 'Expense claims pending'}
                 to="/hr/expense-claims"
@@ -139,7 +139,7 @@ export default function HRHomePage() {
               />
               <ActionRow
                 icon={DollarSign}
-                color="#F59E0B"
+                color="#C9860A"
                 count={null}
                 label={isRTL ? 'تشغيل المرتبات للشهر الحالي' : 'Run payroll for this month'}
                 to="/hr/payroll/run"
@@ -147,7 +147,7 @@ export default function HRHomePage() {
               />
               <ActionRow
                 icon={Briefcase}
-                color="#EF4444"
+                color="#D6403B"
                 count={stats.expiringContracts.length}
                 label={isRTL ? 'عقود تنتهي خلال 30 يوم' : 'Contracts expiring in 30 days'}
                 to="/hr/contracts"

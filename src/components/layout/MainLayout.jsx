@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../contexts/AuthContext';
-import GlobalFilterBar from './GlobalFilterBar';
+import { PageActionsProvider } from '../../contexts/PageActionsContext';
 import ProductTour from '../ui/ProductTour';
 import BottomNav from './BottomNav';
 import { onError } from '../../utils/errorReporter';
@@ -131,7 +131,7 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark overflow-x-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#0A0D13] overflow-x-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         collapsed={collapsed}
         onToggle={toggleCollapsed}
@@ -142,11 +142,12 @@ export default function MainLayout() {
         className="transition-[margin] duration-300 overflow-x-hidden"
         style={{ marginInlineStart: isMobile ? 0 : (collapsed ? 72 : 260) }}
       >
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        <GlobalFilterBar />
-        <main className="pb-[64px] md:pb-0">
-          <Outlet />
-        </main>
+        <PageActionsProvider>
+          <Header onMenuClick={() => setSidebarOpen(true)} />
+          <main className="pb-[64px] md:pb-0">
+            <Outlet />
+          </main>
+        </PageActionsProvider>
       </div>
       <BottomNav onMoreClick={() => setSidebarOpen(true)} />
       {/* <ProductTour /> — disabled until launch */}

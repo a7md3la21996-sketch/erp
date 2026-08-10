@@ -30,16 +30,16 @@ async function getTeamMemberIds(role, teamId) {
 }
 
 export const TASK_PRIORITIES = {
-  high:   { ar: 'عالية',   en: 'High',   color: '#EF4444' },
-  medium: { ar: 'متوسطة',  en: 'Medium', color: '#F97316' },
+  high:   { ar: 'عالية',   en: 'High',   color: '#D6403B' },
+  medium: { ar: 'متوسطة',  en: 'Medium', color: '#DD6327' },
   low:    { ar: 'منخفضة',  en: 'Low',    color: '#6B8DB5' },
 };
 
 export const TASK_STATUSES = {
   pending:     { ar: 'معلقة',   en: 'Pending',     color: '#8BA8C8' },
-  in_progress: { ar: 'جارية',   en: 'In Progress', color: '#4A7AAB' },
+  in_progress: { ar: 'جارية',   en: 'In Progress', color: '#2F6BD3' },
   done:        { ar: 'مكتملة',  en: 'Done',        color: '#2B4C6F' },
-  cancelled:   { ar: 'ملغية',   en: 'Cancelled',   color: '#EF4444' },
+  cancelled:   { ar: 'ملغية',   en: 'Cancelled',   color: '#D6403B' },
 };
 
 export const TASK_TYPES = {

@@ -947,12 +947,12 @@ export default function HelpCenterPage() {
     borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     text: isDark ? '#e4e4e7' : '#1a1a2e',
     textMuted: isDark ? '#a0a0b4' : '#6b7280',
-    accent: '#6366f1',
+    accent: '#5A63C4',
     accentLight: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
     accentBg: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)',
     tipBg: isDark ? 'rgba(234,179,8,0.1)' : 'rgba(234,179,8,0.08)',
     tipBorder: isDark ? 'rgba(234,179,8,0.3)' : 'rgba(234,179,8,0.4)',
-    tipText: isDark ? '#fbbf24' : '#92400e',
+    tipText: isDark ? '#D69A24' : '#6D4805',
     hoverBg: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
     searchBg: isDark ? '#0f1129' : '#f1f5f9',
     activeSidebar: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)',
@@ -1009,7 +1009,7 @@ export default function HelpCenterPage() {
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12,
-            background: `linear-gradient(135deg, ${colors.accent}, ${isDark ? '#818cf8' : '#4f46e5'})`,
+            background: `linear-gradient(135deg, ${colors.accent}, ${isDark ? '#767DCF' : '#3D4389'})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>
@@ -1173,7 +1173,7 @@ export default function HelpCenterPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
-            background: `linear-gradient(135deg, ${colors.accent}, #818cf8)`,
+            background: `linear-gradient(135deg, ${colors.accent}, #767DCF)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <BookOpen size={20} color="#fff" />

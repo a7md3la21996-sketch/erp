@@ -880,12 +880,12 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const CleaningSummaryCard = () => {
     if (!cleaningSummary) return null;
     const items = [];
-    if (cleaningSummary.phonesNormalized > 0) items.push({ count: cleaningSummary.phonesNormalized, label: isRTL ? 'أرقام تم تنظيفها' : 'Phones normalized', color: '#10B981', type: 'fixed' });
-    if (cleaningSummary.namesCleaned > 0) items.push({ count: cleaningSummary.namesCleaned, label: isRTL ? 'أسماء تم تنظيفها' : 'Names cleaned', color: '#10B981', type: 'fixed' });
-    if (cleaningSummary.emailsFixed > 0) items.push({ count: cleaningSummary.emailsFixed, label: isRTL ? 'ايميلات تم إصلاحها' : 'Emails fixed', color: '#10B981', type: 'fixed' });
-    if (cleaningSummary.emptyRowsRemoved > 0) items.push({ count: cleaningSummary.emptyRowsRemoved, label: isRTL ? 'صفوف فارغة محذوفة' : 'Empty rows removed', color: '#10B981', type: 'fixed' });
-    if (cleaningSummary.invalidPhones > 0) items.push({ count: cleaningSummary.invalidPhones, label: isRTL ? 'أرقام غير صحيحة' : 'Invalid phones', color: '#F59E0B', type: 'warning' });
-    if (cleaningSummary.invalidEmails > 0) items.push({ count: cleaningSummary.invalidEmails, label: isRTL ? 'ايميلات غير صحيحة' : 'Invalid emails', color: '#F59E0B', type: 'warning' });
+    if (cleaningSummary.phonesNormalized > 0) items.push({ count: cleaningSummary.phonesNormalized, label: isRTL ? 'أرقام تم تنظيفها' : 'Phones normalized', color: '#158A57', type: 'fixed' });
+    if (cleaningSummary.namesCleaned > 0) items.push({ count: cleaningSummary.namesCleaned, label: isRTL ? 'أسماء تم تنظيفها' : 'Names cleaned', color: '#158A57', type: 'fixed' });
+    if (cleaningSummary.emailsFixed > 0) items.push({ count: cleaningSummary.emailsFixed, label: isRTL ? 'ايميلات تم إصلاحها' : 'Emails fixed', color: '#158A57', type: 'fixed' });
+    if (cleaningSummary.emptyRowsRemoved > 0) items.push({ count: cleaningSummary.emptyRowsRemoved, label: isRTL ? 'صفوف فارغة محذوفة' : 'Empty rows removed', color: '#158A57', type: 'fixed' });
+    if (cleaningSummary.invalidPhones > 0) items.push({ count: cleaningSummary.invalidPhones, label: isRTL ? 'أرقام غير صحيحة' : 'Invalid phones', color: '#C9860A', type: 'warning' });
+    if (cleaningSummary.invalidEmails > 0) items.push({ count: cleaningSummary.invalidEmails, label: isRTL ? 'ايميلات غير صحيحة' : 'Invalid emails', color: '#C9860A', type: 'warning' });
 
     if (items.length === 0) return null;
 
@@ -945,7 +945,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           width: 36,
           height: 20,
           borderRadius: 10,
-          background: checked ? '#4A7AAB' : (isDark ? '#334155' : '#cbd5e1'),
+          background: checked ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
           cursor: 'pointer',
           position: 'relative',
           transition: 'background 0.2s',
@@ -1026,7 +1026,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: detail.status === 'corrected' ? '#10B981' : detail.status === 'warning' ? '#F59E0B' : '#EF4444',
+              background: detail.status === 'corrected' ? '#158A57' : detail.status === 'warning' ? '#C9860A' : '#D6403B',
               display: 'inline-block',
               flexShrink: 0,
             }} />
@@ -1101,7 +1101,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           <button onClick={onClose} style={{
             background: 'transparent',
             border: 'none',
-            color: '#4A7AAB',
+            color: '#2F6BD3',
             fontSize: 20,
             cursor: 'pointer',
             padding: 4,
@@ -1119,8 +1119,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
               padding: 10,
               textAlign: 'center',
               fontSize: 12,
-              borderBottom: `2px solid ${step === i + 1 ? '#4A7AAB' : step > i + 1 ? '#10B981' : 'transparent'}`,
-              color: step === i + 1 ? '#4A7AAB' : step > i + 1 ? '#10B981' : (isDark ? '#94a3b8' : '#64748b'),
+              borderBottom: `2px solid ${step === i + 1 ? '#2F6BD3' : step > i + 1 ? '#158A57' : 'transparent'}`,
+              color: step === i + 1 ? '#2F6BD3' : step > i + 1 ? '#158A57' : (isDark ? '#94a3b8' : '#64748b'),
             }}>
               {step > i + 1 ? '\u2713 ' : `${i + 1}. `}{s}
             </div>
@@ -1139,7 +1139,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 onDragLeave={leave}
                 onClick={() => document.getElementById('fileInput').click()}
                 style={{
-                  border: `2px dashed ${dragging ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db')}`,
+                  border: `2px dashed ${dragging ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db')}`,
                   borderRadius: 12,
                   padding: 40,
                   textAlign: 'center',
@@ -1197,7 +1197,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                   fontSize: 12,
                   background: 'rgba(239,68,68,0.1)',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#EF4444',
+                  color: '#D6403B',
                 }}>
                   {isRTL ? 'الحقول المطلوبة: الاسم الكامل، رقم الموبايل' : 'Required fields: Full Name, Phone'}
                 </div>
@@ -1240,7 +1240,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                           </td>
                           <td style={{ padding: '8px 10px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.06)' : '#f3f4f6'}`, textAlign: 'center', fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                             {currentMapping !== '_skip' ? (
-                              <span style={{ color: '#10B981' }}>{'\u2192'}</span>
+                              <span style={{ color: '#158A57' }}>{'\u2192'}</span>
                             ) : (
                               <span style={{ color: isDark ? '#475569' : '#9ca3af' }}>{'\u00D7'}</span>
                             )}
@@ -1310,9 +1310,9 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                         fontSize: 12,
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        border: `1px solid ${duplicateAction === opt.value ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db')}`,
+                        border: `1px solid ${duplicateAction === opt.value ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db')}`,
                         background: duplicateAction === opt.value ? 'rgba(74,122,171,0.1)' : 'transparent',
-                        color: duplicateAction === opt.value ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                        color: duplicateAction === opt.value ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                       }}
                     >
                       {opt.icon} {opt.label}
@@ -1348,7 +1348,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                       borderRadius: 6,
                       fontSize: 11,
                       background: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.08)',
-                      color: '#10B981',
+                      color: '#158A57',
                       border: '1px solid rgba(16,185,129,0.2)',
                     }}>
                       {'\u2713'} {rule}
@@ -1417,7 +1417,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                           width: 36,
                           height: 20,
                           borderRadius: 10,
-                          background: validationRules.autoFillDepartment ? '#4A7AAB' : (isDark ? '#334155' : '#cbd5e1'),
+                          background: validationRules.autoFillDepartment ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
                           cursor: 'pointer',
                           position: 'relative',
                           transition: 'background 0.2s',
@@ -1471,7 +1471,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                           width: 36,
                           height: 20,
                           borderRadius: 10,
-                          background: validationRules.autoFillSource ? '#4A7AAB' : (isDark ? '#334155' : '#cbd5e1'),
+                          background: validationRules.autoFillSource ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
                           cursor: 'pointer',
                           position: 'relative',
                           transition: 'background 0.2s',
@@ -1525,7 +1525,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                           width: 36,
                           height: 20,
                           borderRadius: 10,
-                          background: validationRules.autoFillContactType ? '#4A7AAB' : (isDark ? '#334155' : '#cbd5e1'),
+                          background: validationRules.autoFillContactType ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
                           cursor: 'pointer',
                           position: 'relative',
                           transition: 'background 0.2s',
@@ -1559,12 +1559,12 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                       {isRTL ? '🔍 مراجعة المسؤولين' : '🔍 Agent Mapping Review'}
                     </span>
                     {unmatchedCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#D6403B' }}>
                         {isRTL ? `${unmatchedCount} غير مطابق` : `${unmatchedCount} unmatched`}
                       </span>
                     )}
                     {partialCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#D97706' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#A66E08' }}>
                         {isRTL ? `${partialCount} تطابق جزئي` : `${partialCount} partial`}
                       </span>
                     )}
@@ -1578,10 +1578,10 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                     {agentMatchTable.map(a => {
                       const override = agentOverrides[a.raw];
                       const effectiveStatus = override ? 'exact' : a.status;
-                      const statusColor = effectiveStatus === 'exact' ? '#10B981'
-                        : effectiveStatus === 'normalized' ? '#10B981'
-                        : effectiveStatus === 'partial' ? '#D97706'
-                        : '#EF4444';
+                      const statusColor = effectiveStatus === 'exact' ? '#158A57'
+                        : effectiveStatus === 'normalized' ? '#158A57'
+                        : effectiveStatus === 'partial' ? '#A66E08'
+                        : '#D6403B';
                       const statusIcon = effectiveStatus === 'exact' ? '✓'
                         : effectiveStatus === 'normalized' ? '✓'
                         : effectiveStatus === 'partial' ? '⚠'
@@ -1597,27 +1597,27 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                               </span>
                             </div>
                             {a.status === 'exact' && !override && (
-                              <div style={{ fontSize: 10, color: '#10B981', marginTop: 2 }}>
+                              <div style={{ fontSize: 10, color: '#158A57', marginTop: 2 }}>
                                 {isRTL ? `مطابق: ${a.matchedTo}` : `Matched: ${a.matchedTo}`}
                               </div>
                             )}
                             {a.status === 'normalized' && !override && (
-                              <div style={{ fontSize: 10, color: '#10B981', marginTop: 2 }}>
+                              <div style={{ fontSize: 10, color: '#158A57', marginTop: 2 }}>
                                 {isRTL ? `مطابق تلقائياً: ${a.matchedTo}` : `Auto-matched: ${a.matchedTo}`}
                               </div>
                             )}
                             {a.status === 'partial' && !override && (
-                              <div style={{ fontSize: 10, color: '#D97706', marginTop: 2 }}>
+                              <div style={{ fontSize: 10, color: '#A66E08', marginTop: 2 }}>
                                 {isRTL ? `اقتراح: ${a.matchedTo} — اختار يدوياً للتأكيد` : `Suggested: ${a.matchedTo} — pick manually to confirm`}
                               </div>
                             )}
                             {a.status === 'none' && !override && (
-                              <div style={{ fontSize: 10, color: '#EF4444', marginTop: 2 }}>
+                              <div style={{ fontSize: 10, color: '#D6403B', marginTop: 2 }}>
                                 {isRTL ? 'غير موجود في السيستم — لو تركت كده هيتحفظ بنفس الاسم (قد لا يظهر لأي سيلز)' : 'Not found in users — will save as-is (may not appear for any agent)'}
                               </div>
                             )}
                             {override && (
-                              <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 2 }}>
+                              <div style={{ fontSize: 10, color: '#2F6BD3', marginTop: 2 }}>
                                 {isRTL ? `هيتحول لـ: ${override}` : `Will map to: ${override}`}
                               </div>
                             )}
@@ -1642,9 +1642,9 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
               )}
 
               <SummaryCards items={[
-                { num: newRows.length, label: isRTL ? 'عميل جديد' : 'New Contacts', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', icon: '\u2705' },
-                { num: dupRows.length, label: isRTL ? (duplicateAction === 'skip' ? 'تخطي' : duplicateAction === 'overwrite' ? 'استبدال' : 'فرصة جديدة') : (duplicateAction === 'skip' ? 'Skipped' : duplicateAction === 'overwrite' ? 'Overwrite' : 'Opportunity'), color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)', icon: duplicateAction === 'skip' ? '\u23ED' : duplicateAction === 'overwrite' ? '\u270F\uFE0F' : '\u{1F504}' },
-                { num: errRows.length, label: isRTL ? 'مرفوض' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)', icon: '\u274C' },
+                { num: newRows.length, label: isRTL ? 'عميل جديد' : 'New Contacts', color: '#158A57', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', icon: '\u2705' },
+                { num: dupRows.length, label: isRTL ? (duplicateAction === 'skip' ? 'تخطي' : duplicateAction === 'overwrite' ? 'استبدال' : 'فرصة جديدة') : (duplicateAction === 'skip' ? 'Skipped' : duplicateAction === 'overwrite' ? 'Overwrite' : 'Opportunity'), color: '#2F6BD3', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)', icon: duplicateAction === 'skip' ? '\u23ED' : duplicateAction === 'overwrite' ? '\u270F\uFE0F' : '\u{1F504}' },
+                { num: errRows.length, label: isRTL ? 'مرفوض' : 'Rejected', color: '#D6403B', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)', icon: '\u274C' },
               ]} />
 
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
@@ -1665,7 +1665,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                     <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                       {isRTL ? `جاري المعالجة ${importProgress.current} من ${importProgress.total}...` : `Processing ${importProgress.current} of ${importProgress.total}...`}
                     </span>
-                    <span style={{ fontSize: 12, color: '#4A7AAB', fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, color: '#2F6BD3', fontWeight: 600 }}>
                       {Math.round((importProgress.current / importProgress.total) * 100)}%
                     </span>
                   </div>
@@ -1681,7 +1681,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                       borderRadius: 4,
                       transition: 'width 0.3s',
                       width: `${(importProgress.current / importProgress.total) * 100}%`,
-                      background: 'linear-gradient(90deg, #4A7AAB, #10B981)',
+                      background: 'linear-gradient(90deg, #2F6BD3, #158A57)',
                     }} />
                   </div>
                 </div>
@@ -1745,11 +1745,11 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                             borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.06)' : '#f3f4f6'}`,
                             fontSize: 12,
                           }}>
-                            {r._status === 'new' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: '#10B981', fontSize: 12 }}>{'\u2705'} {isRTL ? 'جديد' : 'New'}</span>}
-                            {r._status === 'opportunity' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(74,122,171,0.15)', color: '#4A7AAB', fontSize: 12 }}>{'\u{1F504}'} {isRTL ? 'فرصة' : 'Opp'}</span>}
-                            {r._status === 'overwrite' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#F59E0B', fontSize: 12 }}>{'\u270F\uFE0F'} {isRTL ? 'استبدال' : 'Overwrite'}</span>}
+                            {r._status === 'new' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: '#158A57', fontSize: 12 }}>{'\u2705'} {isRTL ? 'جديد' : 'New'}</span>}
+                            {r._status === 'opportunity' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(74,122,171,0.15)', color: '#2F6BD3', fontSize: 12 }}>{'\u{1F504}'} {isRTL ? 'فرصة' : 'Opp'}</span>}
+                            {r._status === 'overwrite' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#C9860A', fontSize: 12 }}>{'\u270F\uFE0F'} {isRTL ? 'استبدال' : 'Overwrite'}</span>}
                             {r._status === 'skipped' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(107,114,128,0.15)', color: '#6B7280', fontSize: 12 }}>{'\u23ED'} {isRTL ? 'تخطي' : 'Skipped'}</span>}
-                            {r._status === 'error' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.15)', color: '#EF4444', fontSize: 12 }}>{'\u274C'} {isRTL ? 'خطأ' : 'Error'}</span>}
+                            {r._status === 'error' && <span style={{ padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.15)', color: '#D6403B', fontSize: 12 }}>{'\u274C'} {isRTL ? 'خطأ' : 'Error'}</span>}
                           </td>
                           <td style={{
                             padding: '8px 10px',
@@ -1779,11 +1779,11 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 {isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}
               </div>
               <SummaryCards items={[
-                { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
-                { num: overwriteRows.length, label: isRTL ? 'تم استبدالهم' : 'Overwritten', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
-                { num: oppRows.length, label: isRTL ? 'فرص جديدة' : 'Opportunities', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)' },
+                { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#158A57', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+                { num: overwriteRows.length, label: isRTL ? 'تم استبدالهم' : 'Overwritten', color: '#C9860A', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
+                { num: oppRows.length, label: isRTL ? 'فرص جديدة' : 'Opportunities', color: '#2F6BD3', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)' },
                 { num: skippedRows.length, label: isRTL ? 'تم تخطيهم' : 'Skipped', color: '#6B7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.2)' },
-                { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
+                { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#D6403B', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
               ].filter(s => s.num > 0)} />
               {errRows.length > 0 && (
                 <Button variant="danger" onClick={downloadErrors} style={{ width: '100%' }}>

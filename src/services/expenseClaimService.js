@@ -9,14 +9,14 @@ const MAX_CLAIMS = 300;
 
 // ── Category definitions ────────────────────────────────────────────────
 export const EXPENSE_CATEGORIES = {
-  transportation:  { ar: 'مواصلات',       en: 'Transportation',   color: '#4A7AAB' },
-  meals:           { ar: 'وجبات',         en: 'Meals',            color: '#F59E0B' },
+  transportation:  { ar: 'مواصلات',       en: 'Transportation',   color: '#2F6BD3' },
+  meals:           { ar: 'وجبات',         en: 'Meals',            color: '#C9860A' },
   accommodation:   { ar: 'إقامة',         en: 'Accommodation',    color: '#6B8DB5' },
-  office_supplies: { ar: 'مستلزمات مكتبية', en: 'Office Supplies', color: '#8B5CF6' },
-  communication:   { ar: 'اتصالات',       en: 'Communication',    color: '#06B6D4' },
-  training:        { ar: 'تدريب',         en: 'Training',         color: '#10B981' },
+  office_supplies: { ar: 'مستلزمات مكتبية', en: 'Office Supplies', color: '#5A63C4' },
+  communication:   { ar: 'اتصالات',       en: 'Communication',    color: '#2088A0' },
+  training:        { ar: 'تدريب',         en: 'Training',         color: '#158A57' },
   travel:          { ar: 'سفر',           en: 'Travel',           color: '#2B4C6F' },
-  medical:         { ar: 'طبي',           en: 'Medical',          color: '#EF4444' },
+  medical:         { ar: 'طبي',           en: 'Medical',          color: '#D6403B' },
   other:           { ar: 'أخرى',          en: 'Other',            color: '#6B7280' },
 };
 

@@ -218,7 +218,7 @@ export default function CustomFieldsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={20} style={{ color: '#4A7AAB' }} />
+            <Layers size={20} style={{ color: '#2F6BD3' }} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textPrimary }}>{isRTL ? 'الحقول المخصصة' : 'Custom Fields'}</h1>
@@ -229,7 +229,7 @@ export default function CustomFieldsPage() {
           onClick={openAdd}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px',
-            borderRadius: 8, border: 'none', backgroundColor: '#4A7AAB', color: '#fff',
+            borderRadius: 8, border: 'none', backgroundColor: '#2F6BD3', color: '#fff',
             fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
@@ -273,17 +273,17 @@ export default function CustomFieldsPage() {
                   <td style={{ ...tdStyle, fontWeight: 600 }}>{f.field_name}</td>
                   <td style={tdStyle}>{f.field_name_ar || '—'}</td>
                   <td style={tdStyle}>
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, color: '#4A7AAB', backgroundColor: 'rgba(74,122,171,0.1)' }}>
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, color: '#2F6BD3', backgroundColor: 'rgba(74,122,171,0.1)' }}>
                       {getEntityLabel(f.entity)}
                     </span>
                   </td>
                   <td style={tdStyle}>
-                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, color: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.1)' }}>
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, color: '#5A63C4', backgroundColor: 'rgba(139,92,246,0.1)' }}>
                       {getTypeLabel(f.field_type)}
                     </span>
                   </td>
                   <td style={tdStyle}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: f.required ? '#10B981' : textMuted }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: f.required ? '#158A57' : textMuted }}>
                       {f.required ? (isRTL ? 'نعم' : 'Yes') : (isRTL ? 'لا' : 'No')}
                     </span>
                   </td>
@@ -296,8 +296,8 @@ export default function CustomFieldsPage() {
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                      <button onClick={() => openEdit(f)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(74,122,171,0.2)', backgroundColor: 'rgba(74,122,171,0.08)', color: '#4A7AAB', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={12} /></button>
-                      <button onClick={() => setDeleteConfirm(f)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', backgroundColor: 'rgba(239,68,68,0.08)', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
+                      <button onClick={() => openEdit(f)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(74,122,171,0.2)', backgroundColor: 'rgba(74,122,171,0.08)', color: '#2F6BD3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={12} /></button>
+                      <button onClick={() => setDeleteConfirm(f)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)', backgroundColor: 'rgba(239,68,68,0.08)', color: '#D6403B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={12} /></button>
                     </div>
                   </td>
                 </tr>
@@ -334,7 +334,7 @@ export default function CustomFieldsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {/* Entity */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'الكيان' : 'Entity'} <span style={{ color: '#EF4444' }}>*</span></label>
+                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'الكيان' : 'Entity'} <span style={{ color: '#D6403B' }}>*</span></label>
                   <select value={form.entity} onChange={e => setForm(f => ({ ...f, entity: e.target.value }))} style={inputStyle}>
                     {ENTITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>)}
                   </select>
@@ -342,7 +342,7 @@ export default function CustomFieldsPage() {
 
                 {/* Type */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'نوع الحقل' : 'Field Type'} <span style={{ color: '#EF4444' }}>*</span></label>
+                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'نوع الحقل' : 'Field Type'} <span style={{ color: '#D6403B' }}>*</span></label>
                   <select value={form.field_type} onChange={e => setForm(f => ({ ...f, field_type: e.target.value }))} style={inputStyle}>
                     {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>)}
                   </select>
@@ -350,7 +350,7 @@ export default function CustomFieldsPage() {
 
                 {/* Field Name EN */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'اسم الحقل (إنجليزي)' : 'Field Name (EN)'} <span style={{ color: '#EF4444' }}>*</span></label>
+                  <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'اسم الحقل (إنجليزي)' : 'Field Name (EN)'} <span style={{ color: '#D6403B' }}>*</span></label>
                   <input type="text" value={form.field_name} onChange={e => setForm(f => ({ ...f, field_name: e.target.value }))} style={inputStyle} placeholder="e.g. Company Size" />
                 </div>
 
@@ -375,7 +375,7 @@ export default function CustomFieldsPage() {
                 {/* Required */}
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: textPrimary }}>
-                    <input type="checkbox" checked={form.required} onChange={e => setForm(f => ({ ...f, required: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#4A7AAB' }} />
+                    <input type="checkbox" checked={form.required} onChange={e => setForm(f => ({ ...f, required: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#2F6BD3' }} />
                     {isRTL ? 'حقل مطلوب' : 'Required field'}
                   </label>
                 </div>
@@ -394,7 +394,7 @@ export default function CustomFieldsPage() {
                       <GripVertical size={12} style={{ color: textMuted, opacity: 0.4 }} />
                       <span style={{ flex: 1, fontSize: 12, color: textPrimary }}>{opt.label}</span>
                       <span style={{ fontSize: 11, color: textMuted }}>{opt.label_ar}</span>
-                      <button onClick={() => removeOption(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 2 }}><X size={12} /></button>
+                      <button onClick={() => removeOption(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 2 }}><X size={12} /></button>
                     </div>
                   ))}
 
@@ -408,7 +408,7 @@ export default function CustomFieldsPage() {
                       <label style={{ display: 'block', fontSize: 10, color: textMuted, marginBottom: 2 }}>{isRTL ? 'الخيار (عربي)' : 'Option (AR)'}</label>
                       <input type="text" value={optionDraft.label_ar} onChange={e => setOptionDraft(d => ({ ...d, label_ar: e.target.value }))} style={{ ...inputStyle, padding: '6px 10px', fontSize: 12 }} dir="rtl" onKeyDown={e => e.key === 'Enter' && addOption()} />
                     </div>
-                    <button onClick={addOption} disabled={!optionDraft.label.trim()} style={{ height: 32, padding: '0 12px', borderRadius: 8, border: 'none', backgroundColor: '#4A7AAB', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: optionDraft.label.trim() ? 1 : 0.4, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                    <button onClick={addOption} disabled={!optionDraft.label.trim()} style={{ height: 32, padding: '0 12px', borderRadius: 8, border: 'none', backgroundColor: '#2F6BD3', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: optionDraft.label.trim() ? 1 : 0.4, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                       <Plus size={12} />
                     </button>
                   </div>
@@ -421,7 +421,7 @@ export default function CustomFieldsPage() {
               <button onClick={closeModal} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${cardBorder}`, backgroundColor: 'transparent', color: textMuted, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
-              <button onClick={handleSave} disabled={saving || !form.field_name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', backgroundColor: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: (saving || !form.field_name.trim()) ? 0.5 : 1 }}>
+              <button onClick={handleSave} disabled={saving || !form.field_name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: (saving || !form.field_name.trim()) ? 0.5 : 1 }}>
                 {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : editingField ? (isRTL ? 'حفظ التعديلات' : 'Save Changes') : (isRTL ? 'إضافة' : 'Add')}
               </button>
             </div>
@@ -433,7 +433,7 @@ export default function CustomFieldsPage() {
       {deleteConfirm && (
         <div onClick={() => setDeleteConfirm(null)} dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: cardBg, borderRadius: 16, border: `1px solid ${cardBorder}`, padding: 24, width: '100%', maxWidth: 380, textAlign: 'center' }}>
-            <Trash2 size={32} style={{ color: '#EF4444', marginBottom: 12 }} />
+            <Trash2 size={32} style={{ color: '#D6403B', marginBottom: 12 }} />
             <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: textPrimary }}>
               {isRTL ? 'حذف الحقل' : 'Delete Field'}
             </h3>
@@ -446,7 +446,7 @@ export default function CustomFieldsPage() {
               <button onClick={() => setDeleteConfirm(null)} style={{ padding: '8px 20px', borderRadius: 8, border: `1px solid ${cardBorder}`, backgroundColor: 'transparent', color: textMuted, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
-              <button onClick={() => handleDelete(deleteConfirm)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', backgroundColor: '#EF4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => handleDelete(deleteConfirm)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', backgroundColor: '#D6403B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {isRTL ? 'حذف' : 'Delete'}
               </button>
             </div>

@@ -4,7 +4,7 @@ import supabase from '../../lib/supabase';
 import { Shield, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Card } from '../../components/ui';
 
-const SEV_COLOR = { high: '#EF4444', medium: '#6B8DB5', low: '#4A7AAB' };
+const SEV_COLOR = { high: '#D6403B', medium: '#6B8DB5', low: '#2F6BD3' };
 const TYPE_LABELS = {
   warning:     { ar: 'إنذار', en: 'Warning' },
   suspension:  { ar: 'إيقاف', en: 'Suspension' },
@@ -107,9 +107,9 @@ export default function EmployeeDisciplinaryTab({ emp, isRTL, lang }) {
                       <span
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
                         style={{
-                          background: c.status === 'open' ? '#6B8DB518' : '#10B98118',
-                          color: c.status === 'open' ? '#6B8DB5' : '#10B981',
-                          border: `1px solid ${c.status === 'open' ? '#6B8DB535' : '#10B98135'}`,
+                          background: c.status === 'open' ? '#6B8DB518' : '#158A5718',
+                          color: c.status === 'open' ? '#6B8DB5' : '#158A57',
+                          border: `1px solid ${c.status === 'open' ? '#6B8DB535' : '#158A5735'}`,
                         }}
                       >
                         {STATUS_LABELS[c.status]?.[lang] || c.status}

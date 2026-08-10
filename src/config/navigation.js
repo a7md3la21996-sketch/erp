@@ -9,14 +9,23 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
-  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
-    { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
-    { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
-    { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
-    { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
-    { id: 'master-leads', label: { ar: 'Master Leads', en: 'Master Leads' }, path: '/crm/master-leads', permission: P.POOL_SETTINGS },
-  ]},
+  // CRM unified into ONE entry that opens the CRM Dashboard directly (no
+  // submenu). From the dashboard you reach everything: Leads (the "Total Leads"
+  // KPI + lens cards → /contacts), Master Leads (header button → /crm/master-leads),
+  // and the hidden Opportunities / Lead-Distribution deep-links. All child routes
+  // still live in App.jsx. To restore the old submenu, replace this single entry
+  // with the commented group below.
+  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
+  // OLD CRM submenu (rollback reference):
+  // { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
+  //   { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
+  //   { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
+  //   { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
+  //   { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
+  //   { id: 'master-leads', label: { ar: 'Master Leads', en: 'Master Leads' }, path: '/crm/master-leads', permission: P.POOL_SETTINGS },
+  // ]},
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
+  { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, icon: BookUser, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, path: '/real-estate/units', permission: P.UNITS_VIEW },
@@ -33,13 +42,19 @@ export const NAV_ITEMS = [
     { id: 'ops-handover',    label: { ar: 'التسليمات',          en: 'Handover' },          path: '/operations/handover',     permission: P.OPS_HANDOVER },
     { id: 'ops-after-sales', label: { ar: 'خدمة ما بعد البيع',  en: 'After-Sales' },       path: '/operations/after-sales',  permission: P.OPS_AFTERSALES },
   ]},
-  { id: 'marketing', label: { ar: 'التسويق', en: 'Marketing' }, icon: Megaphone, permission: P.CAMPAIGNS_VIEW, children: [
-    { id: 'mkt-dashboard', label: { ar: 'نظرة عامة', en: 'Dashboard' }, path: '/marketing', permission: P.CAMPAIGNS_VIEW },
-    { id: 'mkt-campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },
-    { id: 'mkt-channels', label: { ar: 'القنوات', en: 'Channels' }, path: '/marketing/channels', permission: P.CAMPAIGNS_VIEW },
-    { id: 'mkt-funnel', label: { ar: 'القمع التسويقي', en: 'Funnel' }, path: '/marketing/funnel', permission: P.CAMPAIGNS_VIEW },
-    { id: 'mkt-roi', label: { ar: 'تقرير الأداء و ROI', en: 'ROI Report' }, path: '/marketing/roi', permission: P.CAMPAIGNS_VIEW },
-  ]},
+  // Marketing unified into ONE entry that opens the Marketing page directly (no
+  // submenu). The page has an in-page tab bar (نظرة عامة/الحملات/القنوات/القمع/ROI)
+  // that switches sections via the same /marketing/* routes. To restore the old
+  // submenu, replace this single entry with the commented group below.
+  { id: 'marketing', label: { ar: 'التسويق', en: 'Marketing' }, icon: Megaphone, path: '/marketing', permission: P.CAMPAIGNS_VIEW },
+  // OLD Marketing submenu (rollback reference):
+  // { id: 'marketing', label: { ar: 'التسويق', en: 'Marketing' }, icon: Megaphone, permission: P.CAMPAIGNS_VIEW, children: [
+  //   { id: 'mkt-dashboard', label: { ar: 'نظرة عامة', en: 'Dashboard' }, path: '/marketing', permission: P.CAMPAIGNS_VIEW },
+  //   { id: 'mkt-campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },
+  //   { id: 'mkt-channels', label: { ar: 'القنوات', en: 'Channels' }, path: '/marketing/channels', permission: P.CAMPAIGNS_VIEW },
+  //   { id: 'mkt-funnel', label: { ar: 'القمع التسويقي', en: 'Funnel' }, path: '/marketing/funnel', permission: P.CAMPAIGNS_VIEW },
+  //   { id: 'mkt-roi', label: { ar: 'تقرير الأداء و ROI', en: 'ROI Report' }, path: '/marketing/roi', permission: P.CAMPAIGNS_VIEW },
+  // ]},
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
     { id: 'hr-home',      label: { ar: 'لوحة الموارد البشرية', en: 'HR Dashboard' }, path: '/hr',          permission: P.HR_VIEW_ALL },
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },

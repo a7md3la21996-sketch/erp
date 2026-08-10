@@ -145,11 +145,11 @@ export default function TrainingPage() {
   const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
-  const statusColor = s => s==='completed'?'#4A7AAB':s==='active'?'#6B8DB5':'#8BA8C8';
+  const statusColor = s => s==='completed'?'#2F6BD3':s==='active'?'#6B8DB5':'#8BA8C8';
   const statusLabel = (s,lang) => ({ active:lang==='ar'?'نشط':'Active', completed:lang==='ar'?'مكتمل':'Completed', upcoming:lang==='ar'?'قادم':'Upcoming' }[s]||s);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -183,7 +183,7 @@ export default function TrainingPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={BookOpen}     label={lang==='ar'?'إجمالي البرامج':'Total Programs'} value={filtered.length} color="#1B3347" />
         <KpiCard icon={Clock}        label={lang==='ar'?'نشطة':'Active'}            value={active}          color="#6B8DB5" />
-        <KpiCard icon={Users}        label={lang==='ar'?'إجمالي المسجلين':'Enrolled'}         value={totalEnr}        color="#4A7AAB" />
+        <KpiCard icon={Users}        label={lang==='ar'?'إجمالي المسجلين':'Enrolled'}         value={totalEnr}        color="#2F6BD3" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'أتموا التدريب':'Completed'}        value={totalComp}       color="#2B4C6F" />
       </div>
 
@@ -194,7 +194,7 @@ export default function TrainingPage() {
         {filtered.length === 0 ? (
           <div className="text-center py-16 px-5 col-span-2">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-              <GraduationCap size={24} color='#4A7AAB' />
+              <GraduationCap size={24} color='#2F6BD3' />
             </div>
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
@@ -231,7 +231,7 @@ export default function TrainingPage() {
                 <span className="text-xs font-semibold text-brand-500">{prog.completed}/{prog.enrolled} {lang==='ar'?'موظف':'emp'}</span>
               </div>
               <div className="h-[5px] rounded-sm bg-slate-200 dark:bg-white/[0.08]">
-                <div className="h-full rounded-sm transition-[width] duration-500" style={{ width:pct+'%', background:'linear-gradient(90deg,#1B3347,#4A7AAB)' }} />
+                <div className="h-full rounded-sm transition-[width] duration-500" style={{ width:pct+'%', background:'linear-gradient(90deg,#1B3347,#2F6BD3)' }} />
               </div>
             </Card>
           );
@@ -256,7 +256,7 @@ export default function TrainingPage() {
               <Tr key={prog.id}>
                 <Td>
                   <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <div className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background:'linear-gradient(135deg,#1B3347,#4A7AAB)' }}>
+                    <div className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background:'linear-gradient(135deg,#1B3347,#2F6BD3)' }}>
                       <BookOpen size={14} color="#fff" />
                     </div>
                     <span className="font-bold">{lang==='ar'?prog.title:prog.title_en}</span>

@@ -10,11 +10,11 @@ import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Modal, ModalFoote
 const now = new Date();
 
 const typeConfig = {
-  bonus:      { ar: 'مكافأة',   en: 'Bonus',      color: '#10B981' },
-  commission: { ar: 'عمولة',    en: 'Commission',  color: '#4A7AAB' },
-  penalty:    { ar: 'جزاء',     en: 'Penalty',     color: '#EF4444' },
-  deduction:  { ar: 'خصم',      en: 'Deduction',   color: '#EF4444' },
-  addition:   { ar: 'إضافة',    en: 'Addition',    color: '#10B981' },
+  bonus:      { ar: 'مكافأة',   en: 'Bonus',      color: '#158A57' },
+  commission: { ar: 'عمولة',    en: 'Commission',  color: '#2F6BD3' },
+  penalty:    { ar: 'جزاء',     en: 'Penalty',     color: '#D6403B' },
+  deduction:  { ar: 'خصم',      en: 'Deduction',   color: '#D6403B' },
+  addition:   { ar: 'إضافة',    en: 'Addition',    color: '#158A57' },
 };
 
 function TypeBadge({ type, lang }) {
@@ -134,7 +134,7 @@ export default function BonusesPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -166,9 +166,9 @@ export default function BonusesPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 mb-5">
-        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي المكافآت' : 'Total Bonuses'}       value={fmt(totals.bonuses)}     color="#10B981" />
-        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي العمولات' : 'Total Commissions'}   value={fmt(totals.commissions)} color="#4A7AAB" />
-        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي الجزاءات' : 'Total Penalties'}     value={fmt(totals.penalties)}   color="#EF4444" />
+        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي المكافآت' : 'Total Bonuses'}       value={fmt(totals.bonuses)}     color="#158A57" />
+        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي العمولات' : 'Total Commissions'}   value={fmt(totals.commissions)} color="#2F6BD3" />
+        <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي الجزاءات' : 'Total Penalties'}     value={fmt(totals.penalties)}   color="#D6403B" />
       </div>
 
       {/* Table */}
@@ -194,7 +194,7 @@ export default function BonusesPage() {
               <tr>
                 <td colSpan={6} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                    <DollarSign size={24} color="#4A7AAB" />
+                    <DollarSign size={24} color="#2F6BD3" />
                   </div>
                   <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد تعديلات' : 'No Adjustments'}</p>
                   <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لم يتم إضافة أي مكافآت أو جزاءات بعد' : 'No bonuses or penalties added yet'}</p>

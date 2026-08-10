@@ -10,12 +10,12 @@ const STORAGE_KEY = 'platform_kpi_targets';
 
 // ── Metric Configuration ─────────────────────────────────────────
 export const METRIC_CONFIG = {
-  calls:              { ar: 'مكالمات',        en: 'Calls',             icon: 'Phone',        color: '#10B981' },
-  new_opportunities:  { ar: 'فرص جديدة',      en: 'New Opportunities', icon: 'Briefcase',    color: '#4A7AAB' },
+  calls:              { ar: 'مكالمات',        en: 'Calls',             icon: 'Phone',        color: '#158A57' },
+  new_opportunities:  { ar: 'فرص جديدة',      en: 'New Opportunities', icon: 'Briefcase',    color: '#2F6BD3' },
   closed_deals:       { ar: 'صفقات مغلقة',    en: 'Closed Deals',      icon: 'Trophy',       color: '#2B4C6F' },
   revenue:            { ar: 'الإيرادات',       en: 'Revenue',           icon: 'DollarSign',   color: '#6B8DB5' },
-  meetings:           { ar: 'اجتماعات',       en: 'Meetings',          icon: 'Users',        color: '#8B5CF6' },
-  site_visits:        { ar: 'زيارات ميدانية',  en: 'Site Visits',       icon: 'MapPin',       color: '#F59E0B' },
+  meetings:           { ar: 'اجتماعات',       en: 'Meetings',          icon: 'Users',        color: '#5A63C4' },
+  site_visits:        { ar: 'زيارات ميدانية',  en: 'Site Visits',       icon: 'MapPin',       color: '#C9860A' },
 };
 
 export const METRICS = Object.keys(METRIC_CONFIG);
@@ -149,15 +149,17 @@ export async function computeActuals(employeeId, month, year) {
         if (a.type === 'site_visit') actuals.site_visits++;
       });
     }
-    const { count: oppCount } = await supabase.from('opportunities').select('*', { count: 'exact', head: true })
+    // Opportunities retired — deals are the pipeline now. "new_opportunities"
+    // = new deals opened in the window; wins/revenue = deals marked won.
+    const { count: oppCount } = await supabase.from('deals').select('*', { count: 'exact', head: true })
       .eq('assigned_to', employeeId).gte('created_at', startDate).lte('created_at', endDate);
     actuals.new_opportunities = oppCount || 0;
-    const { data: wonDeals } = await supabase.from('opportunities').select('budget, deal_value')
-      .eq('assigned_to', employeeId).eq('stage', 'closed_won')
-      .gte('stage_changed_at', startDate).lte('stage_changed_at', endDate).range(0, 99);
+    const { data: wonDeals } = await supabase.from('deals').select('deal_value')
+      .eq('assigned_to', employeeId).eq('status', 'won')
+      .gte('updated_at', startDate).lte('updated_at', endDate).range(0, 99);
     if (wonDeals) {
       actuals.closed_deals = wonDeals.length;
-      actuals.revenue = wonDeals.reduce((sum, d) => sum + (d.deal_value || d.budget || 0), 0);
+      actuals.revenue = wonDeals.reduce((sum, d) => sum + (d.deal_value || 0), 0);
     }
   } catch {}
   return actuals;

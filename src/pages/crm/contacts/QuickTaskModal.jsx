@@ -88,9 +88,9 @@ export default function QuickTaskModal({ contact, onClose }) {
     { value: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
   ];
   const priorities = [
-    { value: 'high', ar: 'عالية', en: 'High', color: '#EF4444' },
-    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#F59E0B' },
-    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#10B981' },
+    { value: 'high', ar: 'عالية', en: 'High', color: '#D6403B' },
+    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#C9860A' },
+    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#158A57' },
   ];
 
   return (
@@ -106,9 +106,9 @@ export default function QuickTaskModal({ contact, onClose }) {
           <div className="flex gap-1.5 flex-wrap mb-3.5">
             {QUICK_TASK_PRESETS.map(p => (
               <button key={p.key} onClick={() => handlePreset(p)} className="px-3.5 py-[5px] rounded-full text-xs cursor-pointer font-inherit transition-colors" style={{
-                border: `1.5px solid ${selectedPreset === p.key ? '#4A7AAB' : 'var(--border-edge, #E2E8F0)'}`,
+                border: `1.5px solid ${selectedPreset === p.key ? '#2F6BD3' : 'var(--border-edge, #E2E8F0)'}`,
                 background: selectedPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
-                color: selectedPreset === p.key ? '#4A7AAB' : undefined,
+                color: selectedPreset === p.key ? '#2F6BD3' : undefined,
                 fontWeight: selectedPreset === p.key ? 700 : 400,
               }}>{isRTL ? p.ar : p.en}</button>
             ))}

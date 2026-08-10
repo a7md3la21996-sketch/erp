@@ -200,7 +200,7 @@ export default function ContractsPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex flex-wrap justify-between items-center mb-5 gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -224,9 +224,9 @@ export default function ContractsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي العقود' : 'Total Contracts'} value={kpis.total} color="#1B3347" />
-        <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'ينتهي قريبا' : 'Expiring Soon'} value={kpis.expiringSoon} color="#F59E0B" />
-        <KpiCard icon={Trash2} label={lang === 'ar' ? 'منتهية' : 'Expired'} value={kpis.expired} color="#EF4444" />
-        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'نشطة' : 'Active'} value={kpis.active} color="#10B981" />
+        <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'ينتهي قريبا' : 'Expiring Soon'} value={kpis.expiringSoon} color="#C9860A" />
+        <KpiCard icon={Trash2} label={lang === 'ar' ? 'منتهية' : 'Expired'} value={kpis.expired} color="#D6403B" />
+        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'نشطة' : 'Active'} value={kpis.active} color="#158A57" />
       </div>
 
       {/* Filter */}
@@ -270,7 +270,7 @@ export default function ContractsPage() {
               <tr>
                 <td colSpan={7} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                    <FileText size={24} color="#4A7AAB" />
+                    <FileText size={24} color="#2F6BD3" />
                   </div>
                   <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
                     {lang === 'ar' ? 'لا توجد عقود' : 'No Contracts'}
@@ -302,9 +302,9 @@ export default function ContractsPage() {
                         <span
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
                           style={{
-                            background: expired ? '#EF444418' : '#F59E0B18',
-                            color: expired ? '#EF4444' : '#F59E0B',
-                            border: `1px solid ${expired ? '#EF444435' : '#F59E0B35'}`,
+                            background: expired ? '#D6403B18' : '#C9860A18',
+                            color: expired ? '#D6403B' : '#C9860A',
+                            border: `1px solid ${expired ? '#D6403B35' : '#C9860A35'}`,
                           }}
                         >
                           <AlertTriangle size={10} />

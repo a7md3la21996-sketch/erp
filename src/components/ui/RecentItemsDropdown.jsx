@@ -6,10 +6,10 @@ import { Clock, X, User, Target, Award, Trash2, Inbox } from 'lucide-react';
 import { getRecentItems, clearRecent, removeRecentItem } from '../../services/recentItemsService';
 
 const TYPE_CONFIG = {
-  contact:     { icon: User,   color: '#10B981', labelAr: 'جهة اتصال', labelEn: 'Contact' },
-  opportunity: { icon: Target, color: '#8B5CF6', labelAr: 'فرصة',      labelEn: 'Opportunity' },
-  deal:        { icon: Award,  color: '#F59E0B', labelAr: 'صفقة',      labelEn: 'Deal' },
-  page:        { icon: Clock,  color: '#4A7AAB', labelAr: 'صفحة',      labelEn: 'Page' },
+  contact:     { icon: User,   color: '#158A57', labelAr: 'جهة اتصال', labelEn: 'Contact' },
+  opportunity: { icon: Target, color: '#5A63C4', labelAr: 'فرصة',      labelEn: 'Opportunity' },
+  deal:        { icon: Award,  color: '#C9860A', labelAr: 'صفقة',      labelEn: 'Deal' },
+  page:        { icon: Clock,  color: '#2F6BD3', labelAr: 'صفحة',      labelEn: 'Page' },
 };
 
 function relativeTime(dateStr, isRTL) {
@@ -130,7 +130,7 @@ export default function RecentItemsDropdown({ show, onClose }) {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Clock size={16} style={{ color: '#4A7AAB' }} />
+          <Clock size={16} style={{ color: '#2F6BD3' }} />
           <span style={{
             fontSize: 14,
             fontWeight: 700,
@@ -142,7 +142,7 @@ export default function RecentItemsDropdown({ show, onClose }) {
             <span style={{
               fontSize: 11,
               background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-              color: '#4A7AAB',
+              color: '#2F6BD3',
               padding: '1px 7px',
               borderRadius: 10,
               fontWeight: 600,
@@ -270,7 +270,7 @@ export default function RecentItemsDropdown({ show, onClose }) {
                     transition: 'all 0.15s',
                     marginTop: 4,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#D6403B'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.color = isDark ? '#475569' : '#cbd5e1'; e.currentTarget.style.background = 'transparent'; }}
                 >
                   <X size={12} />
@@ -302,7 +302,7 @@ export default function RecentItemsDropdown({ show, onClose }) {
               fontSize: 12,
               fontFamily: 'inherit',
               fontWeight: 600,
-              color: '#EF4444',
+              color: '#D6403B',
               background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.04)',
               transition: 'all 0.15s',
             }}

@@ -36,7 +36,7 @@ const TICKET_TYPE_ICONS = { complaint: AlertTriangle, maintenance: Wrench, inqui
 
 // ── initials helper ─────────────────────────────────────────────────────
 const initials = (n) => (n || '').trim().split(' ').map(w => w[0]).slice(0, 2).join('') || '?';
-const ACOLORS = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8'];
+const ACOLORS = ['#1B3347', '#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8'];
 
 
 function HandoverCard({ ho, isRTL, isDark }) {
@@ -81,7 +81,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
         >
           <span
             className="text-xs font-bold"
-            style={{ color: dLeft < 0 ? '#EF4444' : dLeft < 30 ? '#F97316' : '#4A7AAB' }}
+            style={{ color: dLeft < 0 ? '#D6403B' : dLeft < 30 ? '#DD6327' : '#2F6BD3' }}
           >
             {dLeft < 0 ? (isRTL ? `متأخر ${Math.abs(dLeft)} يوم` : `${Math.abs(dLeft)}d overdue`) : (isRTL ? `متبقي ${dLeft} يوم` : `${dLeft} days left`)}
           </span>
@@ -434,13 +434,13 @@ export default function OperationsPage() {
           )}
           {deal.status === 'completed' && (
             <div className="px-4 py-3.5 rounded-xl bg-brand-500/[0.08] text-center">
-              <CheckCircle size={20} color="#4A7AAB" className="mb-1" />
+              <CheckCircle size={20} color="#2F6BD3" className="mb-1" />
               <p className="m-0 text-xs font-bold text-brand-500">{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
             </div>
           )}
           {deal.status === 'cancelled' && (
             <div className="px-4 py-3.5 rounded-xl bg-red-500/[0.08] text-center">
-              <X size={20} color="#EF4444" className="mb-1" />
+              <X size={20} color="#D6403B" className="mb-1" />
               <p className="m-0 text-xs font-bold text-red-500">{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
             </div>
           )}
@@ -454,7 +454,7 @@ export default function OperationsPage() {
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <KpiCard icon={Plus} label={isRTL ? 'صفقات جديدة' : 'New Deals'} value={newDeals} color="#4A7AAB" />
+          <KpiCard icon={Plus} label={isRTL ? 'صفقات جديدة' : 'New Deals'} value={newDeals} color="#2F6BD3" />
           <KpiCard icon={Clock} label={isRTL ? 'قيد المراجعة' : 'Under Review'} value={underReview} color="#6B8DB5" />
           <KpiCard icon={FileText} label={isRTL ? 'بانتظار التوقيع' : 'Awaiting Signature'} value={awaitingSign} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'مكتملة' : 'Completed'} value={completedDeals} color="#1B3347" />
@@ -510,7 +510,7 @@ export default function OperationsPage() {
                         <div className="flex items-center gap-1">
                           <span className={`text-xs font-semibold ${doneDocs === reqDocs.length ? 'text-brand-500' : 'text-red-500'}`}>{doneDocs}/{reqDocs.length}</span>
                           <div className="w-10 h-1 rounded-sm bg-edge dark:bg-edge-dark">
-                            <div className="h-full rounded-sm transition-all duration-300" style={{ width: `${(doneDocs / reqDocs.length) * 100}%`, background: doneDocs === reqDocs.length ? '#4A7AAB' : '#F97316' }} />
+                            <div className="h-full rounded-sm transition-all duration-300" style={{ width: `${(doneDocs / reqDocs.length) * 100}%`, background: doneDocs === reqDocs.length ? '#2F6BD3' : '#DD6327' }} />
                           </div>
                         </div>
                       </td>
@@ -537,8 +537,8 @@ export default function OperationsPage() {
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoneyShort(totalDue)} color="#4A7AAB" />
-          <KpiCard icon={AlertTriangle} label={isRTL ? 'متأخر السداد' : 'Overdue'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
+          <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoneyShort(totalDue)} color="#2F6BD3" />
+          <KpiCard icon={AlertTriangle} label={isRTL ? 'متأخر السداد' : 'Overdue'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#D6403B" />
           <KpiCard icon={TrendingUp} label={isRTL ? 'محصّل هذا الشهر' : 'Collected This Month'} value={fmtMoneyShort(paidSum)} color="#2B4C6F" />
           <KpiCard icon={PieChart} label={isRTL ? 'نسبة التحصيل' : 'Collection Rate'} value={`${collectionRate}%`} color="#1B3347" />
         </div>
@@ -614,7 +614,7 @@ export default function OperationsPage() {
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#4A7AAB" />
+          <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#2F6BD3" />
           <KpiCard icon={Clock} label={isRTL ? 'تحت الإنشاء' : 'Under Construction'} value={constructionCount} color="#6B8DB5" />
           <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={(handovers || []).filter(h => h.status === 'ready').length} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'تم التسليم' : 'Handed Over'} value={handedCount} color="#1B3347" />
@@ -639,9 +639,9 @@ export default function OperationsPage() {
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <KpiCard icon={AlertCircle} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} color="#EF4444" />
-          <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution'} value={resolvedTickets.length > 0 ? `${Math.round(resolvedTickets.reduce((s, t) => s + daysSince(t.created_at) - (daysSince(t.resolved_at) || 0), 0) / resolvedTickets.length)}d` : '-'} color="#4A7AAB" />
-          <KpiCard icon={AlertTriangle} label={isRTL ? 'شكاوى مفتوحة' : 'Open Complaints'} value={complaints} color="#F97316" />
+          <KpiCard icon={AlertCircle} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} color="#D6403B" />
+          <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution'} value={resolvedTickets.length > 0 ? `${Math.round(resolvedTickets.reduce((s, t) => s + daysSince(t.created_at) - (daysSince(t.resolved_at) || 0), 0) / resolvedTickets.length)}d` : '-'} color="#2F6BD3" />
+          <KpiCard icon={AlertTriangle} label={isRTL ? 'شكاوى مفتوحة' : 'Open Complaints'} value={complaints} color="#DD6327" />
           <KpiCard icon={Star} label={isRTL ? 'رضا العملاء' : 'Satisfaction'} value={`${avgRating}/5`} color="#2B4C6F" />
         </div>
         <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -691,7 +691,7 @@ export default function OperationsPage() {
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-center">
                         {tk.rating ? (
                           <div className="flex items-center gap-0.5 justify-center">
-                            <Star size={13} color="#F59E0B" fill="#F59E0B" />
+                            <Star size={13} color="#C9860A" fill="#C9860A" />
                             <span className="text-xs font-bold text-content dark:text-content-dark">{tk.rating}</span>
                           </div>
                         ) : <span className="text-content-muted dark:text-content-muted-dark">—</span>}
@@ -835,7 +835,7 @@ export default function OperationsPage() {
 
   // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen pb-16 bg-surface-bg dark:bg-surface-bg-dark">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen pb-16 bg-[#F7F8FA] dark:bg-[#0A0D13]">
       {/* Page Header */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>

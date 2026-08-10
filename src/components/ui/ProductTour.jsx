@@ -8,7 +8,7 @@ const STORAGE_KEY = 'platform_tour_completed';
 const STEPS = [
   {
     icon: BookUser,
-    color: '#4A7AAB',
+    color: '#2F6BD3',
     title: { ar: 'جهات الاتصال', en: 'Contacts' },
     body: { ar: 'أضف ليدز جديدة، سجل مكالمات، وتابع كل عميل من مكان واحد.', en: 'Add new leads, log calls, and track every client from one place.' },
     target: 'contacts',
@@ -22,14 +22,14 @@ const STEPS = [
   },
   {
     icon: BarChart3,
-    color: '#10B981',
+    color: '#158A57',
     title: { ar: 'لوحة التحكم', en: 'Dashboard' },
     body: { ar: 'شوف أداءك اليومي، المتابعات، والأرقام المهمة في نظرة واحدة.', en: 'See your daily performance, follow-ups, and key numbers at a glance.' },
     target: 'dashboard',
   },
   {
     icon: MessageCircle,
-    color: '#8B5CF6',
+    color: '#5A63C4',
     title: { ar: 'التواصل والمهام', en: 'Communication & Tasks' },
     body: { ar: 'استخدم الشات، واتساب، والمهام لتنظيم يومك بالكامل.', en: 'Use chat, WhatsApp, and tasks to organize your entire day.' },
     target: 'workspace',

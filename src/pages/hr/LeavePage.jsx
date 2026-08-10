@@ -11,9 +11,9 @@ import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkelet
 /* ─── Inline ApprovalBadge Component ─── */
 function ApprovalBadge({ status, approverName, comments, lang }) {
   const map = {
-    pending:  { label_ar: 'بانتظار الموافقة', label_en: 'Pending Approval', color: '#F59E0B', bg: '#F59E0B18', icon: Clock },
-    approved: { label_ar: 'تمت الموافقة',     label_en: 'Approved',         color: '#10B981', bg: '#10B98118', icon: CheckCircle2 },
-    rejected: { label_ar: 'مرفوض',            label_en: 'Rejected',         color: '#EF4444', bg: '#EF444418', icon: XCircle },
+    pending:  { label_ar: 'بانتظار الموافقة', label_en: 'Pending Approval', color: '#C9860A', bg: '#C9860A18', icon: Clock },
+    approved: { label_ar: 'تمت الموافقة',     label_en: 'Approved',         color: '#158A57', bg: '#158A5718', icon: CheckCircle2 },
+    rejected: { label_ar: 'مرفوض',            label_en: 'Rejected',         color: '#D6403B', bg: '#D6403B18', icon: XCircle },
   };
   const s = map[status] || map.pending;
   const Icon = s.icon;
@@ -201,7 +201,7 @@ export default function LeavePage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters]);
 
-  const statusColor = s => s==='approved'?'#10B981':s==='pending'?'#F59E0B':'#EF4444';
+  const statusColor = s => s==='approved'?'#158A57':s==='pending'?'#C9860A':'#D6403B';
   const statusLabel = (s,lang) => ({ approved:lang==='ar'?'موافق':'Approved', pending:lang==='ar'?'معلق':'Pending', rejected:lang==='ar'?'مرفوض':'Rejected' }[s]||s);
   const typeLabel   = (t,lang) => ({ annual:lang==='ar'?'سنوية':'Annual', sick:lang==='ar'?'مرضية':'Sick', unpaid:lang==='ar'?'بدون راتب':'Unpaid', emergency:lang==='ar'?'طارئة':'Emergency' }[t]||t);
 
@@ -212,7 +212,7 @@ export default function LeavePage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -245,9 +245,9 @@ export default function LeavePage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={CalendarOff}  label={lang==='ar'?'إجمالي الطلبات':'Total Requests'} value={leaves.length} color="#1B3347" />
-        <KpiCard icon={Clock}        label={lang==='ar'?'بانتظار الموافقة':'Pending Approval'} value={pending} color="#F59E0B" />
-        <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#10B981" />
-        <KpiCard icon={XCircle}      label={lang==='ar'?'مرفوضة':'Rejected'} value={rejected} color="#EF4444" />
+        <KpiCard icon={Clock}        label={lang==='ar'?'بانتظار الموافقة':'Pending Approval'} value={pending} color="#C9860A" />
+        <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#158A57" />
+        <KpiCard icon={XCircle}      label={lang==='ar'?'مرفوضة':'Rejected'} value={rejected} color="#D6403B" />
       </div>
 
       {/* Leave Balances */}
@@ -271,7 +271,7 @@ export default function LeavePage() {
                   <span className="text-xs font-bold text-brand-500">{bal} {lang==='ar'?'يوم':'days'}</span>
                 </div>
                 <div className="h-1 rounded-sm bg-slate-200 dark:bg-white/[0.08]">
-                  <div className="h-full rounded-sm" style={{ width:pct+'%', background:pct>50?'#4A7AAB':pct>25?'#6B8DB5':'#EF4444' }} />
+                  <div className="h-full rounded-sm" style={{ width:pct+'%', background:pct>50?'#2F6BD3':pct>25?'#6B8DB5':'#D6403B' }} />
                 </div>
               </div>
             );
@@ -298,7 +298,7 @@ export default function LeavePage() {
           <tbody>{leaves.length === 0 ? (
               <tr><td colSpan={7} className="text-center py-16 px-5">
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                  <CalendarOff size={24} color='#4A7AAB' />
+                  <CalendarOff size={24} color='#2F6BD3' />
                 </div>
                 <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
@@ -311,7 +311,7 @@ export default function LeavePage() {
             return (
               <Tr key={lv.id}>
                 <Td className="font-semibold">{name}</Td>
-                <Td><Badge style={{ background:'#4A7AAB18', color:'#4A7AAB', border:'1px solid #4A7AAB35' }}>{typeLabel(lv.type,lang)}</Badge></Td>
+                <Td><Badge style={{ background:'#2F6BD318', color:'#2F6BD3', border:'1px solid #2F6BD335' }}>{typeLabel(lv.type,lang)}</Badge></Td>
                 <Td className="text-content-muted dark:text-content-muted-dark">{lv.start_date||lv.from}</Td>
                 <Td className="text-content-muted dark:text-content-muted-dark">{lv.end_date||lv.to}</Td>
                 <Td className="font-bold text-brand-500">{lv.days}</Td>

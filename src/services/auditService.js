@@ -28,7 +28,7 @@ export const ACTION_TYPES = {
   password_reset:   { ar: 'إعادة تعيين كلمة المرور', en: 'Password Reset' },
 };
 
-export async function getAuditLogs({ limit = 50, offset = 0, action, entity, search, withCount = false } = {}) {
+export async function getAuditLogs({ limit = 50, offset = 0, action, entity, entityId, search, withCount = false } = {}) {
   try {
     // count: 'exact' triggers a full scan — only do it when the caller explicitly
     // asks for the total (e.g. the audit page pagination). Filter callers like
@@ -39,6 +39,10 @@ export async function getAuditLogs({ limit = 50, offset = 0, action, entity, sea
       .range(offset, offset + limit - 1);
     if (action) query = query.eq('action', action);
     if (entity) query = query.eq('entity', entity);
+    // Scope to a single record when asked — the drawer passes entityId to get
+    // THIS lead's history. Without this the query returned the newest N audits
+    // across ALL contacts, so a per-contact view was almost always empty.
+    if (entityId) query = query.eq('entity_id', entityId);
     if (search) query = query.or(`description.ilike.%${search}%,entity_name.ilike.%${search}%`);
     const { data, error, count } = await query;
     if (error) return { data: [], total: 0 };
@@ -76,21 +80,21 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
   //  - Related collections fetched as embeds (opportunities, activities, ...)
   //  - Client-computed helper fields prefixed with '_' — these are derived on
   //    the frontend and only exist in memory, so auditing them is noise.
+  //  - `last_activity_at` bumps on every interaction — pure timeline noise here.
   const SKIP_FIELDS = [
-    'id','created_at','updated_at',
+    'id','created_at','updated_at','last_activity_at',
     'opportunities','activities','campaign_interactions','extra_phones',
     'users','lead_score_history',
-    // Client-side computed/helper fields
-    '_country','_campaign_count','_opp_count','_agent_count',
-    '_lastNote','_feedback','_aging_level','_offline','_triggerEdit',
-    '_customFieldValues',
   ];
   let changes = null;
   if (oldData && newData) {
     changes = {};
     const keys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
     keys.forEach(k => {
-      if (SKIP_FIELDS.includes(k)) return;
+      // Skip DB internals/embeds AND every client-only helper — ANY '_'-prefixed
+      // key (e.g. _skipDbUpdate, _country, _feedback) is derived in memory, not
+      // real data, so auditing it is noise (and leaks internal flags).
+      if (k.startsWith('_') || SKIP_FIELDS.includes(k)) return;
       const oldVal = oldData[k];
       const newVal = newData[k];
       if (typeof oldVal === 'object' && oldVal !== null && typeof newVal === 'object' && newVal !== null) return;

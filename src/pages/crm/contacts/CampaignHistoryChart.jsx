@@ -16,7 +16,7 @@ export default function CampaignHistoryChart({ chartData, isRTL }) {
           contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
           formatter={(value, name, props) => [value, props.payload.fullName]}
         />
-        <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#4A7AAB" radius={[0, 4, 4, 0]} barSize={16} />
+        <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#2F6BD3" radius={[0, 4, 4, 0]} barSize={16} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -82,7 +82,7 @@ export default function CustomFieldsRenderer({ entity, entityId, mode = 'view', 
         displayVal = opt ? (isRTL ? (opt.label_ar || opt.label) : opt.label) : val;
       } else if (field.field_type === 'url' && val) {
         displayVal = (
-          <a href={val} target="_blank" rel="noopener noreferrer" style={{ color: '#4A7AAB', textDecoration: 'none', fontSize: 12 }}>
+          <a href={val} target="_blank" rel="noopener noreferrer" style={{ color: '#2F6BD3', textDecoration: 'none', fontSize: 12 }}>
             {val}
           </a>
         );
@@ -101,7 +101,7 @@ export default function CustomFieldsRenderer({ entity, entityId, mode = 'view', 
     return (
       <div key={field.id} style={{ marginBottom: 10 }}>
         <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>
-          {label(field)}{field.required ? <span style={{ color: '#EF4444' }}> *</span> : ''}
+          {label(field)}{field.required ? <span style={{ color: '#D6403B' }}> *</span> : ''}
         </label>
         {field.field_type === 'text' && (
           <input type="text" value={val} onChange={e => handleChange(field.id, e.target.value)} style={inputStyle} />
@@ -135,7 +135,7 @@ export default function CustomFieldsRenderer({ entity, entityId, mode = 'view', 
               type="checkbox"
               checked={!!val}
               onChange={e => handleChange(field.id, e.target.checked)}
-              style={{ width: 16, height: 16, accentColor: '#4A7AAB' }}
+              style={{ width: 16, height: 16, accentColor: '#2F6BD3' }}
             />
             {val ? (isRTL ? 'نعم' : 'Yes') : (isRTL ? 'لا' : 'No')}
           </label>
@@ -164,7 +164,7 @@ export default function CustomFieldsRenderer({ entity, entityId, mode = 'view', 
           fontFamily: 'inherit',
         }}
       >
-        <Layers size={13} style={{ color: '#4A7AAB' }} />
+        <Layers size={13} style={{ color: '#2F6BD3' }} />
         <span style={{ flex: 1, textAlign: 'start', fontSize: 11, fontWeight: 700, color: textPrimary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {isRTL ? 'حقول مخصصة' : 'Custom Fields'}
         </span>

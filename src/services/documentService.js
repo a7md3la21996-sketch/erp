@@ -34,10 +34,10 @@ export const DOCUMENT_TYPES = [
 ];
 
 export const DOC_TYPE_COLORS = {
-  contract: '#10B981',
-  invoice:  '#F59E0B',
-  proposal: '#3B82F6',
-  report:   '#8B5CF6',
+  contract: '#158A57',
+  invoice:  '#C9860A',
+  proposal: '#2F6BD3',
+  report:   '#5A63C4',
   other:    '#6B7280',
 };
 

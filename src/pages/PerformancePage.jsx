@@ -62,9 +62,9 @@ const DEPT_KPIS = {
 };
 
 const FREQ_CONFIG = {
-  daily:     { ar: 'يومي',       en: 'Daily',     color: '#4A7AAB' },
-  weekly:    { ar: 'أسبوعي',    en: 'Weekly',    color: '#4A7AAB' },
-  monthly:   { ar: 'شهري',      en: 'Monthly',   color: '#4A7AAB' },
+  daily:     { ar: 'يومي',       en: 'Daily',     color: '#2F6BD3' },
+  weekly:    { ar: 'أسبوعي',    en: 'Weekly',    color: '#2F6BD3' },
+  monthly:   { ar: 'شهري',      en: 'Monthly',   color: '#2F6BD3' },
   quarterly: { ar: 'ربع سنوي', en: 'Quarterly', color: '#6B8DB5' },
 };
 
@@ -113,9 +113,9 @@ const BOX_LABELS = {
 };
 
 const BOX_COLORS = [
-  ['#EF4444', '#6B8DB5', '#4A7AAB'],
-  ['#EF4444', '#4A7AAB', '#4A7AAB'],
-  ['#6B7280', '#4A7AAB', '#4A7AAB'],
+  ['#D6403B', '#6B8DB5', '#2F6BD3'],
+  ['#D6403B', '#2F6BD3', '#2F6BD3'],
+  ['#6B7280', '#2F6BD3', '#2F6BD3'],
 ];
 
 export default function PerformancePage() {
@@ -298,14 +298,14 @@ export default function PerformancePage() {
 
   const BSC_PERSPECTIVES = [
     {
-      key: 'financial', icon: '', ar: 'المالي', en: 'Financial', color: '#4A7AAB',
+      key: 'financial', icon: '', ar: 'المالي', en: 'Financial', color: '#2F6BD3',
       objectives: [
         { ar: 'تحقيق التارجت الشهري',  en: 'Monthly target',      actual: SALES_BSC.achieved, target: SALES_BSC.target, unit: 'EGP' },
         { ar: 'تقليل تكاليف التوظيف', en: 'Reduce hiring costs',  actual: 18000,                   target: 25000,                unit: 'EGP' },
       ],
     },
     {
-      key: 'customer', icon: '', ar: 'العملاء', en: 'Customer', color: '#4A7AAB',
+      key: 'customer', icon: '', ar: 'العملاء', en: 'Customer', color: '#2F6BD3',
       objectives: [
         { ar: 'معدل تحويل الليدز',   en: 'Lead conversion rate', actual: CRM_BSC.conversionRate, target: 10,  unit: '%' },
         { ar: 'الصفقات المغلقة',      en: 'Deals closed',         actual: CRM_BSC.closedDeals,    target: 15,  unit: ''  },
@@ -319,7 +319,7 @@ export default function PerformancePage() {
       ],
     },
     {
-      key: 'learning', icon: '', ar: 'التعلم والنمو', en: 'Learning & Growth', color: '#4A7AAB',
+      key: 'learning', icon: '', ar: 'التعلم والنمو', en: 'Learning & Growth', color: '#2F6BD3',
       objectives: [
         { ar: 'اكتمال التدريب',        en: 'Training completion',  actual: 65,            target: 80,  unit: '%'   },
         { ar: 'متوسط تقييم الكفاءات', en: 'Avg competency score', actual: avgCompScore,   target: 4,   unit: '/5'  },
@@ -328,7 +328,7 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -370,10 +370,10 @@ export default function PerformancePage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         {[
-          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
-          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: employees.length, icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#2F6BD3' },
+          { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#2F6BD3' },
+          { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#D6403B' },
+          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: employees.length, icon: '', color: '#2F6BD3' },
         ].map((s, i) => (
           <Card key={i} className="px-5 py-4">
             <div className="text-xl mb-1.5">{s.icon}</div>
@@ -428,7 +428,7 @@ export default function PerformancePage() {
         <div className="flex flex-col gap-2.5">
           {paged.sort((a, b) => b.avgPct - a.avgPct).map((d, idx) => {
             const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
-            const color = d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444';
+            const color = d.avgPct >= 90 ? '#2F6BD3' : d.avgPct >= 60 ? '#6B8DB5' : '#D6403B';
             return (
               <Card key={d.emp.id} hover
                 role="button" tabIndex={0}
@@ -441,8 +441,8 @@ export default function PerformancePage() {
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx >= 3 ? 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark' : ''}`}
                     style={idx < 3 ? {
-                      background: ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20',
-                      color: ['#6B8DB5','#8BA8C8','#4A7AAB'][idx],
+                      background: ['#6B8DB5','#8BA8C8','#2F6BD3'][idx] + '20',
+                      color: ['#6B8DB5','#8BA8C8','#2F6BD3'][idx],
                     } : undefined}
                   >
                     {idx + 1}
@@ -493,7 +493,7 @@ export default function PerformancePage() {
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5">
                       {d.scores.map((kpi, i) => {
                         const freq = FREQ_CONFIG[kpi.freq];
-                        const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
+                        const kpiColor = kpi.pct >= 90 ? '#2F6BD3' : kpi.pct >= 60 ? '#6B8DB5' : '#D6403B';
                         return (
                           <div key={i} className="px-3 py-2.5 rounded-lg bg-brand-500/[0.06] dark:bg-brand-500/[0.06] border border-edge dark:border-edge-dark">
                             <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -537,7 +537,7 @@ export default function PerformancePage() {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-            <Target size={28} color="#4A7AAB" strokeWidth={1.5} />
+            <Target size={28} color="#2F6BD3" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
           <p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
@@ -579,7 +579,7 @@ export default function PerformancePage() {
                           <div className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
                         </Td>
                         {d.scores.map((kpi, j) => {
-                          const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
+                          const kpiColor = kpi.pct >= 90 ? '#2F6BD3' : kpi.pct >= 60 ? '#6B8DB5' : '#D6403B';
                           return (
                             <Td key={j} className="text-center">
                               <div className="text-xs font-bold" style={{ color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
@@ -588,7 +588,7 @@ export default function PerformancePage() {
                           );
                         })}
                         <Td className="text-center">
-                          <span className="text-xs font-bold" style={{ color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
+                          <span className="text-xs font-bold" style={{ color: d.avgPct >= 90 ? '#2F6BD3' : d.avgPct >= 60 ? '#6B8DB5' : '#D6403B' }}>{d.avgPct}%</span>
                         </Td>
                       </Tr>
                     ))}
@@ -647,12 +647,12 @@ export default function PerformancePage() {
           {/* Activity Legend */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(crmData).reduce((s,d) => s + (d.calls || 0), 0), color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'مكالمات ناجحة' : 'Answered', value: Object.values(crmData).reduce((s,d) => s + (d.calls_answered || 0), 0), color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(crmData).reduce((s,d) => s + (d.calls || 0), 0), color: '#2F6BD3' },
+              { label: lang === 'ar' ? 'مكالمات ناجحة' : 'Answered', value: Object.values(crmData).reduce((s,d) => s + (d.calls_answered || 0), 0), color: '#2F6BD3' },
               { label: lang === 'ar' ? 'زيارات' : 'Visits', value: Object.values(crmData).reduce((s,d) => s + (d.visits || 0), 0), color: '#6B8DB5' },
               { label: lang === 'ar' ? 'اجتماعات' : 'Meetings', value: Object.values(crmData).reduce((s,d) => s + (d.meetings_scheduled || 0), 0), color: '#6B8DB5' },
-              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(crmData).reduce((s,d) => s + (d.opportunities || 0), 0), color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(crmData).reduce((s,d) => s + (d.deals_closed || 0), 0), color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(crmData).reduce((s,d) => s + (d.opportunities || 0), 0), color: '#2F6BD3' },
+              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(crmData).reduce((s,d) => s + (d.deals_closed || 0), 0), color: '#2F6BD3' },
             ].map((s, i) => (
               <Card key={i} className="px-4 py-3.5">
                 <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
@@ -679,12 +679,12 @@ export default function PerformancePage() {
                 {empData.filter(d => d.emp.department === 'sales').map((d, i) => {
                   const convRate = d.crm.calls > 0 ? ((d.crm.deals_closed / d.crm.calls) * 100).toFixed(1) : 0;
                   const analysis = d.crm.calls >= 40 && d.crm.deals_closed >= 3
-                    ? { ar: 'نجم ', en: 'Star ', color: '#4A7AAB' }
+                    ? { ar: 'نجم ', en: 'Star ', color: '#2F6BD3' }
                     : d.crm.calls >= 30 && d.crm.deals_closed < 2
                     ? { ar: 'مهارة ', en: 'Skill Gap ', color: '#6B8DB5' }
                     : d.crm.calls < 20
-                    ? { ar: 'نشاط منخفض', en: 'Low Activity', color: '#EF4444' }
-                    : { ar: 'جيد ', en: 'Good ', color: '#4A7AAB' };
+                    ? { ar: 'نشاط منخفض', en: 'Low Activity', color: '#D6403B' }
+                    : { ar: 'جيد ', en: 'Good ', color: '#2F6BD3' };
                   return (
                     <Tr key={d.emp.id}>
                       <Td className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
@@ -733,14 +733,14 @@ export default function PerformancePage() {
                 {empData.filter(d => d.emp.department === 'sales').map((d) => {
                   const c = d.crm;
                   const answerRate = c.calls > 0 ? Math.round((c.calls_answered / c.calls) * 100) : 0;
-                  const rateColor = answerRate >= 60 ? '#4A7AAB' : answerRate >= 40 ? '#6B8DB5' : '#EF4444';
+                  const rateColor = answerRate >= 60 ? '#2F6BD3' : answerRate >= 40 ? '#6B8DB5' : '#D6403B';
                   return (
                     <Tr key={d.emp.id}>
                       <Td className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
                       <Td className="text-xs text-center font-bold">{c.calls}</Td>
-                      <Td className="text-xs text-center" style={{ color: '#4A7AAB' }}>{c.calls_answered}</Td>
+                      <Td className="text-xs text-center" style={{ color: '#2F6BD3' }}>{c.calls_answered}</Td>
                       <Td className="text-xs text-center" style={{ color: '#6B8DB5' }}>{c.calls_no_answer}</Td>
-                      <Td className="text-xs text-center" style={{ color: '#EF4444' }}>{c.calls_busy}</Td>
+                      <Td className="text-xs text-center" style={{ color: '#D6403B' }}>{c.calls_busy}</Td>
                       <Td className="text-xs text-center">{c.visits}</Td>
                       <Td className="text-xs text-center">{c.meetings_scheduled}</Td>
                       <Td className="text-xs text-center">{c.whatsapp_sent}</Td>
@@ -764,9 +764,9 @@ export default function PerformancePage() {
             </div>
             <div className={`flex gap-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
               {[
-                { ar: 'نشاط عالي + نتيجة عالية = نجم → مكافأة', en: 'High Activity + High Results = Star → Reward', color: '#4A7AAB' },
+                { ar: 'نشاط عالي + نتيجة عالية = نجم → مكافأة', en: 'High Activity + High Results = Star → Reward', color: '#2F6BD3' },
                 { ar: 'نشاط عالي + نتيجة ضعيفة = مشكلة مهارة → تدريب', en: 'High Activity + Low Results = Skill Gap → Training', color: '#6B8DB5' },
-                { ar: 'نشاط منخفض + نتيجة ضعيفة = مشكلة التزام → متابعة', en: 'Low Activity + Low Results = Commitment Issue → Follow Up', color: '#EF4444' },
+                { ar: 'نشاط منخفض + نتيجة ضعيفة = مشكلة التزام → متابعة', en: 'Low Activity + Low Results = Commitment Issue → Follow Up', color: '#D6403B' },
               ].map((r, i) => (
                 <div key={i} className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
@@ -805,7 +805,7 @@ export default function PerformancePage() {
                 {p.objectives.map((o, i) => {
                   const pct  = Math.min(Math.round((o.actual / o.target) * 100), 150);
                   const disp = Math.min(pct, 100);
-                  const col  = pct >= 90 ? '#4A7AAB' : pct >= 60 ? '#6B8DB5' : '#EF4444';
+                  const col  = pct >= 90 ? '#2F6BD3' : pct >= 60 ? '#6B8DB5' : '#D6403B';
                   const fmt  = v => typeof v === 'number' && v > 1000 ? (v / 1000).toFixed(0) + 'K' : v;
                   return (
                     <div key={i}>

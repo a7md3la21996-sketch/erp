@@ -2,16 +2,16 @@ import { Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star } from 'luc
 
 // ─── Temperature Config ───
 export const TEMP_CONFIG = {
-  hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#EF4444", bg: "rgba(239,68,68,0.10)" },
-  warm: { label_ar: "دافئ", label_en: "Warm", color: "#F97316", bg: "rgba(249,115,22,0.10)" },
+  hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#D6403B", bg: "rgba(239,68,68,0.10)" },
+  warm: { label_ar: "دافئ", label_en: "Warm", color: "#DD6327", bg: "rgba(249,115,22,0.10)" },
   cool: { label_ar: "عادي", label_en: "Cool", color: "#8BA8C8", bg: "rgba(139,168,200,0.10)" },
-  cold: { label_ar: "بارد", label_en: "Cold", color: "#4A7AAB", bg: "rgba(74,122,171,0.10)" },
+  cold: { label_ar: "بارد", label_en: "Cold", color: "#2F6BD3", bg: "rgba(74,122,171,0.10)" },
 };
 
 // ─── Priority Config ───
 export const PRIORITY_CONFIG = {
-  urgent: { label_ar: "عاجل",  label_en: "Urgent", color: "#EF4444" },
-  high:   { label_ar: "عالي",  label_en: "High",   color: "#4A7AAB" },
+  urgent: { label_ar: "عاجل",  label_en: "Urgent", color: "#D6403B" },
+  high:   { label_ar: "عالي",  label_en: "High",   color: "#2F6BD3" },
   medium: { label_ar: "متوسط", label_en: "Medium", color: "#6B8DB5" },
   low:    { label_ar: "منخفض", label_en: "Low",    color: "#8BA8C8" },
 };
@@ -67,7 +67,7 @@ export const calcLeadScore = (opp) => {
   return Math.min(score, 100);
 };
 
-export const scoreColor = (s) => s >= 70 ? '#10B981' : s >= 40 ? '#F59E0B' : '#EF4444';
+export const scoreColor = (s) => s >= 70 ? '#158A57' : s >= 40 ? '#C9860A' : '#D6403B';
 export const scoreLabel = (s, isRTL) => s >= 70 ? (isRTL ? 'ساخن' : 'Hot') : s >= 40 ? (isRTL ? 'دافئ' : 'Warm') : (isRTL ? 'بارد' : 'Cold');
 
 // ─── Budget formatting ───
@@ -81,15 +81,15 @@ export const daysInStage = (opp) => daysSince(opp.stage_changed_at || opp.update
 export const actLabel = (createdAt, isRTL) => {
   if (!createdAt) return { text: '—', color: '#8BA8C8' };
   const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
-  if (days === 0) return { text: isRTL ? "اليوم" : "Today", color: "#4A7AAB" };
+  if (days === 0) return { text: isRTL ? "اليوم" : "Today", color: "#2F6BD3" };
   if (days === 1) return { text: isRTL ? "أمس" : "Yesterday", color: "#6B8DB5" };
   if (days <= 3) return { text: days + (isRTL ? "د" : "d"), color: "#8BA8C8" };
-  return { text: days + (isRTL ? "د" : "d"), color: "#EF4444" };
+  return { text: days + (isRTL ? "د" : "d"), color: "#D6403B" };
 };
 
 // ─── Avatar helpers ───
 export const initials = (n) => (n || "").trim().split(" ").map(w => w[0]).slice(0, 2).join("") || "?";
-export const ACOLORS = ["#1B3347", "#2B4C6F", "#4A7AAB", "#6B8DB5", "#8BA8C8"];
+export const ACOLORS = ["#1B3347", "#2B4C6F", "#2F6BD3", "#6B8DB5", "#8BA8C8"];
 export const avatarColor = (id) => ACOLORS[(id || 0) % ACOLORS.length];
 
 // ─── Display name helpers ───

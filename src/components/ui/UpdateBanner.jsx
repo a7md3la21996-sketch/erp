@@ -58,7 +58,7 @@ export default function UpdateBanner({ onUpdate }) {
         bottom: 16,
         insetInlineStart: 16,
         zIndex: 9998,
-        background: '#4A7AAB',
+        background: '#2F6BD3',
         color: '#fff',
         padding: '10px 14px',
         borderRadius: 12,
@@ -81,7 +81,7 @@ export default function UpdateBanner({ onUpdate }) {
         onClick={onUpdate}
         style={{
           background: '#fff',
-          color: '#4A7AAB',
+          color: '#2F6BD3',
           border: 'none',
           borderRadius: 8,
           padding: '6px 12px',

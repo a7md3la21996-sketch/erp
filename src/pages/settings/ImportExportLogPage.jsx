@@ -34,7 +34,7 @@ export default function ImportExportLogPage() {
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
   const statusBadge = (status) => {
-    const cfg = { completed: { icon: CheckCircle, color: '#10B981', label: isRTL ? 'مكتمل' : 'Completed' }, partial: { icon: AlertTriangle, color: '#F59E0B', label: isRTL ? 'جزئي' : 'Partial' }, failed: { icon: XCircle, color: '#EF4444', label: isRTL ? 'فشل' : 'Failed' } };
+    const cfg = { completed: { icon: CheckCircle, color: '#158A57', label: isRTL ? 'مكتمل' : 'Completed' }, partial: { icon: AlertTriangle, color: '#C9860A', label: isRTL ? 'جزئي' : 'Partial' }, failed: { icon: XCircle, color: '#D6403B', label: isRTL ? 'فشل' : 'Failed' } };
     const c = cfg[status] || cfg.completed;
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ color: c.color, background: c.color + '18' }}>
@@ -46,7 +46,7 @@ export default function ImportExportLogPage() {
   if (loading) return <div className="p-5"><PageSkeleton hasKpis={false} tableRows={8} tableCols={5} /></div>;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className="flex justify-between items-center mb-5">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">

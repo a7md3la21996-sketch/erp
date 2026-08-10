@@ -107,7 +107,7 @@ export default function ShortcutsHelpModal({ onClose }) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Keyboard size={20} style={{ color: '#4A7AAB' }} />
+            <Keyboard size={20} style={{ color: '#2F6BD3' }} />
             <span
               style={{
                 fontSize: 16,
@@ -202,7 +202,7 @@ export default function ShortcutsHelpModal({ onClose }) {
                             fontFamily: 'inherit',
                             backgroundColor: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)',
                             border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.15)'}`,
-                            color: isDark ? '#7db4d8' : '#4A7AAB',
+                            color: isDark ? '#7db4d8' : '#2F6BD3',
                           }}
                         >
                           {k}

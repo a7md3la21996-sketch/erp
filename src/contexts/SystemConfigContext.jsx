@@ -1,20 +1,30 @@
 import { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { loadConfig, loadConfigFromServer, saveSection, resetConfig } from '../services/systemConfigService';
 import { supabase } from '../lib/supabase';
-import { setConfigStages } from '../pages/crm/contacts/constants';
+import { setConfigStages, setConfigTypes, setConfigSources } from '../pages/crm/contacts/constants';
 
 const SystemConfigContext = createContext(null);
+
+// Push editable config sections into the static constant maps (TYPE, SOURCE_*,
+// pipeline stages) so renames / new entries from System Config render
+// everywhere those maps are read. Called on every config (re)load.
+function syncConstants(c) {
+  if (!c) return;
+  if (c.pipelineStages) setConfigStages(c.pipelineStages);
+  if (c.contactTypes) setConfigTypes(c.contactTypes);
+  if (c.sources) setConfigSources(c.sources);
+}
 
 export function SystemConfigProvider({ children }) {
   const [config, setConfig] = useState(() => {
     const c = loadConfig();
-    if (c.pipelineStages) setConfigStages(c.pipelineStages);
+    syncConstants(c);
     return c;
   });
 
   const reloadConfig = useCallback(() => {
     const c = loadConfig();
-    if (c.pipelineStages) setConfigStages(c.pipelineStages);
+    syncConstants(c);
     setConfig(c);
   }, []);
 
@@ -22,7 +32,7 @@ export function SystemConfigProvider({ children }) {
   const reloadFromServer = useCallback(async () => {
     try {
       const serverConfig = await loadConfigFromServer();
-      if (serverConfig.pipelineStages) setConfigStages(serverConfig.pipelineStages);
+      syncConstants(serverConfig);
       setConfig(serverConfig);
     } catch {
       reloadConfig(); // fallback to localStorage
@@ -98,6 +108,7 @@ export function SystemConfigProvider({ children }) {
       pipelineStages: config.pipelineStages || {},
       companyInfo: config.companyInfo || {},
       lostReasons: config.lostReasons || [],
+      leadCategories: config.leadCategories || [],
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},
       contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5, inactiveDays: 5, activityActiveDays: 3, activityModerateDays: 7 },

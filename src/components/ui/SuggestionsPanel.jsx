@@ -17,9 +17,9 @@ const TYPE_ICONS = {
 };
 
 const PRIORITY_COLORS = {
-  high: '#EF4444',
-  medium: '#F59E0B',
-  low: '#4A7AAB',
+  high: '#D6403B',
+  medium: '#C9860A',
+  low: '#2F6BD3',
 };
 
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -95,7 +95,7 @@ export default function SuggestionsPanel() {
   };
 
   const badgeStyle = {
-    background: '#4A7AAB',
+    background: '#2F6BD3',
     color: '#fff',
     fontSize: 11,
     fontWeight: 700,
@@ -118,7 +118,7 @@ export default function SuggestionsPanel() {
       {/* Header */}
       <div style={headerStyle} onClick={() => setCollapsed(c => !c)}>
         <div style={headerLeftStyle}>
-          <Lightbulb size={18} color="#4A7AAB" />
+          <Lightbulb size={18} color="#2F6BD3" />
           <span style={titleStyle}>
             {isRTL ? 'اقتراحات ذكية' : 'Smart Suggestions'}
           </span>
@@ -234,7 +234,7 @@ function SuggestionCard({ suggestion, isDark, isRTL, onDismiss, onAction }) {
   const actionBtnStyle = {
     fontSize: 11,
     fontWeight: 600,
-    color: '#4A7AAB',
+    color: '#2F6BD3',
     background: 'rgba(74,122,171,0.1)',
     border: 'none',
     borderRadius: 6,

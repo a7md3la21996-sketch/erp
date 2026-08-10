@@ -188,9 +188,9 @@ export default function PayrollBreakdownModal({
         <div className={`p-4 rounded-xl bg-gradient-to-br from-brand-900/5 to-brand-500/5 border border-brand-500/20 ${isRTL ? 'text-right' : 'text-left'}`}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SummaryCell label={isRTL ? 'الراتب الأساسي' : 'Base'} value={baseSalary} color="#1B3347" />
-            <SummaryCell label={isRTL ? 'إجمالي الإضافات' : 'Additions'} value={allowances + overtimeBonus + otherAdditions} color="#10B981" />
-            <SummaryCell label={isRTL ? 'إجمالي الخصومات' : 'Deductions'} value={totalDeductions} color="#EF4444" negative />
-            <SummaryCell label={isRTL ? 'الصافي' : 'Net'} value={netSalary} color="#4A7AAB" big />
+            <SummaryCell label={isRTL ? 'إجمالي الإضافات' : 'Additions'} value={allowances + overtimeBonus + otherAdditions} color="#158A57" />
+            <SummaryCell label={isRTL ? 'إجمالي الخصومات' : 'Deductions'} value={totalDeductions} color="#D6403B" negative />
+            <SummaryCell label={isRTL ? 'الصافي' : 'Net'} value={netSalary} color="#2F6BD3" big />
           </div>
           <p className="m-0 mt-2 text-xs text-content-muted dark:text-content-muted-dark">
             {isRTL ? `شهر ${monthName}` : `Period: ${monthName}`}

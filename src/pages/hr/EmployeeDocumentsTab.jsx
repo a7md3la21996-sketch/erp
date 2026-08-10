@@ -14,8 +14,8 @@ const TYPE_LABELS = {
   other:       { ar: 'أخرى', en: 'Other' },
 };
 const TYPE_COLORS = {
-  contract: '#4A7AAB',
-  id: '#10B981',
+  contract: '#2F6BD3',
+  id: '#158A57',
   certificate: '#6B8DB5',
   other: '#9CA3AF',
 };

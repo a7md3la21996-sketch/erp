@@ -140,7 +140,7 @@ export default function PrintSettingsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Printer size={20} style={{ color: '#4A7AAB' }} />
+          <Printer size={20} style={{ color: '#2F6BD3' }} />
         </div>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -175,7 +175,7 @@ export default function PrintSettingsPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 24px', borderRadius: 8, border: 'none',
-              background: '#4A7AAB', color: 'white', cursor: 'pointer',
+              background: '#2F6BD3', color: 'white', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
             }}
           >
@@ -183,7 +183,7 @@ export default function PrintSettingsPage() {
             {isRTL ? 'حفظ' : 'Save'}
           </button>
           {saved && (
-            <span style={{ fontSize: 12, color: '#22C55E', fontWeight: 600 }}>
+            <span style={{ fontSize: 12, color: '#158A57', fontWeight: 600 }}>
               {isRTL ? 'تم الحفظ' : 'Saved!'}
             </span>
           )}
@@ -203,7 +203,7 @@ export default function PrintSettingsPage() {
               setPreviewHTML(generateInvoiceHTML(SAMPLE_INVOICE, SAMPLE_ITEMS, form, lang));
             }}
           >
-            <FileText size={16} style={{ color: '#4A7AAB' }} />
+            <FileText size={16} style={{ color: '#2F6BD3' }} />
             {isRTL ? 'معاينة فاتورة' : 'Preview Invoice'}
           </button>
           <button
@@ -213,7 +213,7 @@ export default function PrintSettingsPage() {
               setPreviewHTML(generateQuotationHTML(SAMPLE_QUOTATION, SAMPLE_ITEMS, form, lang));
             }}
           >
-            <Eye size={16} style={{ color: '#8B5CF6' }} />
+            <Eye size={16} style={{ color: '#5A63C4' }} />
             {isRTL ? 'معاينة عرض سعر' : 'Preview Quotation'}
           </button>
           <button
@@ -223,7 +223,7 @@ export default function PrintSettingsPage() {
               setPreviewHTML(generateContactCardHTML(SAMPLE_CONTACT, form, lang));
             }}
           >
-            <Users size={16} style={{ color: '#10B981' }} />
+            <Users size={16} style={{ color: '#158A57' }} />
             {isRTL ? 'معاينة بطاقة جهة اتصال' : 'Preview Contact Card'}
           </button>
           <button
@@ -239,7 +239,7 @@ export default function PrintSettingsPage() {
               ));
             }}
           >
-            <BarChart3 size={16} style={{ color: '#F59E0B' }} />
+            <BarChart3 size={16} style={{ color: '#C9860A' }} />
             {isRTL ? 'معاينة تقرير' : 'Preview Report'}
           </button>
         </div>

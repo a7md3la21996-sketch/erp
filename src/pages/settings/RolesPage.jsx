@@ -143,7 +143,7 @@ function ToggleSwitch({ checked, onChange, disabled, isDark, small }) {
       style={{
         width: w, height: h, borderRadius: h,
         background: checked
-          ? (disabled ? (isDark ? '#1e3a5f' : '#93c5fd') : '#3b82f6')
+          ? (disabled ? (isDark ? '#1e3a5f' : '#8DB1EF') : '#2F6BD3')
           : (isDark ? '#374151' : '#d1d5db'),
         border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
         position: 'relative', transition: 'background 0.2s',
@@ -330,7 +330,7 @@ function RoleModal({ role, onSave, onClose, isDark, isRTL, lang }) {
           </button>
           <button onClick={handleSave} style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-            background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer',
+            background: '#2F6BD3', color: '#fff', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <Save size={14} />
@@ -366,9 +366,9 @@ function DeleteModal({ role, onConfirm, onClose, isDark, isRTL, lang }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <div style={{
             width: 36, height: 36, borderRadius: '50%',
-            background: '#ef444418', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#D6403B18', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <AlertTriangle size={18} color="#ef4444" />
+            <AlertTriangle size={18} color="#D6403B" />
           </div>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
             {lang === 'ar' ? 'حذف الدور' : 'Delete Role'}
@@ -391,7 +391,7 @@ function DeleteModal({ role, onConfirm, onClose, isDark, isRTL, lang }) {
           </button>
           <button onClick={() => { onConfirm(role.id); onClose(); }} style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13,
-            background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer',
+            background: '#D6403B', color: '#fff', border: 'none', cursor: 'pointer',
           }}>
             {lang === 'ar' ? 'حذف' : 'Delete'}
           </button>
@@ -468,15 +468,15 @@ export default function RolesPage() {
 
   /* ── Role Colors ── */
   const roleColors = {
-    admin: '#ef4444',
-    manager: '#3b82f6',
-    sales: '#f59e0b',
-    hr: '#8b5cf6',
-    finance: '#10b981',
+    admin: '#D6403B',
+    manager: '#2F6BD3',
+    sales: '#C9860A',
+    hr: '#5A63C4',
+    finance: '#158A57',
     viewer: '#6b7280',
   };
 
-  const getRoleColor = (id) => roleColors[id] || '#3b82f6';
+  const getRoleColor = (id) => roleColors[id] || '#2F6BD3';
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', maxWidth: 1200, margin: '0 auto' }}>
@@ -488,10 +488,10 @@ export default function RolesPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 38, height: 38, borderRadius: 10,
-            background: isDark ? '#1e3a5f' : '#dbeafe',
+            background: isDark ? '#1e3a5f' : '#DBE8FB',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Shield size={20} color="#3b82f6" />
+            <Shield size={20} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{
@@ -523,7 +523,7 @@ export default function RolesPage() {
             onClick={() => setShowCreateModal(true)}
             style={{
               padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              background: '#3b82f6', color: '#fff', border: 'none',
+              background: '#2F6BD3', color: '#fff', border: 'none',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
@@ -670,7 +670,7 @@ export default function RolesPage() {
                             width: 30, height: 30, borderRadius: 6,
                             background: 'none', border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#ef4444',
+                            color: '#D6403B',
                           }}
                         >
                           <Trash2 size={13} />

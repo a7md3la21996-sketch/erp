@@ -13,7 +13,7 @@ import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, S
 const TABLE = 'disciplinary';
 
 /* ─── Dynamic Badge ─── */
-function DynBadge({ label, color = '#4A7AAB' }) {
+function DynBadge({ label, color = '#2F6BD3' }) {
   return (
     <span
       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
@@ -147,7 +147,7 @@ export default function DisciplinaryPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [search, smartFilters]);
 
-  const severityColor = s => s==='high'?'#EF4444':s==='medium'?'#6B8DB5':'#4A7AAB';
+  const severityColor = s => s==='high'?'#D6403B':s==='medium'?'#6B8DB5':'#2F6BD3';
   const severityLabel = (s,lang) => ({ high:lang==='ar'?'عالي':'High', medium:lang==='ar'?'متوسط':'Medium', low:lang==='ar'?'منخفض':'Low' }[s]||s);
   const typeLabel     = (t,lang) => ({ warning:lang==='ar'?'إنذار':'Warning', suspension:lang==='ar'?'إيقاف':'Suspension', termination:lang==='ar'?'فصل':'Termination' }[t]||t);
   const statusLabel   = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
@@ -244,7 +244,7 @@ export default function DisciplinaryPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -278,8 +278,8 @@ export default function DisciplinaryPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Shield}       label={lang==='ar'?'إجمالي الحالات':'Total Cases'} value={filtered.length} color="#1B3347" />
         <KpiCard icon={AlertTriangle} label={lang==='ar'?'مفتوحة':'Open'}           value={open}         color="#6B8DB5" />
-        <KpiCard icon={XCircle}      label={lang==='ar'?'خطورة عالية':'High Severity'} value={high}         color="#EF4444" />
-        <KpiCard icon={CheckCircle2} label={lang==='ar'?'مغلقة':'Closed'}          value={closed}       color="#4A7AAB" />
+        <KpiCard icon={XCircle}      label={lang==='ar'?'خطورة عالية':'High Severity'} value={high}         color="#D6403B" />
+        <KpiCard icon={CheckCircle2} label={lang==='ar'?'مغلقة':'Closed'}          value={closed}       color="#2F6BD3" />
       </div>
 
       <SmartFilter
@@ -306,7 +306,7 @@ export default function DisciplinaryPage() {
                 <td colSpan={7}>
                   <div className="text-center py-16 px-5">
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                      <ShieldAlert size={24} color="#4A7AAB" />
+                      <ShieldAlert size={24} color="#2F6BD3" />
                     </div>
                     <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مخالفات تأديبية':'No Disciplinary Records'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي مخالفات':'No disciplinary records found'}</p>
@@ -319,11 +319,11 @@ export default function DisciplinaryPage() {
               return (
                 <Tr key={cas.id}>
                   <Td className="font-semibold">{name}</Td>
-                  <Td><DynBadge label={typeLabel(cas.type,lang)} color="#4A7AAB" /></Td>
+                  <Td><DynBadge label={typeLabel(cas.type,lang)} color="#2F6BD3" /></Td>
                   <Td className="text-content-muted dark:text-content-muted-dark">{cas.reason}</Td>
                   <Td className="text-content-muted dark:text-content-muted-dark">{cas.date}</Td>
                   <Td><DynBadge label={severityLabel(cas.severity,lang)} color={severityColor(cas.severity)} /></Td>
-                  <Td><DynBadge label={statusLabel(cas.status,lang)} color={cas.status==='open'?'#6B8DB5':'#4A7AAB'} /></Td>
+                  <Td><DynBadge label={statusLabel(cas.status,lang)} color={cas.status==='open'?'#6B8DB5':'#2F6BD3'} /></Td>
                   <Td>
                     <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <button

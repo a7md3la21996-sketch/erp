@@ -65,7 +65,7 @@ export default function HandOffLeadModal({ contact, onClose, onSuccess, eligible
     setSubmitting(true);
     try {
       const byName = profile?.full_name_en || profile?.full_name_ar || '';
-      await handOffLead(contact.id, selected.id, { assignedByName: byName });
+      await handOffLead(contact.id, selected.id, { assignedByName: byName, assignedById: profile?.id || null });
       const targetDisplay = isRTL
         ? (selected.full_name_ar || selected.full_name_en)
         : (selected.full_name_en || selected.full_name_ar);

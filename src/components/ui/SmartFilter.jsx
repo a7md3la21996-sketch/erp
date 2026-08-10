@@ -342,9 +342,9 @@ export default function SmartFilter({
                             onClick={() => toggleFilterLogic(i)}
                             className="text-[10px] font-bold px-2 py-0.5 rounded border cursor-pointer transition-colors"
                             style={{
-                              color: f.logic === 'or' ? '#F59E0B' : '#4A7AAB',
-                              borderColor: f.logic === 'or' ? '#F59E0B40' : '#4A7AAB40',
-                              background: f.logic === 'or' ? '#F59E0B10' : '#4A7AAB10',
+                              color: f.logic === 'or' ? '#C9860A' : '#2F6BD3',
+                              borderColor: f.logic === 'or' ? '#C9860A40' : '#2F6BD340',
+                              background: f.logic === 'or' ? '#C9860A10' : '#2F6BD310',
                             }}
                           >
                             {f.logic === 'or' ? (isRTL ? 'أو' : 'OR') : (isRTL ? 'و' : 'AND')}
@@ -490,11 +490,9 @@ export default function SmartFilter({
             </button>
             {sortOpen && (
               <>
-                {/* Mobile backdrop */}
-                <div className="sm:hidden fixed inset-0 z-[49] bg-black/40" onClick={() => setSortOpen(false)} />
                 <div
                   role="menu"
-                  className="fixed sm:absolute inset-x-2 sm:inset-auto top-auto sm:top-full bottom-2 sm:bottom-auto end-auto sm:end-0 sm:mt-1 z-50 min-w-0 sm:min-w-[180px] w-auto sm:w-max max-w-none sm:max-w-[calc(100vw-1rem)] max-h-[80vh] sm:max-h-none overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1"
+                  className="absolute top-full end-0 mt-1 z-50 w-[210px] max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1"
                 >
                 {sortOptions.map(opt => {
                   const isActive = opt.value === sortBy;
@@ -550,8 +548,8 @@ export default function SmartFilter({
                   onClick={() => toggleFilterLogic(i)}
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded cursor-pointer border-none"
                   style={{
-                    color: f.logic === 'or' ? '#F59E0B' : '#6B8DB5',
-                    background: f.logic === 'or' ? '#F59E0B12' : 'transparent',
+                    color: f.logic === 'or' ? '#C9860A' : '#6B8DB5',
+                    background: f.logic === 'or' ? '#C9860A12' : 'transparent',
                   }}
                 >
                   {f.logic === 'or' ? (isRTL ? 'أو' : 'OR') : (isRTL ? 'و' : 'AND')}

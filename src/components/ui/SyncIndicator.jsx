@@ -68,22 +68,22 @@ export default function SyncIndicator() {
   let dotColor, dotShadow, Icon, label;
 
   if (!status.isOnline) {
-    dotColor = '#ef4444';
+    dotColor = '#D6403B';
     dotShadow = '0 0 6px rgba(239,68,68,0.5)';
     Icon = CloudOff;
     label = isRTL ? 'غير متصل' : 'Offline';
   } else if (status.failedItems > 0) {
-    dotColor = '#f59e0b';
+    dotColor = '#C9860A';
     dotShadow = '0 0 6px rgba(245,158,11,0.5)';
     Icon = AlertTriangle;
     label = isRTL ? `${status.failedItems} عناصر فشلت` : `${status.failedItems} failed`;
   } else if (status.pending > 0) {
-    dotColor = '#f59e0b';
+    dotColor = '#C9860A';
     dotShadow = '0 0 6px rgba(245,158,11,0.5)';
     Icon = RefreshCw;
     label = isRTL ? `${status.pending} في الانتظار` : `${status.pending} pending`;
   } else {
-    dotColor = '#22c55e';
+    dotColor = '#158A57';
     dotShadow = '0 0 6px rgba(34,197,94,0.4)';
     Icon = CheckCircle2;
     label = isRTL ? 'متزامن' : 'Synced';
@@ -157,14 +157,14 @@ export default function SyncIndicator() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: isDark ? '#94a3b8' : '#64748b' }}>
               <span>{isRTL ? 'في الانتظار' : 'Pending'}</span>
-              <span style={{ fontWeight: 600, color: status.pending > 0 ? '#f59e0b' : (isDark ? '#e2e8f0' : '#1e293b') }}>
+              <span style={{ fontWeight: 600, color: status.pending > 0 ? '#C9860A' : (isDark ? '#e2e8f0' : '#1e293b') }}>
                 {status.pending}
               </span>
             </div>
             {status.failedItems > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', color: isDark ? '#94a3b8' : '#64748b' }}>
                 <span>{isRTL ? 'فشلت' : 'Failed'}</span>
-                <span style={{ fontWeight: 600, color: '#ef4444' }}>
+                <span style={{ fontWeight: 600, color: '#D6403B' }}>
                   {status.failedItems}
                 </span>
               </div>
@@ -192,7 +192,7 @@ export default function SyncIndicator() {
                 borderRadius: 8,
                 cursor: syncing ? 'not-allowed' : 'pointer',
                 background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
-                color: isDark ? '#818cf8' : '#6366f1',
+                color: isDark ? '#767DCF' : '#5A63C4',
                 fontWeight: 600,
                 fontSize: 12,
                 fontFamily: 'inherit',

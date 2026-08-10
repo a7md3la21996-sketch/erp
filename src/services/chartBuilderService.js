@@ -85,10 +85,10 @@ const AGGREGATIONS = {
 };
 
 const COLOR_PALETTES = {
-  default: ['#4A7AAB', '#6BAED6', '#9ECAE1', '#C6DBEF', '#2171B5', '#084594'],
-  warm: ['#E85D5D', '#F59E0B', '#F97316', '#EF4444', '#FB923C', '#FCA5A5'],
-  cool: ['#10B981', '#3B82F6', '#6366F1', '#14B8A6', '#818CF8', '#34D399'],
-  mixed: ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'],
+  default: ['#2F6BD3', '#6BAED6', '#9ECAE1', '#C6DBEF', '#2171B5', '#084594'],
+  warm: ['#E85D5D', '#C9860A', '#DD6327', '#D6403B', '#E9925F', '#EDB3B0'],
+  cool: ['#158A57', '#2F6BD3', '#5A63C4', '#12897E', '#767DCF', '#5FB68F'],
+  mixed: ['#5A63C4', '#C14D7E', '#C9860A', '#158A57', '#2F6BD3', '#D6403B'],
 };
 
 // ── CRUD ──

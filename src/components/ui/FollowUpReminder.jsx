@@ -164,7 +164,7 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
       <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {next && (
           <div className={`flex items-center gap-[5px] px-2 py-[3px] rounded-md ${overdue ? 'bg-red-500/10 border border-red-500/30' : 'bg-brand-500/10 border border-brand-500/20'}`}>
-            <Clock size={11} color={overdue ? '#EF4444' : '#4A7AAB'} />
+            <Clock size={11} color={overdue ? '#D6403B' : '#2F6BD3'} />
             <span className={`text-[11px] font-semibold ${overdue ? 'text-red-500' : 'text-brand-500'}`}>{formatDue(next.due_at, lang)}</span>
           </div>
         )}
@@ -180,7 +180,7 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
     <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
       <div className={`py-3 px-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${active.length > 0 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <Bell size={14} color="#4A7AAB" />
+          <Bell size={14} color="#2F6BD3" />
           <span className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? 'المتابعات' : 'Follow-ups'}</span>
           {active.length > 0 && <span className={`text-[11px] px-[7px] py-px rounded-[10px] font-semibold ${overdue ? 'bg-red-500/15 text-red-500' : 'bg-brand-500/15 text-brand-500'}`}>{active.length}</span>}
         </div>
@@ -215,8 +215,8 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
                   {r.notes && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-px overflow-hidden text-ellipsis whitespace-nowrap">{r.notes}</div>}
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => handleDone(r.id)} className="w-[26px] h-[26px] rounded-md border border-emerald-500/30 bg-emerald-500/10 cursor-pointer flex items-center justify-center"><Check size={12} color="#10B981" /></button>
-                  <button onClick={() => handleDelete(r.id)} className="w-[26px] h-[26px] rounded-md border border-red-500/20 bg-transparent cursor-pointer flex items-center justify-center"><Trash2 size={12} color="#EF4444" /></button>
+                  <button onClick={() => handleDone(r.id)} className="w-[26px] h-[26px] rounded-md border border-emerald-500/30 bg-emerald-500/10 cursor-pointer flex items-center justify-center"><Check size={12} color="#158A57" /></button>
+                  <button onClick={() => handleDelete(r.id)} className="w-[26px] h-[26px] rounded-md border border-red-500/20 bg-transparent cursor-pointer flex items-center justify-center"><Trash2 size={12} color="#D6403B" /></button>
                 </div>
               </div>
             );

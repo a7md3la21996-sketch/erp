@@ -10,12 +10,18 @@ import {
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
   ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer,
-  GitCompareArrows, Map as MapIcon, LineChart, PenTool
+  GitCompareArrows, Map as MapIcon, LineChart, PenTool, Copy, ArrowRightLeft
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';
 import { exportToCSV as exportReportCSV, exportToPrintableHTML } from '../services/reportExportService';
 import PrintPreview from '../components/ui/PrintPreview';
+import AgentBreakdownTab from './reports/AgentBreakdownTab';
+import AgentActivityTab from './reports/AgentActivityTab';
+import MeetingsTab from './reports/MeetingsTab';
+import StatusTransitionsTab from './reports/StatusTransitionsTab';
+import ReassignmentsTab from './reports/ReassignmentsTab';
+import DuplicatesTab from './reports/DuplicatesTab';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
 import { getTeamKPIs, setTargets, METRIC_CONFIG, METRICS } from '../services/kpiTargetsService';
@@ -46,9 +52,19 @@ const SECTION_TABS = [
   { id: 'reports',   ar: 'مكتبة التقارير', en: 'Report Library',   icon: FileText },
   { id: 'targets',   ar: 'الأهداف',         en: 'Targets',           icon: Trophy },
   { id: 'kpi',       ar: 'أداء الفريق',     en: 'Team Performance',  icon: Target },
+  { id: 'agents',    ar: 'أداء السيلز',     en: 'Sales Breakdown',   icon: Users },
+  { id: 'activity',  ar: 'نشاط الموظفين',   en: 'Team Activity',     icon: Activity },
+  { id: 'meetings',  ar: 'الاجتماعات',      en: 'Meetings',          icon: Calendar },
+  { id: 'transitions', ar: 'تحويلات الحالة', en: 'Status Changes',   icon: GitCompareArrows },
+  { id: 'reassignments', ar: 'التوزيعات',    en: 'Distribution',      icon: ArrowRightLeft },
+  { id: 'duplicates',  ar: 'المكرّرات',      en: 'Duplicates',        icon: Copy },
   { id: 'analytics', ar: 'التحليلات',       en: 'Analytics',         icon: LineChart },
   { id: 'forecast',  ar: 'التوقعات',        en: 'Forecast',          icon: TrendingUp },
 ];
+
+// Top-level tabs only managers/leaders may see (per-agent breakdown + activity).
+const MANAGER_ONLY_TABS = new Set(['agents', 'activity', 'meetings', 'transitions', 'reassignments', 'duplicates']);
+const MANAGER_ROLES = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'];
 
 const ANALYTICS_SUB_TABS = [
   { id: 'overview',      ar: 'تحليلات عامة', en: 'Overview',       icon: LineChart },
@@ -71,7 +87,7 @@ function SectionLoader() {
 
 const REPORT_CATEGORIES = [
   {
-    key: 'crm', ar: 'تقارير CRM', en: 'CRM Reports', icon: Users, color: '#4A7AAB',
+    key: 'crm', ar: 'تقارير CRM', en: 'CRM Reports', icon: Users, color: '#2F6BD3',
     desc_ar: 'تقارير العملاء المحتملين، المصادر، الحملات، ومعدلات التحويل', desc_en: 'Leads, sources, campaigns, conversion funnels',
     reports: [
       { key: 'contacts_by_source', ar: 'جهات الاتصال حسب المصدر', en: 'Contacts by Source', desc_ar: 'توزيع جهات الاتصال على مصادر الاستقطاب', desc_en: 'Distribution of contacts across acquisition sources', icon: PieChart, data: [] },
@@ -83,7 +99,7 @@ const REPORT_CATEGORIES = [
       { key: 'activity_summary', ar: 'ملخص النشاط', en: 'Activity Summary', desc_ar: 'إجمالي الأنشطة: مكالمات، اجتماعات، متابعات', desc_en: 'Total activities: calls, meetings, follow-ups', icon: Activity, data: [] },
     ] },
   {
-    key: 'sales', ar: 'تقارير المبيعات', en: 'Sales Reports', icon: DollarSign, color: '#4A7AAB',
+    key: 'sales', ar: 'تقارير المبيعات', en: 'Sales Reports', icon: DollarSign, color: '#2F6BD3',
     desc_ar: 'الإيرادات الشهرية، تحقيق الأهداف، أداء الفريق، ودورة الصفقة', desc_en: 'Revenue, targets, performers, deal cycle',
     reports: [
       { key: 'revenue_by_month', ar: 'الإيرادات الشهرية', en: 'Revenue by Month', desc_ar: 'مقارنة الإيرادات الفعلية مع المستهدف', desc_en: 'Compare actual revenue vs target by month', icon: BarChart3, data: [] },
@@ -230,7 +246,7 @@ function TargetTrackerTab({ lang, isRTL }) {
   const topPerformer = monthData[0];
   const aboveTarget = monthData.filter(e => e.pct >= 100).length;
   const monthLabel = (id) => { const m = MONTHS.find(m => m.id === id); return m ? (lang === 'ar' ? m.ar : m.en) : id; };
-  const getPctColor = (pct) => pct >= 100 ? '#4A7AAB' : pct >= 80 ? '#6B8DB5' : pct >= 60 ? '#8BA8C8' : '#EF4444';
+  const getPctColor = (pct) => pct >= 100 ? '#2F6BD3' : pct >= 80 ? '#6B8DB5' : pct >= 60 ? '#8BA8C8' : '#D6403B';
   const getTrend = (empId, currentPct) => {
     const prevMonth = selectedMonth === 'mar' ? 'feb' : selectedMonth === 'feb' ? 'jan' : null;
     if (!prevMonth) return 0;
@@ -255,10 +271,10 @@ function TargetTrackerTab({ lang, isRTL }) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
-        <KpiCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sub={monthLabel(selectedMonth)} color="#4A7AAB" />
-        <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sub={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? '#4A7AAB' : '#EF4444'} />
+        <KpiCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sub={monthLabel(selectedMonth)} color="#2F6BD3" />
+        <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sub={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? '#2F6BD3' : '#D6403B'} />
         <KpiCard icon={Crown} label={lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer'} value={topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—'} sub={topPerformer ? `${topPerformer.pct}%` : ''} color="#FFD700" />
-        <KpiCard icon={Zap} label={lang === 'ar' ? 'حققوا التارجت' : 'Hit Target'} value={`${aboveTarget} / ${monthData.length}`} sub={lang === 'ar' ? 'موظف' : 'agents'} color="#4A7AAB" />
+        <KpiCard icon={Zap} label={lang === 'ar' ? 'حققوا التارجت' : 'Hit Target'} value={`${aboveTarget} / ${monthData.length}`} sub={lang === 'ar' ? 'موظف' : 'agents'} color="#2F6BD3" />
       </div>
 
       {/* Main content grid */}
@@ -299,7 +315,7 @@ function TargetTrackerTab({ lang, isRTL }) {
                       <Td className="text-center">{getRankIcon(idx + 1)}</Td>
                       <Td>
                         <div className="flex items-center gap-2.5">
-                          <div className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: emp.avatar_color || '#4A7AAB' }}>
+                          <div className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: emp.avatar_color || '#2F6BD3' }}>
                             {(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}
                           </div>
                           <div>
@@ -348,7 +364,7 @@ function TargetTrackerTab({ lang, isRTL }) {
                 const podiumColors = ['#C0C0C0', '#FFD700', '#CD7F32'];
                 return (
                   <div key={idx} className="flex flex-col items-center w-20">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white mb-1.5" style={{ background: emp.avatar_color || '#4A7AAB', border: `2px solid ${podiumColors[idx]}` }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white mb-1.5" style={{ background: emp.avatar_color || '#2F6BD3', border: `2px solid ${podiumColors[idx]}` }}>
                       {(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}
                     </div>
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 text-center">
@@ -390,7 +406,7 @@ function TargetTrackerTab({ lang, isRTL }) {
                     <span className="text-xs font-bold" style={{ color: getPctColor(mPct) }}>{mPct}%</span>
                   </div>
                   <div className="h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12]">
-                    <div className="h-full rounded" style={{ width: `${Math.min(mPct,100)}%`, background: m === selectedMonth ? '#4A7AAB' : '#6B8DB5' }} />
+                    <div className="h-full rounded" style={{ width: `${Math.min(mPct,100)}%`, background: m === selectedMonth ? '#2F6BD3' : '#6B8DB5' }} />
                   </div>
                 </div>
               );
@@ -454,7 +470,7 @@ function KpiPerformanceTab({ lang, isRTL }) {
 
   const aboveTarget = teamKpis.filter(k => k.overallPct >= 80).length;
 
-  const getPctColor = (pct) => pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
+  const getPctColor = (pct) => pct >= 80 ? '#158A57' : pct >= 50 ? '#C9860A' : '#D6403B';
   const fmtVal = (metric, val) => metric === 'revenue' ? (val >= 1000000 ? (val/1000000).toFixed(1)+'M' : val >= 1000 ? (val/1000).toFixed(0)+'K' : val) : val;
 
   const handleSaveEdit = async (empId, metric) => {
@@ -490,8 +506,8 @@ function KpiPerformanceTab({ lang, isRTL }) {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
         <KpiCard icon={Target} label={lang === 'ar' ? 'أداء الفريق' : 'Team Performance'} value={`${teamOverall}%`} sub={lang === 'ar' ? monthLabel?.ar : monthLabel?.en} color={getPctColor(teamOverall)} />
-        <KpiCard icon={Users} label={lang === 'ar' ? 'أعضاء الفريق' : 'Team Members'} value={teamKpis.length} sub={lang === 'ar' ? 'موظف مبيعات' : 'sales agents'} color="#4A7AAB" />
-        <KpiCard icon={Award} label={lang === 'ar' ? 'فوق 80%' : 'Above 80%'} value={`${aboveTarget} / ${teamKpis.length}`} sub={lang === 'ar' ? 'حققوا الهدف' : 'hit target'} color="#10B981" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'أعضاء الفريق' : 'Team Members'} value={teamKpis.length} sub={lang === 'ar' ? 'موظف مبيعات' : 'sales agents'} color="#2F6BD3" />
+        <KpiCard icon={Award} label={lang === 'ar' ? 'فوق 80%' : 'Above 80%'} value={`${aboveTarget} / ${teamKpis.length}`} sub={lang === 'ar' ? 'حققوا الهدف' : 'hit target'} color="#158A57" />
         <KpiCard icon={Trophy} label={lang === 'ar' ? 'الأفضل' : 'Top Performer'} value={teamKpis[0] ? (lang === 'ar' ? teamKpis[0].employee.full_name_ar.split(' ')[0] : teamKpis[0].employee.full_name_en.split(' ')[0]) : '—'} sub={teamKpis[0] ? `${teamKpis[0].overallPct}%` : ''} color="#FFD700" />
       </div>
 
@@ -531,7 +547,7 @@ function KpiPerformanceTab({ lang, isRTL }) {
                     <Td className="text-center">{getRankIcon(idx + 1)}</Td>
                     <Td>
                       <div className="flex items-center gap-2.5">
-                        <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#4A7AAB' }}>
+                        <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#2F6BD3' }}>
                           {(lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en).charAt(0)}
                         </div>
                         <div>
@@ -602,7 +618,7 @@ function KpiPerformanceTab({ lang, isRTL }) {
           return (
             <Card key={row.employee.id} className="p-4">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#4A7AAB' }}>
+                <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#2F6BD3' }}>
                   {(lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en).charAt(0)}
                 </div>
                 <div className="flex-1">
@@ -645,11 +661,20 @@ export default function ReportsPage() {
   // Section-level tab (top bar) — driven by ?tab= query param.
   // Resolves legacy IDs (comparison/heatmap/chart-builder) to the
   // new 'analytics' tab so old bookmarks keep working.
+  // Manager-only tabs (per-agent breakdown / activity) are hidden from sales
+  // agents — both from the tab bar AND from a direct ?tab= deep-link.
+  const isManagerPlus = MANAGER_ROLES.includes(profile?.role);
+  const visibleSectionTabs = useMemo(
+    () => SECTION_TABS.filter(s => isManagerPlus || !MANAGER_ONLY_TABS.has(s.id)),
+    [isManagerPlus]
+  );
+
   const sectionTab = useMemo(() => {
     const t = searchParams.get('tab');
     if (LEGACY_ANALYTICS_TABS.has(t)) return 'analytics';
+    if (MANAGER_ONLY_TABS.has(t) && !isManagerPlus) return 'reports';
     return SECTION_TABS.some(s => s.id === t) ? t : 'reports';
-  }, [searchParams]);
+  }, [searchParams, isManagerPlus]);
 
   // Analytics sub-tab. Defaults to 'overview'; legacy ?tab=comparison
   // surfaces here as the active sub-tab so the user lands exactly where
@@ -862,7 +887,7 @@ export default function ReportsPage() {
   const exportColumns = useMemo(() => reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [], [reportTable]);
 
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -883,7 +908,7 @@ export default function ReportsPage() {
 
       {/* Section Tabs (pill style) */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1 flex-wrap">
-        {SECTION_TABS.map(tab => {
+        {visibleSectionTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = sectionTab === tab.id;
           return (
@@ -912,6 +937,32 @@ export default function ReportsPage() {
       {/* ── Section: Team Performance (promoted from inner-tab) ── */}
       {sectionTab === 'kpi' && (
         <KpiPerformanceTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {/* ── Section: Per-Sales-Agent Breakdown (managers only) ── */}
+      {sectionTab === 'agents' && isManagerPlus && (
+        <AgentBreakdownTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {/* ── Section: Per-Agent Activity (managers only) ── */}
+      {sectionTab === 'activity' && isManagerPlus && (
+        <AgentActivityTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {sectionTab === 'meetings' && isManagerPlus && (
+        <MeetingsTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {sectionTab === 'transitions' && isManagerPlus && (
+        <StatusTransitionsTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {sectionTab === 'reassignments' && isManagerPlus && (
+        <ReassignmentsTab lang={lang} isRTL={isRTL} />
+      )}
+
+      {sectionTab === 'duplicates' && isManagerPlus && (
+        <DuplicatesTab lang={lang} isRTL={isRTL} />
       )}
 
       {/* ── Section: Forecast ── */}
@@ -966,8 +1017,8 @@ export default function ReportsPage() {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-            <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="#4A7AAB" />
-            <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={reportsByCategoryKey.crm || 0} color="#4A7AAB" />
+            <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="#2F6BD3" />
+            <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={reportsByCategoryKey.crm || 0} color="#2F6BD3" />
             <KpiCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={reportsByCategoryKey.finance || 0} color="#2B4C6F" />
             <KpiCard icon={Briefcase} label={lang === 'ar' ? 'تقارير HR' : 'HR Reports'} value={reportsByCategoryKey.hr || 0} color="#6B8DB5" />
           </div>

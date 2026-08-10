@@ -34,14 +34,14 @@ const METRIC_ICONS = {
 };
 
 const METRIC_COLORS = {
-  contacts: '#3B82F6',
-  opportunities: '#8B5CF6',
-  won_deals: '#10B981',
-  revenue: '#F59E0B',
-  activities: '#6366F1',
-  conversion_rate: '#EC4899',
-  avg_deal: '#14B8A6',
-  lost_deals: '#EF4444',
+  contacts: '#2F6BD3',
+  opportunities: '#5A63C4',
+  won_deals: '#158A57',
+  revenue: '#C9860A',
+  activities: '#5A63C4',
+  conversion_rate: '#C14D7E',
+  avg_deal: '#12897E',
+  lost_deals: '#D6403B',
 };
 
 function formatNumber(n, isCurrency, isPercent) {
@@ -120,10 +120,10 @@ export default function ComparisonReportsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 42, height: 42, borderRadius: 12,
-            background: isDark ? '#3B82F620' : '#3B82F615',
+            background: isDark ? '#2F6BD320' : '#2F6BD315',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <GitCompareArrows size={22} color="#3B82F6" />
+            <GitCompareArrows size={22} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary }}>
@@ -140,7 +140,7 @@ export default function ComparisonReportsPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', borderRadius: 8,
-            background: isDark ? '#3B82F6' : '#3B82F6',
+            background: isDark ? '#2F6BD3' : '#2F6BD3',
             color: '#FFF', border: 'none', cursor: 'pointer',
             fontSize: 13, fontWeight: 600,
           }}
@@ -233,7 +233,7 @@ export default function ComparisonReportsPage() {
           }}>
             {metrics.map(m => {
               const Icon = METRIC_ICONS[m.id] || BarChart3;
-              const color = METRIC_COLORS[m.id] || '#3B82F6';
+              const color = METRIC_COLORS[m.id] || '#2F6BD3';
               const max = Math.max(m.period1Value, m.period2Value) || 1;
               const p1Pct = (m.period1Value / max) * 100;
               const p2Pct = (m.period2Value / max) * 100;
@@ -241,7 +241,7 @@ export default function ComparisonReportsPage() {
                 ? m.changeDirection === 'down'
                 : m.changeDirection === 'up';
               const changeColor = m.changeDirection === 'same' ? textSecondary
-                : isGoodChange ? '#10B981' : '#EF4444';
+                : isGoodChange ? '#158A57' : '#D6403B';
 
               return (
                 <div key={m.id} style={{
@@ -275,10 +275,10 @@ export default function ComparisonReportsPage() {
                   {/* Values */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
                     <div>
-                      <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 600, textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: 10, color: '#2F6BD3', fontWeight: 600, textTransform: 'uppercase' }}>
                         {isRTL ? 'الفترة أ' : 'Period A'}
                       </span>
-                      <p style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#3B82F6' }}>
+                      <p style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#2F6BD3' }}>
                         {formatNumber(m.period1Value, m.isCurrency, m.isPercent)}
                       </p>
                     </div>
@@ -295,7 +295,7 @@ export default function ComparisonReportsPage() {
                   {/* Progress bars */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ height: 6, borderRadius: 3, background: isDark ? '#1E293B' : '#F1F5F9', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${p1Pct}%`, borderRadius: 3, background: '#3B82F6', transition: 'width 0.5s' }} />
+                      <div style={{ height: '100%', width: `${p1Pct}%`, borderRadius: 3, background: '#2F6BD3', transition: 'width 0.5s' }} />
                     </div>
                     <div style={{ height: 6, borderRadius: 3, background: isDark ? '#1E293B' : '#F1F5F9', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${p2Pct}%`, borderRadius: 3, background: isDark ? '#64748B' : '#94A3B8', transition: 'width 0.5s' }} />
@@ -325,7 +325,7 @@ export default function ComparisonReportsPage() {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey={p1Label} fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey={p1Label} fill="#2F6BD3" radius={[4, 4, 0, 0]} />
                   <Bar dataKey={p2Label} fill={isDark ? '#64748B' : '#94A3B8'} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -349,7 +349,7 @@ export default function ComparisonReportsPage() {
                     formatter={v => v.toLocaleString()}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey={p1Label} fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey={p1Label} fill="#C9860A" radius={[4, 4, 0, 0]} />
                   <Bar dataKey={p2Label} fill={isDark ? '#64748B' : '#94A3B8'} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -389,15 +389,15 @@ export default function ComparisonReportsPage() {
                 </thead>
                 <tbody>
                   {agents.map((a, idx) => {
-                    const changeColor = a.changeDirection === 'up' ? '#10B981'
-                      : a.changeDirection === 'down' ? '#EF4444' : textSecondary;
+                    const changeColor = a.changeDirection === 'up' ? '#158A57'
+                      : a.changeDirection === 'down' ? '#D6403B' : textSecondary;
                     return (
                       <tr key={idx} style={{ borderBottom: `1px solid ${tableBorderColor}` }}
                         onMouseEnter={e => e.currentTarget.style.background = tableRowHoverBg}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <td style={{ padding: '10px 14px', fontWeight: 600, color: textPrimary }}>{a.agent}</td>
-                        <td style={{ padding: '10px 14px', color: '#3B82F6', fontWeight: 600 }}>{a.period1Revenue.toLocaleString()}</td>
+                        <td style={{ padding: '10px 14px', color: '#2F6BD3', fontWeight: 600 }}>{a.period1Revenue.toLocaleString()}</td>
                         <td style={{ padding: '10px 14px', color: textSecondary }}>{a.period2Revenue.toLocaleString()}</td>
                         <td style={{ padding: '10px 14px', color: changeColor, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                           {a.changeDirection === 'up' && <ArrowUpRight size={14} />}
@@ -405,7 +405,7 @@ export default function ComparisonReportsPage() {
                           {a.changeDirection === 'same' && <Minus size={14} />}
                           {a.change}%
                         </td>
-                        <td style={{ padding: '10px 14px', color: '#3B82F6', fontWeight: 600 }}>{a.period1Deals}</td>
+                        <td style={{ padding: '10px 14px', color: '#2F6BD3', fontWeight: 600 }}>{a.period1Deals}</td>
                         <td style={{ padding: '10px 14px', color: textSecondary }}>{a.period2Deals}</td>
                       </tr>
                     );
@@ -438,7 +438,7 @@ export default function ComparisonReportsPage() {
                     formatter={v => v.toLocaleString()}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey={p1Label} fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey={p1Label} fill="#2F6BD3" radius={[0, 4, 4, 0]} />
                   <Bar dataKey={p2Label} fill={isDark ? '#64748B' : '#94A3B8'} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>

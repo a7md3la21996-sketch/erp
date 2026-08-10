@@ -28,7 +28,7 @@ function renderText(text, isDark) {
   return parts.map((part, i) => {
     if (part.startsWith('@')) {
       return (
-        <span key={i} style={{ color: '#4A7AAB', fontWeight: 600 }}>{part}</span>
+        <span key={i} style={{ color: '#2F6BD3', fontWeight: 600 }}>{part}</span>
       );
     }
     return part;
@@ -36,7 +36,7 @@ function renderText(text, isDark) {
 }
 
 // ── Avatar initials ────────────────────────────────────────────
-const AVATAR_COLORS = ['#4A7AAB', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#14B8A6', '#F97316'];
+const AVATAR_COLORS = ['#2F6BD3', '#158A57', '#C9860A', '#5A63C4', '#D6403B', '#C14D7E', '#12897E', '#DD6327'];
 function avatarColor(id) {
   let hash = 0;
   for (let i = 0; i < (id || '').length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
@@ -238,7 +238,7 @@ export default function CommentsSection({ entity, entityId, entityName, onCommen
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#4A7AAB',
+    color: '#2F6BD3',
   };
 
   const emptyTextStyle = {
@@ -331,7 +331,7 @@ export default function CommentsSection({ entity, entityId, entityName, onCommen
     width: 30,
     height: 30,
     borderRadius: '50%',
-    background: text.trim() ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'),
+    background: text.trim() ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'),
     border: 'none',
     color: text.trim() ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
     cursor: text.trim() ? 'pointer' : 'default',
@@ -383,7 +383,7 @@ export default function CommentsSection({ entity, entityId, entityName, onCommen
     <div style={containerStyle} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div style={headerStyle}>
-        <MessageCircle size={14} color="#4A7AAB" />
+        <MessageCircle size={14} color="#2F6BD3" />
         <span style={headerTextStyle}>{isRTL ? 'التعليقات' : 'Comments'}</span>
         <span style={countStyle}>{comments.length}</span>
       </div>
@@ -417,10 +417,10 @@ export default function CommentsSection({ entity, entityId, entityName, onCommen
                       rows={2}
                       autoFocus
                     />
-                    <button onClick={() => handleEditSave(c.id)} style={{ ...actionBtnStyle, color: '#10B981' }}>
+                    <button onClick={() => handleEditSave(c.id)} style={{ ...actionBtnStyle, color: '#158A57' }}>
                       <Check size={14} />
                     </button>
-                    <button onClick={() => setEditingId(null)} style={{ ...actionBtnStyle, color: '#EF4444' }}>
+                    <button onClick={() => setEditingId(null)} style={{ ...actionBtnStyle, color: '#D6403B' }}>
                       <X size={14} />
                     </button>
                   </div>
@@ -432,7 +432,7 @@ export default function CommentsSection({ entity, entityId, entityName, onCommen
                     <button onClick={() => handleEdit(c)} style={actionBtnStyle} title={isRTL ? 'تعديل' : 'Edit'}>
                       <Pencil size={11} />
                     </button>
-                    <button onClick={() => handleDelete(c.id)} style={{ ...actionBtnStyle, color: '#EF4444' }} title={isRTL ? 'حذف' : 'Delete'}>
+                    <button onClick={() => handleDelete(c.id)} style={{ ...actionBtnStyle, color: '#D6403B' }} title={isRTL ? 'حذف' : 'Delete'}>
                       <Trash2 size={11} />
                     </button>
                   </div>

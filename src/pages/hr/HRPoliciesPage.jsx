@@ -268,7 +268,7 @@ const MOCK_POLICIES = [
 /* ── Category definitions ── */
 const CATEGORIES = [
   { key: 'all',          label_ar: 'الكل',      label_en: 'All',            icon: FileText,    color: '#1B3347' },
-  { key: 'leave',        label_ar: 'الإجازات',  label_en: 'Leave',          icon: BookOpen,    color: '#4A7AAB' },
+  { key: 'leave',        label_ar: 'الإجازات',  label_en: 'Leave',          icon: BookOpen,    color: '#2F6BD3' },
   { key: 'attendance',   label_ar: 'الحضور',    label_en: 'Attendance',     icon: Clock,       color: '#6B8DB5' },
   { key: 'conduct',      label_ar: 'السلوك',    label_en: 'Conduct',        icon: Shield,      color: '#2B4C6F' },
   { key: 'compensation', label_ar: 'التعويضات', label_en: 'Compensation',   icon: DollarSign,  color: '#3D6B8E' },
@@ -278,14 +278,14 @@ const CATEGORIES = [
 const CATEGORY_MAP = Object.fromEntries(CATEGORIES.filter(c => c.key !== 'all').map(c => [c.key, c]));
 
 const STATUS_CONFIG = {
-  active:   { label_ar: 'نشط',    label_en: 'Active',   color: '#4A7AAB' },
+  active:   { label_ar: 'نشط',    label_en: 'Active',   color: '#2F6BD3' },
   draft:    { label_ar: 'مسودة',   label_en: 'Draft',    color: '#6B8DB5' },
   archived: { label_ar: 'مؤرشف',  label_en: 'Archived', color: '#94a3b8' },
 };
 
 
 /* ── Icon Button helper ── */
-function IconBtn({ icon: Icon, onClick, title, color = '#4A7AAB' }) {
+function IconBtn({ icon: Icon, onClick, title, color = '#2F6BD3' }) {
   return (
     <button
       title={title}
@@ -384,7 +384,7 @@ export default function HRPoliciesPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
 
       {/* ── Page Header ── */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -410,7 +410,7 @@ export default function HRPoliciesPage() {
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={FileText}      label={lang === 'ar' ? 'إجمالي السياسات' : 'Total Policies'}     value={totalPolicies}   color="#1B3347" />
-        <KpiCard icon={CheckCircle2}  label={lang === 'ar' ? 'نشطة' : 'Active'}                        value={activePolicies}   color="#4A7AAB" />
+        <KpiCard icon={CheckCircle2}  label={lang === 'ar' ? 'نشطة' : 'Active'}                        value={activePolicies}   color="#2F6BD3" />
         <KpiCard icon={PenLine}       label={lang === 'ar' ? 'مسودة' : 'Draft'}                        value={draftPolicies}    color="#6B8DB5" />
         <KpiCard icon={Calendar}      label={lang === 'ar' ? 'مُحدّثة مؤخرًا' : 'Recently Updated'}    value={recentlyUpdated}  color="#2B4C6F" />
       </div>

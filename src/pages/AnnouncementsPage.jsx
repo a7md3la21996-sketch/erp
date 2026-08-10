@@ -177,7 +177,7 @@ export default function AnnouncementsPage() {
         onClick={() => handleView(ann)}
         style={{
           background: isPinned ? pinnedBg : cardBg,
-          border: `1px solid ${isPinned ? (isDark ? '#4A7AAB30' : '#4A7AAB20') : cardBorder}`,
+          border: `1px solid ${isPinned ? (isDark ? '#2F6BD330' : '#2F6BD320') : cardBorder}`,
           borderRadius: 14,
           padding: '18px 20px',
           cursor: 'pointer',
@@ -196,7 +196,7 @@ export default function AnnouncementsPage() {
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: '#4A7AAB',
+            background: '#2F6BD3',
           }} />
         )}
 
@@ -215,7 +215,7 @@ export default function AnnouncementsPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 4 }}>
-              {isPinned && <Pin size={13} color="#4A7AAB" />}
+              {isPinned && <Pin size={13} color="#2F6BD3" />}
               <span style={{ fontSize: 15, fontWeight: 700, color: textPrimary, lineHeight: 1.3 }}>{title}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -308,7 +308,7 @@ export default function AnnouncementsPage() {
                   onClick={() => setDeleteConfirm(ann)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                    color: '#EF4444', display: 'flex', alignItems: 'center',
+                    color: '#D6403B', display: 'flex', alignItems: 'center',
                   }}
                 >
                   <Trash2 size={14} />
@@ -326,8 +326,8 @@ export default function AnnouncementsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#4A7AAB18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Megaphone size={22} color="#4A7AAB" />
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#2F6BD318', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Megaphone size={22} color="#2F6BD3" />
           </div>
           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: textPrimary }}>
@@ -343,7 +343,7 @@ export default function AnnouncementsPage() {
             onClick={() => { setEditingAnn(null); setShowModal(true); }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
-              borderRadius: 10, border: 'none', background: '#4A7AAB', color: '#fff',
+              borderRadius: 10, border: 'none', background: '#2F6BD3', color: '#fff',
               fontSize: 13, fontWeight: 600, cursor: 'pointer',
               flexDirection: isRTL ? 'row-reverse' : 'row',
             }}
@@ -379,8 +379,8 @@ export default function AnnouncementsPage() {
           {pinnedItems.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <Pin size={13} color="#4A7AAB" />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB' }}>
+                <Pin size={13} color="#2F6BD3" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#2F6BD3' }}>
                   {lang === 'ar' ? 'مثبت' : 'Pinned'}
                 </span>
               </div>
@@ -541,7 +541,7 @@ function ViewModal({ ann, onClose, isDark, isRTL, lang, userId, formatDate, form
             {lang === 'ar' ? pri.ar : pri.en}
           </span>
           {ann.pinned && (
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: '#4A7AAB18', color: '#4A7AAB', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: '#2F6BD318', color: '#2F6BD3', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Pin size={11} /> {lang === 'ar' ? 'مثبت' : 'Pinned'}
             </span>
           )}
@@ -785,8 +785,8 @@ function AnnForm({ existing, onClose, onSave, isDark, isRTL, lang }) {
               >
                 <div style={{
                   width: 18, height: 18, borderRadius: 4,
-                  border: `2px solid ${form.pinned ? '#4A7AAB' : inputBorder}`,
-                  background: form.pinned ? '#4A7AAB' : 'transparent',
+                  border: `2px solid ${form.pinned ? '#2F6BD3' : inputBorder}`,
+                  background: form.pinned ? '#2F6BD3' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}>
@@ -826,7 +826,7 @@ function AnnForm({ existing, onClose, onSave, isDark, isRTL, lang }) {
             disabled={!form.title.trim() && !form.titleAr.trim()}
             style={{
               padding: '10px 24px', borderRadius: 10,
-              border: 'none', background: '#4A7AAB', color: '#fff',
+              border: 'none', background: '#2F6BD3', color: '#fff',
               fontSize: 13, fontWeight: 600, cursor: 'pointer',
               opacity: (!form.title.trim() && !form.titleAr.trim()) ? 0.5 : 1,
             }}
@@ -871,8 +871,8 @@ function DeleteConfirm({ ann, onClose, onConfirm, isDark, isRTL, lang }) {
           borderRadius: 16, padding: 28, maxWidth: 400, width: '100%', textAlign: 'center',
         }}
       >
-        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#EF444418', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <Trash2 size={22} color="#EF4444" />
+        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#D6403B18', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <Trash2 size={22} color="#D6403B" />
         </div>
         <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: textPrimary }}>
           {lang === 'ar' ? 'حذف الإعلان؟' : 'Delete Announcement?'}
@@ -895,7 +895,7 @@ function DeleteConfirm({ ann, onClose, onConfirm, isDark, isRTL, lang }) {
             onClick={onConfirm}
             style={{
               padding: '10px 24px', borderRadius: 10,
-              border: 'none', background: '#EF4444', color: '#fff',
+              border: 'none', background: '#D6403B', color: '#fff',
               fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}
           >

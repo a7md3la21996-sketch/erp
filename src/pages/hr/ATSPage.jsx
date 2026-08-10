@@ -99,18 +99,18 @@ export default function ATSPage() {
 
   /* ─── Status configs ─── */
   const jobStatusConfig = useMemo(() => ({
-    open:    { color: '#10B981', label: lang === 'ar' ? 'مفتوح' : 'Open' },
-    closed:  { color: '#EF4444', label: lang === 'ar' ? 'مغلق' : 'Closed' },
-    on_hold: { color: '#F59E0B', label: lang === 'ar' ? 'معلّق' : 'On Hold' },
+    open:    { color: '#158A57', label: lang === 'ar' ? 'مفتوح' : 'Open' },
+    closed:  { color: '#D6403B', label: lang === 'ar' ? 'مغلق' : 'Closed' },
+    on_hold: { color: '#C9860A', label: lang === 'ar' ? 'معلّق' : 'On Hold' },
   }), [lang]);
 
   const appStatusConfig = useMemo(() => ({
-    new:       { color: '#3B82F6', label: lang === 'ar' ? 'جديد' : 'New' },
-    screening: { color: '#F59E0B', label: lang === 'ar' ? 'فرز' : 'Screening' },
-    interview: { color: '#4A7AAB', label: lang === 'ar' ? 'مقابلة' : 'Interview' },
-    offered:   { color: '#10B981', label: lang === 'ar' ? 'عرض' : 'Offered' },
-    rejected:  { color: '#EF4444', label: lang === 'ar' ? 'مرفوض' : 'Rejected' },
-    hired:     { color: '#10B981', label: lang === 'ar' ? 'تم التعيين' : 'Hired', bold: true },
+    new:       { color: '#2F6BD3', label: lang === 'ar' ? 'جديد' : 'New' },
+    screening: { color: '#C9860A', label: lang === 'ar' ? 'فرز' : 'Screening' },
+    interview: { color: '#2F6BD3', label: lang === 'ar' ? 'مقابلة' : 'Interview' },
+    offered:   { color: '#158A57', label: lang === 'ar' ? 'عرض' : 'Offered' },
+    rejected:  { color: '#D6403B', label: lang === 'ar' ? 'مرفوض' : 'Rejected' },
+    hired:     { color: '#158A57', label: lang === 'ar' ? 'تم التعيين' : 'Hired', bold: true },
   }), [lang]);
 
   /* ─── Job Actions ─── */
@@ -294,7 +294,7 @@ export default function ATSPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -363,7 +363,7 @@ export default function ATSPage() {
                 <tr>
                   <td colSpan={7} className="text-center py-16 px-5">
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Briefcase size={24} color="#4A7AAB" />
+                      <Briefcase size={24} color="#2F6BD3" />
                     </div>
                     <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد وظائف' : 'No Job Postings'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لم يتم إضافة أي وظائف بعد' : 'No job postings added yet'}</p>
@@ -439,7 +439,7 @@ export default function ATSPage() {
                   <tr>
                     <td colSpan={8} className="text-center py-16 px-5">
                       <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                        <Users size={24} color="#4A7AAB" />
+                        <Users size={24} color="#2F6BD3" />
                       </div>
                       <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'لا يوجد متقدمون' : 'No Applicants'}</p>
                       <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لم يتم إضافة أي متقدمين بعد' : 'No applicants added yet'}</p>

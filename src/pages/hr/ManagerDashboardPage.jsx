@@ -132,7 +132,7 @@ export default function ManagerDashboardPage() {
 
   if (team.length === 0) {
     return (
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-surface-bg dark:bg-surface-bg-dark min-h-screen flex flex-col items-center justify-center text-center">
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen flex flex-col items-center justify-center text-center">
         <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4">
           <Users size={28} className="text-brand-500" />
         </div>
@@ -162,7 +162,7 @@ export default function ManagerDashboardPage() {
   })();
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Hero */}
       <div className={`mb-6 ${isRTL ? 'text-right' : 'text-left'}`}>
         <h1 className="m-0 text-2xl md:text-3xl font-bold text-content dark:text-content-dark">
@@ -177,9 +177,9 @@ export default function ManagerDashboardPage() {
       {teamStats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
           <KpiCard icon={Users} label={isRTL ? 'حجم الفريق' : 'Team Size'} value={teamStats.headcount} color="#1B3347" />
-          <KpiCard icon={AlertTriangle} label={isRTL ? 'بانتظار موافقتك' : 'Pending Your Approval'} value={teamStats.pendingApprovals} color="#F59E0B" />
-          <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط الحضور' : 'Avg Attendance'} value={`${teamStats.avgAttendance}%`} color="#10B981" />
-          <KpiCard icon={Clock} label={isRTL ? 'تأخيرات الشهر' : 'Late This Month'} value={teamStats.lateCount} color="#EF4444" />
+          <KpiCard icon={AlertTriangle} label={isRTL ? 'بانتظار موافقتك' : 'Pending Your Approval'} value={teamStats.pendingApprovals} color="#C9860A" />
+          <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط الحضور' : 'Avg Attendance'} value={`${teamStats.avgAttendance}%`} color="#158A57" />
+          <KpiCard icon={Clock} label={isRTL ? 'تأخيرات الشهر' : 'Late This Month'} value={teamStats.lateCount} color="#D6403B" />
         </div>
       )}
 
@@ -209,7 +209,7 @@ export default function ManagerDashboardPage() {
                     <ApprovalRow
                       key={`l-${l.id}`}
                       icon={CalendarOff}
-                      iconColor="#4A7AAB"
+                      iconColor="#2F6BD3"
                       title={(isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || '—'}
                       sub={`${isRTL ? 'إجازة' : 'Leave'} ${l.type || ''} · ${l.start_date} → ${l.end_date}`}
                       busy={acting === `l-${l.id}`}
@@ -226,7 +226,7 @@ export default function ManagerDashboardPage() {
                     <ApprovalRow
                       key={`c-${c.id}`}
                       icon={Receipt}
-                      iconColor="#10B981"
+                      iconColor="#158A57"
                       title={(isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || '—'}
                       sub={`${isRTL ? 'مصروف' : 'Expense'} ${c.title || ''} · ${Number(c.amount || 0).toLocaleString()} ج.م`}
                       busy={acting === `c-${c.id}`}

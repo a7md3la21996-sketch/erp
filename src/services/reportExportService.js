@@ -47,7 +47,7 @@ function downloadBlob(blob, name) {
 // Printable HTML (opens in new window with print dialog)
 // ═══════════════════════════════════════════════════════════════════
 
-const ACCENT = '#4A7AAB';
+const ACCENT = '#2F6BD3';
 
 const PRINT_CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }

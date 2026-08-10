@@ -15,9 +15,9 @@ import supabase from '../../lib/supabase';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
-  google:   { ar: 'جوجل',    en: 'Google',   weight: 3,   color: '#EF4444', seniorOnly: true },
+  google:   { ar: 'جوجل',    en: 'Google',   weight: 3,   color: '#D6403B', seniorOnly: true },
   tiktok:   { ar: 'تيك توك', en: 'TikTok',   weight: 2.5, color: '#2B4C6F' },
-  meta:     { ar: 'ميتا',    en: 'Meta',     weight: 2,   color: '#4A7AAB' },
+  meta:     { ar: 'ميتا',    en: 'Meta',     weight: 2,   color: '#2F6BD3' },
   organic:  { ar: 'أورجانيك',en: 'Organic',  weight: 1.5, color: '#6B8DB5' },
   cold_call:{ ar: 'كولد كول',en: 'Cold Call',weight: 1,   color: '#8BA8C8' },
 };
@@ -87,13 +87,13 @@ async function fetchPoolLeads() {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function getAging(dateStr) {
+function getAging(dateStr, isRTL = true) {
   if (!dateStr) return { label: '—', color: '#6B8DB5', dot: 'warn', level: 'warn' };
   const mins = Math.floor((Date.now() - new Date(dateStr)) / 60000);
   if (isNaN(mins)) return { label: '—', color: '#6B8DB5', dot: 'warn', level: 'warn' };
-  if (mins < 60)    return { label: `${mins}د`,           color: '#4A7AAB', dot: 'fresh', level: 'fresh' };
-  if (mins < 1440)  return { label: `${Math.floor(mins / 60)}س`, color: '#6B8DB5', dot: 'warn',  level: 'warn'  };
-  return              { label: `${Math.floor(mins / 1440)}ي`, color: '#EF4444', dot: 'old',   level: 'old'   };
+  if (mins < 60)    return { label: `${mins}${isRTL ? 'د' : 'm'}`,               color: '#2F6BD3', dot: 'fresh', level: 'fresh' };
+  if (mins < 1440)  return { label: `${Math.floor(mins / 60)}${isRTL ? 'س' : 'h'}`,  color: '#6B8DB5', dot: 'warn',  level: 'warn'  };
+  return              { label: `${Math.floor(mins / 1440)}${isRTL ? 'ي' : 'd'}`, color: '#D6403B', dot: 'old',   level: 'old'   };
 }
 
 function getSLAStatus(lead) {
@@ -404,7 +404,7 @@ export default function LeadPoolPage() {
   ) : null;
 
   return (
-    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -440,10 +440,10 @@ export default function LeadPoolPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-4">
         {[
-          { label: lang === 'ar' ? 'إجمالي' : 'Total',         value: stats.total,       icon: Users,        color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'فريش' : 'Fresh',           value: stats.fresh,       icon: Flame,        color: '#EF4444', hide: !canViewFresh },
+          { label: lang === 'ar' ? 'إجمالي' : 'Total',         value: stats.total,       icon: Users,        color: '#2F6BD3' },
+          { label: lang === 'ar' ? 'فريش' : 'Fresh',           value: stats.fresh,       icon: Flame,        color: '#D6403B', hide: !canViewFresh },
           { label: lang === 'ar' ? 'كولد كول' : 'Cold Calls',  value: stats.cold,        icon: Phone,        color: '#2B4C6F' },
-          { label: lang === 'ar' ? 'تعدى SLA' : 'SLA Breached',value: stats.slaBreached, icon: AlertTriangle,color: '#EF4444' },
+          { label: lang === 'ar' ? 'تعدى SLA' : 'SLA Breached',value: stats.slaBreached, icon: AlertTriangle,color: '#D6403B' },
           { label: lang === 'ar' ? 'متوسط انتظار' : 'Avg Wait', value: `${stats.avgWait}د`, icon: Clock,     color: '#6B8DB5' },
         ].filter(s => !s.hide).map((s, i) => (
           <KpiCard key={i} icon={s.icon} label={s.label} value={s.value} color={s.color} />
@@ -453,7 +453,7 @@ export default function LeadPoolPage() {
       {/* SLA Warning */}
       {stats.slaBreached > 0 && (
         <div className={`bg-red-500/[0.08] border border-red-500/30 rounded-xl px-3.5 py-2.5 mb-3.5 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <Bell size={15} color="#EF4444" />
+          <Bell size={15} color="#D6403B" />
           <span className="text-xs text-red-500 font-semibold">
             {lang === 'ar' ? `${stats.slaBreached} ليد تعدى وقت SLA — يحتاج توزيع عاجل` : `${stats.slaBreached} leads breached SLA — urgent assignment needed`}
           </span>
@@ -464,7 +464,7 @@ export default function LeadPoolPage() {
       {stats.stale > 0 && canManage && (
         <div className={`bg-amber-500/[0.08] border border-amber-500/30 rounded-xl px-3.5 py-2.5 mb-3.5 flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Clock size={15} color="#F59E0B" />
+            <Clock size={15} color="#C9860A" />
             <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
               {lang === 'ar' ? `${stats.stale} ليد راكد (أكثر من 48 ساعة بدون توزيع)` : `${stats.stale} stale leads (48+ hours unassigned)`}
             </span>
@@ -492,13 +492,13 @@ export default function LeadPoolPage() {
         {visible.length === 0 ? (
           <div className="text-center py-[60px] px-5">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-              <Users size={24} color='#4A7AAB' />
+              <Users size={24} color='#2F6BD3' />
             </div>
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
           </div>
         ) : paginatedData.map((lead, idx) => {
-          const aging   = getAging(lead.created_at);
+          const aging   = getAging(lead.created_at, isRTL);
           const sla     = getSLAStatus(lead);
           const src     = SOURCES[lead.source];
           const score   = getLeadScore(lead);
@@ -525,7 +525,7 @@ export default function LeadPoolPage() {
               <div className="flex-1 min-w-0">
                 <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <span className="text-sm font-semibold text-content dark:text-content-dark">{lead.name}</span>
-                  <Badge size="sm" style={{ background: (src?.color || '#4A7AAB') + '18', color: src?.color || '#4A7AAB' }}>
+                  <Badge size="sm" style={{ background: (src?.color || '#2F6BD3') + '18', color: src?.color || '#2F6BD3' }}>
                     {lang === 'ar' ? src?.ar : src?.en}
                   </Badge>
                   {lead.type === 'fresh' && canViewFresh && (

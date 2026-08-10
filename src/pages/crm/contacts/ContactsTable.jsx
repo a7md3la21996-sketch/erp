@@ -13,12 +13,14 @@ import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
 import { getMyScore, getAgentCount, getAgentsView } from '../../../utils/contactView';
+import { leadCategoryLabel, leadCategoryColor } from '../../../config/leadCategories';
+import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 
 const STATUS_STYLES = {
-  new:             { label: 'جديد',        labelEn: 'New',       color: '#4A7AAB' },
-  following:       { label: 'متابعة',      labelEn: 'Following', color: '#10B981' },
-  contacted:       { label: 'تم التواصل',  labelEn: 'Contacted', color: '#F59E0B' },
-  has_opportunity: { label: 'لديه فرصة',   labelEn: 'Has Opp',   color: '#059669' },
+  new:             { label: 'جديد',        labelEn: 'New',       color: '#2F6BD3' },
+  following:       { label: 'متابعة',      labelEn: 'Following', color: '#158A57' },
+  contacted:       { label: 'تم التواصل',  labelEn: 'Contacted', color: '#C9860A' },
+  has_opportunity: { label: 'لديه فرصة',   labelEn: 'Has Opp',   color: '#117049' },
   disqualified:    { label: 'غير مؤهل',    labelEn: 'DQ',        color: '#6b7280' },
 };
 
@@ -105,6 +107,7 @@ export default function ContactsTable({
   deptView,
 }) {
   const { t } = useTranslation();
+  const { leadCategories: leadCategoryDefs } = useSystemConfig();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
   // Stable across renders — only recompute when language flips. Was being
@@ -175,7 +178,7 @@ export default function ContactsTable({
         ) : (paged || []).length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-              <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
+              <Search size={28} color="#2F6BD3" strokeWidth={1.5} />
             </div>
             <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
             {hasActiveFilters && onClearAllFilters && (
@@ -191,23 +194,26 @@ export default function ContactsTable({
           <div className="divide-y divide-edge/50 dark:divide-edge-dark/50">
             {(paged || []).map(c => {
               const typeInfo = TYPE[c.contact_type];
-              const typeBorderColor = typeInfo?.color || '#4A7AAB';
+              const typeBorderColor = typeInfo?.color || '#2F6BD3';
               return (
                 <div key={c.id}
                   onClick={() => setSelected(c)}
                   className={`px-4 py-3 cursor-pointer active:bg-surface-bg dark:active:bg-brand-500/[0.06]`}
-                  style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
+                  style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#D6403B' : typeBorderColor}` }}
                 >
                   {/* Row 1: Avatar + Name + Call/WA buttons */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-bold"
-                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
+                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#D6403B' : '#fff' }}>
                       {c.is_blacklisted ? <Ban size={15} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className={`font-semibold text-sm block truncate ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                         {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                       </span>
+                      {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
+                        <span className="inline-block mt-0.5 text-[9px] font-semibold px-1.5 py-px rounded-full" style={{ background: `${col}1A`, color: col, border: `1px solid ${col}40` }}>{leadCategoryLabel(c.lead_category, isRTL, leadCategoryDefs)}</span>
+                      ); })()}
                       <div className="mt-0.5" onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone} small /></div>
                       {c.phone2 && <div onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone2} small /></div>}
                       {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <div key={`${c.id}-xp-${i}`} onClick={e => e.stopPropagation()}><PhoneCell phone={p} small /></div> : null)}
@@ -318,7 +324,7 @@ export default function ContactsTable({
                 <tr><td colSpan={visibleColSpan} className="p-0 border-none">
                 <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-                    <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
+                    <Search size={28} color="#2F6BD3" strokeWidth={1.5} />
                   </div>
                   <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
                   <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
@@ -340,12 +346,12 @@ export default function ContactsTable({
               const isPinned = pinnedIds.includes(c.id);
               const isMergeSelected = mergeTargets.includes(c.id);
               const typeInfo = TYPE[c.contact_type];
-              const typeBorderColor = typeInfo?.color || '#4A7AAB';
+              const typeBorderColor = typeInfo?.color || '#2F6BD3';
               return (
               <tr key={c.id}
                 onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
                 className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIdSet.has(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
-                style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
+                style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#D6403B' : typeBorderColor}` }}
               >
                 {/* Checkbox — visible on touch (hover-only fade is broken on
                     iPad/tablet where there is no hover state). Stays full
@@ -361,7 +367,7 @@ export default function ContactsTable({
                 {hasCol('contact') && <td className={tdCls}>
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
-                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
+                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#D6403B' : '#fff' }}>
                       {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -370,7 +376,10 @@ export default function ContactsTable({
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
                         {c.contact_number && <span className="shrink-0 text-[9px] font-mono text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark px-1.5 py-px rounded">{c.contact_number}</span>}
-                        {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
+                        {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
+                          <span className="shrink-0 text-[9px] font-semibold px-1.5 py-px rounded-full" style={{ background: `${col}1A`, color: col, border: `1px solid ${col}40` }}>{leadCategoryLabel(c.lead_category, isRTL, leadCategoryDefs)}</span>
+                        ); })()}
+                        {isPinned && <Pin size={10} color="#C9860A" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
@@ -595,7 +604,7 @@ export default function ContactsTable({
                         <MessageCircle size={13} />
                       </a>
                     )}
-                    {hasRowAction('quickAction') && <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
+                    {hasRowAction('quickAction') && <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '', followupDate: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
                       className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${quickActionTarget?.id === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.15]'}`}>
                       <Zap size={13} />
                     </button>}

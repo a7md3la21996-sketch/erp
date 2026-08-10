@@ -126,13 +126,13 @@ export default function ProfilePage() {
   // Achievements / Badges
   const badges = useMemo(() => {
     const list = [];
-    if (stats.revenue >= 1000000) list.push({ id: 'top_seller', label_en: 'Top Seller', label_ar: 'أفضل بائع', icon: Trophy, color: '#F59E0B' });
-    if (stats.calls >= 25) list.push({ id: 'call_champion', label_en: 'Call Champion', label_ar: 'بطل المكالمات', icon: PhoneCall, color: '#10B981' });
+    if (stats.revenue >= 1000000) list.push({ id: 'top_seller', label_en: 'Top Seller', label_ar: 'أفضل بائع', icon: Trophy, color: '#C9860A' });
+    if (stats.calls >= 25) list.push({ id: 'call_champion', label_en: 'Call Champion', label_ar: 'بطل المكالمات', icon: PhoneCall, color: '#158A57' });
     // Streak: deals 3 months in a row (mock check)
     const hasStreak = PERF_DATA.slice(-3).every(m => m.deals >= 5);
-    if (hasStreak) list.push({ id: 'streak', label_en: '3-Month Streak', label_ar: 'سلسلة 3 أشهر', icon: Flame, color: '#EF4444' });
-    if (stats.deals >= 8) list.push({ id: 'deal_closer', label_en: 'Deal Closer', label_ar: 'مغلق صفقات', icon: Target, color: '#4A7AAB' });
-    list.push({ id: 'rising_star', label_en: 'Rising Star', label_ar: 'نجم صاعد', icon: Star, color: '#8B5CF6' });
+    if (hasStreak) list.push({ id: 'streak', label_en: '3-Month Streak', label_ar: 'سلسلة 3 أشهر', icon: Flame, color: '#D6403B' });
+    if (stats.deals >= 8) list.push({ id: 'deal_closer', label_en: 'Deal Closer', label_ar: 'مغلق صفقات', icon: Target, color: '#2F6BD3' });
+    list.push({ id: 'rising_star', label_en: 'Rising Star', label_ar: 'نجم صاعد', icon: Star, color: '#5A63C4' });
     return list;
   }, [stats]);
 
@@ -194,7 +194,7 @@ export default function ProfilePage() {
     width: 44,
     height: 24,
     borderRadius: 12,
-    background: active ? '#4A7AAB' : (isDark ? '#334155' : '#cbd5e1'),
+    background: active ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
     border: 'none',
     cursor: 'pointer',
     position: 'relative',
@@ -249,7 +249,7 @@ export default function ProfilePage() {
         {/* Avatar */}
         <div style={{
           width: 96, height: 96, borderRadius: '50%',
-          background: `linear-gradient(135deg, ${employee.avatar_color || '#4A7AAB'}, #1B3347)`,
+          background: `linear-gradient(135deg, ${employee.avatar_color || '#2F6BD3'}, #1B3347)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 32, fontWeight: 700, color: '#fff', flexShrink: 0,
         }}>
@@ -283,7 +283,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={handleSaveProfile} style={{
                   display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 10,
-                  background: '#4A7AAB', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                  background: '#2F6BD3', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
                 }}>
                   <Save size={15} /> {isRTL ? 'حفظ' : 'Save'}
                 </button>
@@ -305,14 +305,14 @@ export default function ProfilePage() {
                 <span style={{
                   padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                   background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-                  color: '#4A7AAB',
+                  color: '#2F6BD3',
                 }}>
                   {roleLabel}
                 </span>
                 <span style={{
                   padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                   background: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)',
-                  color: '#10B981',
+                  color: '#158A57',
                 }}>
                   {isRTL ? dept?.name_ar : dept?.name_en}
                 </span>
@@ -337,7 +337,7 @@ export default function ProfilePage() {
           <button onClick={() => setEditing(true)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 22px', borderRadius: 12,
             background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-            color: '#4A7AAB', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
+            color: '#2F6BD3', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'inherit',
           }}>
             <Edit3 size={16} /> {isRTL ? 'تعديل الملف' : 'Edit Profile'}
           </button>
@@ -347,10 +347,10 @@ export default function ProfilePage() {
       {/* ═══ STATS CARDS ═══ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: isRTL ? 'المكالمات' : 'Calls', value: stats.calls, icon: PhoneCall, color: '#10B981' },
-          { label: isRTL ? 'الفرص' : 'Opportunities', value: stats.opportunities, icon: TrendingUp, color: '#4A7AAB' },
+          { label: isRTL ? 'المكالمات' : 'Calls', value: stats.calls, icon: PhoneCall, color: '#158A57' },
+          { label: isRTL ? 'الفرص' : 'Opportunities', value: stats.opportunities, icon: TrendingUp, color: '#2F6BD3' },
           { label: isRTL ? 'الصفقات المغلقة' : 'Deals Closed', value: stats.deals, icon: Trophy, color: '#2B4C6F' },
-          { label: isRTL ? 'الإيرادات' : 'Revenue', value: formatCurrency(stats.revenue), icon: Target, color: '#F59E0B' },
+          { label: isRTL ? 'الإيرادات' : 'Revenue', value: formatCurrency(stats.revenue), icon: Target, color: '#C9860A' },
         ].map((s, i) => (
           <div key={i} style={{
             ...cardStyle, padding: 20,
@@ -377,12 +377,12 @@ export default function ProfilePage() {
         {/* ═══ KPI TARGETS ═══ */}
         <div style={cardStyle}>
           <div style={sectionTitle}>
-            <Target size={20} style={{ color: '#4A7AAB' }} />
+            <Target size={20} style={{ color: '#2F6BD3' }} />
             {isRTL ? 'أهداف الأداء - مارس 2026' : 'KPI Targets - March 2026'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {kpiData.map(kpi => {
-              const pctColor = kpi.pct >= 80 ? '#10B981' : kpi.pct >= 50 ? '#F59E0B' : '#EF4444';
+              const pctColor = kpi.pct >= 80 ? '#158A57' : kpi.pct >= 50 ? '#C9860A' : '#D6403B';
               return (
                 <div key={kpi.metric}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -412,7 +412,7 @@ export default function ProfilePage() {
         {/* ═══ GOALS / OKRs ═══ */}
         <div style={cardStyle}>
           <div style={sectionTitle}>
-            <Award size={20} style={{ color: '#8B5CF6' }} />
+            <Award size={20} style={{ color: '#5A63C4' }} />
             {isRTL ? `أهداف ${CURRENT_QUARTER} ${CURRENT_YEAR}` : `${CURRENT_QUARTER} ${CURRENT_YEAR} Goals`}
           </div>
           {objectives.length === 0 ? (
@@ -433,7 +433,7 @@ export default function ProfilePage() {
                       <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
                         {isRTL ? obj.titleAr : obj.title}
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{progress}%</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#2F6BD3' }}>{progress}%</span>
                     </div>
                     {/* Overall progress bar */}
                     <div style={{
@@ -443,7 +443,7 @@ export default function ProfilePage() {
                       <div style={{
                         height: '100%', borderRadius: 3,
                         width: `${progress}%`,
-                        background: '#4A7AAB',
+                        background: '#2F6BD3',
                         transition: 'width 0.6s ease',
                       }} />
                     </div>
@@ -490,7 +490,7 @@ export default function ProfilePage() {
       {/* ═══ PERFORMANCE CHART ═══ */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={sectionTitle}>
-          <TrendingUp size={20} style={{ color: '#4A7AAB' }} />
+          <TrendingUp size={20} style={{ color: '#2F6BD3' }} />
           {isRTL ? 'أداء آخر 6 أشهر' : 'Last 6 Months Performance'}
         </div>
         <div style={{ height: 300 }}>
@@ -501,9 +501,9 @@ export default function ProfilePage() {
               <YAxis yAxisId="left" tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: isDark ? '#94a3b8' : '#64748b' }} axisLine={false} tickLine={false} tickFormatter={v => formatCurrency(v)} />
               <Tooltip content={<ChartTooltipCustom />} />
-              <Bar yAxisId="left" dataKey="calls" name={isRTL ? 'مكالمات' : 'Calls'} fill="#4A7AAB" radius={[4, 4, 0, 0]} barSize={20} />
-              <Bar yAxisId="left" dataKey="deals" name={isRTL ? 'صفقات' : 'Deals'} fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} />
-              <Line yAxisId="right" type="monotone" dataKey="revenue" name={isRTL ? 'إيرادات' : 'Revenue'} stroke="#F59E0B" strokeWidth={2} dot={{ r: 4, fill: '#F59E0B' }} />
+              <Bar yAxisId="left" dataKey="calls" name={isRTL ? 'مكالمات' : 'Calls'} fill="#2F6BD3" radius={[4, 4, 0, 0]} barSize={20} />
+              <Bar yAxisId="left" dataKey="deals" name={isRTL ? 'صفقات' : 'Deals'} fill="#158A57" radius={[4, 4, 0, 0]} barSize={20} />
+              <Line yAxisId="right" type="monotone" dataKey="revenue" name={isRTL ? 'إيرادات' : 'Revenue'} stroke="#C9860A" strokeWidth={2} dot={{ r: 4, fill: '#C9860A' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -512,7 +512,7 @@ export default function ProfilePage() {
       {/* ═══ ACHIEVEMENTS ═══ */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={sectionTitle}>
-          <Award size={20} style={{ color: '#F59E0B' }} />
+          <Award size={20} style={{ color: '#C9860A' }} />
           {isRTL ? 'الإنجازات والأوسمة' : 'Achievements & Badges'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
@@ -535,7 +535,7 @@ export default function ProfilePage() {
       {/* ═══ ACCOUNT SETTINGS ═══ */}
       <div style={cardStyle}>
         <div style={sectionTitle}>
-          <Shield size={20} style={{ color: '#4A7AAB' }} />
+          <Shield size={20} style={{ color: '#2F6BD3' }} />
           {isRTL ? 'إعدادات الحساب' : 'Account Settings'}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 24 }}>
@@ -559,7 +559,7 @@ export default function ProfilePage() {
                   style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                    background: i18n.language === 'en' ? '#4A7AAB' : 'transparent',
+                    background: i18n.language === 'en' ? '#2F6BD3' : 'transparent',
                     color: i18n.language === 'en' ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
                   }}
                 >EN</button>
@@ -568,7 +568,7 @@ export default function ProfilePage() {
                   style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                    background: i18n.language === 'ar' ? '#4A7AAB' : 'transparent',
+                    background: i18n.language === 'ar' ? '#2F6BD3' : 'transparent',
                     color: i18n.language === 'ar' ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
                   }}
                 >عربي</button>
@@ -589,7 +589,7 @@ export default function ProfilePage() {
                   style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                    background: !isDark ? '#4A7AAB' : 'transparent',
+                    background: !isDark ? '#2F6BD3' : 'transparent',
                     color: !isDark ? '#fff' : '#94a3b8',
                     display: 'flex', alignItems: 'center', gap: 4,
                   }}
@@ -599,7 +599,7 @@ export default function ProfilePage() {
                   style={{
                     padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                    background: isDark ? '#4A7AAB' : 'transparent',
+                    background: isDark ? '#2F6BD3' : 'transparent',
                     color: isDark ? '#fff' : '#64748b',
                     display: 'flex', alignItems: 'center', gap: 4,
                   }}
@@ -642,7 +642,7 @@ export default function ProfilePage() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
                 padding: '10px 14px', borderRadius: 10,
-                background: 'rgba(16,185,129,0.1)', color: '#10B981',
+                background: 'rgba(16,185,129,0.1)', color: '#158A57',
                 fontSize: 13, fontWeight: 600,
               }}>
                 <Check size={16} /> {isRTL ? 'تم تغيير كلمة المرور بنجاح' : 'Password changed successfully'}
@@ -682,7 +682,7 @@ export default function ProfilePage() {
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   padding: '10px 20px', borderRadius: 10,
-                  background: (!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm) ? (isDark ? '#334155' : '#e2e8f0') : '#4A7AAB',
+                  background: (!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm) ? (isDark ? '#334155' : '#e2e8f0') : '#2F6BD3',
                   color: (!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm) ? (isDark ? '#64748b' : '#94a3b8') : '#fff',
                   border: 'none', cursor: (!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm) ? 'not-allowed' : 'pointer',
                   fontSize: 13, fontWeight: 600, fontFamily: 'inherit', width: '100%',

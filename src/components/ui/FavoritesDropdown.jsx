@@ -7,10 +7,10 @@ import { getFavorites, removeFavorite, addFavorite } from '../../services/favori
 import { NAV_ITEMS } from '../../config/navigation';
 
 const TYPE_CONFIG = {
-  page:        { labelAr: 'صفحات',   labelEn: 'Pages',         icon: FileText,  color: '#4A7AAB' },
-  contact:     { labelAr: 'جهات اتصال', labelEn: 'Contacts',   icon: Users,     color: '#10B981' },
-  deal:        { labelAr: 'صفقات',   labelEn: 'Deals',         icon: Briefcase, color: '#F59E0B' },
-  opportunity: { labelAr: 'فرص',     labelEn: 'Opportunities',  icon: Target,    color: '#8B5CF6' },
+  page:        { labelAr: 'صفحات',   labelEn: 'Pages',         icon: FileText,  color: '#2F6BD3' },
+  contact:     { labelAr: 'جهات اتصال', labelEn: 'Contacts',   icon: Users,     color: '#158A57' },
+  deal:        { labelAr: 'صفقات',   labelEn: 'Deals',         icon: Briefcase, color: '#C9860A' },
+  opportunity: { labelAr: 'فرص',     labelEn: 'Opportunities',  icon: Target,    color: '#5A63C4' },
 };
 
 export default function FavoritesDropdown({ show, onClose }) {
@@ -126,7 +126,7 @@ export default function FavoritesDropdown({ show, onClose }) {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Star size={16} style={{ color: '#F59E0B' }} />
+          <Star size={16} style={{ color: '#C9860A' }} />
           <span style={{
             fontSize: 14,
             fontWeight: 700,
@@ -138,7 +138,7 @@ export default function FavoritesDropdown({ show, onClose }) {
             <span style={{
               fontSize: 11,
               background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-              color: '#4A7AAB',
+              color: '#2F6BD3',
               padding: '1px 7px',
               borderRadius: 10,
               fontWeight: 600,
@@ -225,7 +225,7 @@ export default function FavoritesDropdown({ show, onClose }) {
                     onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <Star size={13} style={{ color: '#F59E0B', flexShrink: 0 }} fill="#F59E0B" />
+                    <Star size={13} style={{ color: '#C9860A', flexShrink: 0 }} fill="#C9860A" />
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
                       {isRTL ? (fav.nameAr || fav.name) : fav.name}
                     </span>
@@ -243,7 +243,7 @@ export default function FavoritesDropdown({ show, onClose }) {
                         cursor: 'pointer',
                         transition: 'all 0.15s',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#D6403B'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.color = isDark ? '#64748b' : '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
                     >
                       <X size={12} />
@@ -277,7 +277,7 @@ export default function FavoritesDropdown({ show, onClose }) {
               fontSize: 12,
               fontFamily: 'inherit',
               fontWeight: 600,
-              color: '#4A7AAB',
+              color: '#2F6BD3',
               background: isDark ? 'rgba(74,122,171,0.06)' : 'rgba(74,122,171,0.04)',
               transition: 'all 0.15s',
             }}

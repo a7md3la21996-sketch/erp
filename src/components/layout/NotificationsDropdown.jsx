@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 const REMINDER_ICONS = { call: Phone, whatsapp: MessageCircle, visit: MapPin, meeting: Users, email: Mail };
-const REMINDER_COLORS = { call: '#10B981', whatsapp: '#25D366', visit: '#4A7AAB', meeting: '#8B5CF6', email: '#F59E0B' };
+const REMINDER_COLORS = { call: '#158A57', whatsapp: '#25D366', visit: '#2F6BD3', meeting: '#5A63C4', email: '#C9860A' };
 const REMINDER_LABELS = {
   call: { ar: 'مكالمة', en: 'Call' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
@@ -198,14 +198,14 @@ export default function NotificationsDropdown({ show, onClose }) {
         alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bell size={16} color="#6366f1" />
+          <Bell size={16} color="#5A63C4" />
           <span style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
             {isRTL ? 'الإشعارات' : 'Notifications'}
           </span>
           {unreadCount > 0 && (
             <span style={{
               fontSize: 10, fontWeight: 700, color: '#fff',
-              background: '#ef4444', borderRadius: 99, padding: '1px 7px',
+              background: '#D6403B', borderRadius: 99, padding: '1px 7px',
               minWidth: 18, textAlign: 'center',
             }}>{unreadCount}</span>
           )}
@@ -215,7 +215,7 @@ export default function NotificationsDropdown({ show, onClose }) {
             <button onClick={handleMarkAllRead} title={isRTL ? 'قراءة الكل' : 'Mark all read'}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                color: '#6366f1', padding: 4, display: 'flex', alignItems: 'center',
+                color: '#5A63C4', padding: 4, display: 'flex', alignItems: 'center',
               }}>
               <CheckCheck size={16} />
             </button>
@@ -233,7 +233,7 @@ export default function NotificationsDropdown({ show, onClose }) {
               fontSize: 11, fontWeight: activeTab === t.key ? 600 : 400,
               padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
               fontFamily: 'inherit',
-              background: activeTab === t.key ? '#6366f1' : 'transparent',
+              background: activeTab === t.key ? '#5A63C4' : 'transparent',
               color: activeTab === t.key ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
               transition: 'all 0.15s',
             }}>
@@ -254,7 +254,7 @@ export default function NotificationsDropdown({ show, onClose }) {
             {/* Reminders */}
             {activeTab === 'all' && reminders.map(r => {
               const Icon = REMINDER_ICONS[r.type] || Phone;
-              const color = REMINDER_COLORS[r.type] || '#4A7AAB';
+              const color = REMINDER_COLORS[r.type] || '#2F6BD3';
               const label = REMINDER_LABELS[r.type] || REMINDER_LABELS.call;
               return (
                 <div key={r.id} style={{
@@ -292,10 +292,10 @@ export default function NotificationsDropdown({ show, onClose }) {
                       style={{
                         width: 26, height: 26, borderRadius: 6, display: 'flex',
                         alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
-                        border: `1px solid ${isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5'}`,
-                        background: isDark ? 'rgba(16,185,129,0.1)' : '#ecfdf5',
+                        border: `1px solid ${isDark ? 'rgba(16,185,129,0.3)' : '#C9E7D9'}`,
+                        background: isDark ? 'rgba(16,185,129,0.1)' : '#E6F4EE',
                       }}>
-                      <Check size={12} color="#10B981" />
+                      <Check size={12} color="#158A57" />
                     </button>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ export default function NotificationsDropdown({ show, onClose }) {
                       {isPriority && (
                         <span style={{
                           fontSize: 9, fontWeight: 700, color: '#fff',
-                          background: n.priority === 'urgent' ? '#ef4444' : '#f97316',
+                          background: n.priority === 'urgent' ? '#D6403B' : '#DD6327',
                           borderRadius: 4, padding: '1px 5px',
                           textTransform: 'uppercase',
                         }}>
@@ -365,14 +365,14 @@ export default function NotificationsDropdown({ show, onClose }) {
                     <span style={{ fontSize: 9, color: isDark ? '#475569' : '#cbd5e1' }}>
                       {timeAgo(n.created_at, isRTL)}
                     </span>
-                    {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1' }} />}
+                    {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#5A63C4' }} />}
                     {(
                       <button onClick={(e) => handleDelete(e, n.id)} title={isRTL ? 'حذف' : 'Delete'}
                         style={{
                           width: 22, height: 22, borderRadius: 5, display: 'flex',
                           alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
                           border: 'none', background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
-                          color: '#ef4444',
+                          color: '#D6403B',
                         }}>
                         <Trash2 size={12} />
                       </button>
@@ -406,7 +406,7 @@ export default function NotificationsDropdown({ show, onClose }) {
           onClick={() => { navigate('/notifications'); onClose(); }}
           style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#6366f1', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            color: '#5A63C4', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
             padding: '4px 12px',
           }}>
           {isRTL ? 'عرض الكل' : 'View All'}

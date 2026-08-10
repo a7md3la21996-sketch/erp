@@ -33,9 +33,10 @@ function VersionChecker() {
 
 // Lazy-loaded pages
 const DashboardPage = lazyRetry(() => import('./pages/dashboard/DashboardPage'));
+const LauncherPage = lazyRetry(() => import('./pages/LauncherPage'));
 const ContactsPage = lazyRetry(() => import('./pages/ContactsPage'));
 const CrmDashboardPage = lazyRetry(() => import('./pages/crm/CrmDashboardPage'));
-const OpportunitiesPage = lazyRetry(() => import('./pages/crm/OpportunitiesPage'));
+// OpportunitiesPage retired — replaced by the deal-events model (deals + meetings).
 const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
 const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'));
 const MasterLeadsPage = lazyRetry(() => import('./pages/crm/MasterLeadsPage'));
@@ -92,6 +93,7 @@ const CommissionsPage = lazyRetry(() => import('./pages/sales/CommissionsPage'))
 const SalesForecastPage = lazyRetry(() => import('./pages/sales/SalesForecastPage'));
 const ProjectsPage = lazyRetry(() => import('./pages/real-estate/ProjectsPage'));
 const UnitsPage = lazyRetry(() => import('./pages/real-estate/UnitsPage'));
+const DevelopersPage = lazyRetry(() => import('./pages/real-estate/DevelopersPage'));
 const UsersPage = lazyRetry(() => import('./pages/settings/UsersPage'));
 const TeamHierarchyPage = lazyRetry(() => import('./pages/settings/TeamHierarchyPage'));
 const ImportExportLogPage = lazyRetry(() => import('./pages/settings/ImportExportLogPage'));
@@ -186,7 +188,7 @@ function AuthRedirect() {
       <p className="text-content-muted dark:text-content-muted-dark text-sm m-0">Loading...</p>
     </div>
   );
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to="/home" replace />;
   return <LoginPage />;
 }
 
@@ -220,13 +222,13 @@ export default function App() {
               <Route path="/login" element={<AuthRedirect />} />
               <Route path="/" element={<AuthRedirect />} />
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
+                <Route path="/home" element={<Guarded><LauncherPage /></Guarded>} />
                 <Route path="/dashboard" element={<Guarded><DashboardPage /></Guarded>} />
                 <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
                 <Route path="/crm/dashboard" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
-                <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
                 <Route path="/crm/master-leads" element={<Guarded><MasterLeadsPage /></Guarded>} />
                 <Route path="/contacts/master/:phone" element={<ProtectedRoute permission={P.CONTACTS_VIEW_ALL}><Guarded><MasterProfilePage /></Guarded></ProtectedRoute>} />
@@ -297,6 +299,7 @@ export default function App() {
                 {/* Real estate catalog — open to all (sales need projects/units list) */}
                 <Route path="/real-estate/projects" element={<ProtectedRoute permission={P.PROJECTS_VIEW}><Guarded><ProjectsPage /></Guarded></ProtectedRoute>} />
                 <Route path="/real-estate/units" element={<ProtectedRoute permission={P.UNITS_VIEW}><Guarded><UnitsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/real-estate/developers" element={<ProtectedRoute permission={P.PROJECTS_VIEW}><Guarded><DevelopersPage /></Guarded></ProtectedRoute>} />
                 <Route path="/real-estate/*" element={<ProtectedRoute permission={P.PROJECTS_VIEW}><Guarded><ProjectsPage /></Guarded></ProtectedRoute>} />
                 {/* Marketing — admin/marketing only */}
                 <Route path="/marketing" element={<ProtectedRoute permission={P.CAMPAIGNS_VIEW}><Guarded><MarketingPage /></Guarded></ProtectedRoute>} />

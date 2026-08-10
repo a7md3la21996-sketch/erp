@@ -22,21 +22,21 @@ const MAX_HISTORY = 200;
 
 // ── Report type definitions ──────────────────────────────────────────
 export const REPORT_TYPES = {
-  sales_summary:    { en: 'Sales Summary',      ar: 'ملخص المبيعات',     color: '#4A7AAB' },
+  sales_summary:    { en: 'Sales Summary',      ar: 'ملخص المبيعات',     color: '#2F6BD3' },
   pipeline_report:  { en: 'Pipeline Report',    ar: 'تقرير المسار البيعي', color: '#6B21A8' },
-  activity_report:  { en: 'Activity Report',    ar: 'تقرير الأنشطة',     color: '#F59E0B' },
-  revenue_report:   { en: 'Revenue Report',     ar: 'تقرير الإيرادات',    color: '#10B981' },
-  leads_report:     { en: 'Leads Report',       ar: 'تقرير الليدز',      color: '#3B82F6' },
-  hr_attendance:    { en: 'HR Attendance',       ar: 'تقرير الحضور',      color: '#EC4899' },
-  hr_leave:         { en: 'HR Leave',            ar: 'تقرير الإجازات',    color: '#14B8A6' },
-  finance_expenses: { en: 'Finance Expenses',   ar: 'تقرير المصروفات',   color: '#EF4444' },
-  team_performance: { en: 'Team Performance',   ar: 'أداء الفريق',       color: '#8B5CF6' },
+  activity_report:  { en: 'Activity Report',    ar: 'تقرير الأنشطة',     color: '#C9860A' },
+  revenue_report:   { en: 'Revenue Report',     ar: 'تقرير الإيرادات',    color: '#158A57' },
+  leads_report:     { en: 'Leads Report',       ar: 'تقرير الليدز',      color: '#2F6BD3' },
+  hr_attendance:    { en: 'HR Attendance',       ar: 'تقرير الحضور',      color: '#C14D7E' },
+  hr_leave:         { en: 'HR Leave',            ar: 'تقرير الإجازات',    color: '#12897E' },
+  finance_expenses: { en: 'Finance Expenses',   ar: 'تقرير المصروفات',   color: '#D6403B' },
+  team_performance: { en: 'Team Performance',   ar: 'أداء الفريق',       color: '#5A63C4' },
 };
 
 export const FREQUENCY_OPTIONS = {
-  daily:   { en: 'Daily',   ar: 'يومي',   color: '#10B981' },
-  weekly:  { en: 'Weekly',  ar: 'أسبوعي', color: '#3B82F6' },
-  monthly: { en: 'Monthly', ar: 'شهري',   color: '#8B5CF6' },
+  daily:   { en: 'Daily',   ar: 'يومي',   color: '#158A57' },
+  weekly:  { en: 'Weekly',  ar: 'أسبوعي', color: '#2F6BD3' },
+  monthly: { en: 'Monthly', ar: 'شهري',   color: '#5A63C4' },
 };
 
 export const DAY_OF_WEEK = [

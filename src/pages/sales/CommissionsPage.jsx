@@ -39,9 +39,9 @@ const fmtRate = (row) => {
 
 // ── Installment status config ─────────────────────────────────────────────
 const INSTALLMENT_STATUS = {
-  pending:   { ar: 'معلق',   en: 'Pending',   color: '#D97706' },
-  paid:      { ar: 'مدفوع',  en: 'Paid',      color: '#059669' },
-  overdue:   { ar: 'متأخر',  en: 'Overdue',   color: '#EF4444' },
+  pending:   { ar: 'معلق',   en: 'Pending',   color: '#A66E08' },
+  paid:      { ar: 'مدفوع',  en: 'Paid',      color: '#117049' },
+  overdue:   { ar: 'متأخر',  en: 'Overdue',   color: '#D6403B' },
   cancelled: { ar: 'ملغي',   en: 'Cancelled', color: '#6B7280' },
 };
 
@@ -61,7 +61,7 @@ const TABS = [
 ];
 
 // ── Bar chart colors ─────────────────────────────────────────────────────
-const DEV_CHART_COLORS = ['#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#1B3347', '#3D6B8E', '#5A92B5', '#7AB0D0'];
+const DEV_CHART_COLORS = ['#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8', '#1B3347', '#3D6B8E', '#5A92B5', '#7AB0D0'];
 
 // ── Component ─────────────────────────────────────────────────────────────
 export default function CommissionsPage() {
@@ -396,7 +396,7 @@ export default function CommissionsPage() {
 
   // ──────────────── RENDER ────────────────
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ── Header ── */}
       <div className="mb-5 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
@@ -478,10 +478,10 @@ export default function CommissionsPage() {
         <>
           {/* ── Installments KPI Cards ── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-            <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoney(instStats.totalDue)} sub={`${fmtFull(instStats.totalDue)} EGP`} color="#D97706" />
-            <KpiCard icon={CheckCircle} label={lang === 'ar' ? 'تم التحصيل' : 'Paid'} value={fmtMoney(instStats.totalPaid)} sub={`${fmtFull(instStats.totalPaid)} EGP`} color="#059669" />
-            <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'متأخر' : 'Overdue'} value={fmtMoney(instStats.totalOverdue)} sub={`${fmtFull(instStats.totalOverdue)} EGP`} color="#EF4444" />
-            <KpiCard icon={CalendarClock} label={lang === 'ar' ? 'مستحق هذا الشهر' : 'Upcoming This Month'} value={fmtMoney(instStats.upcomingThisMonth)} sub={`${fmtFull(instStats.upcomingThisMonth)} EGP`} color="#4A7AAB" />
+            <KpiCard icon={DollarSign} label={lang === 'ar' ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoney(instStats.totalDue)} sub={`${fmtFull(instStats.totalDue)} EGP`} color="#A66E08" />
+            <KpiCard icon={CheckCircle} label={lang === 'ar' ? 'تم التحصيل' : 'Paid'} value={fmtMoney(instStats.totalPaid)} sub={`${fmtFull(instStats.totalPaid)} EGP`} color="#117049" />
+            <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'متأخر' : 'Overdue'} value={fmtMoney(instStats.totalOverdue)} sub={`${fmtFull(instStats.totalOverdue)} EGP`} color="#D6403B" />
+            <KpiCard icon={CalendarClock} label={lang === 'ar' ? 'مستحق هذا الشهر' : 'Upcoming This Month'} value={fmtMoney(instStats.upcomingThisMonth)} sub={`${fmtFull(instStats.upcomingThisMonth)} EGP`} color="#2F6BD3" />
           </div>
 
           {/* ── Installments Filters ── */}
@@ -597,9 +597,9 @@ export default function CommissionsPage() {
           {/* ── Installments Summary Bar ── */}
           <div className="mt-4 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
             <span className="font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'الملخص' : 'Summary'}</span>
-            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مستحق:' : 'Due:'} <span className="font-bold" style={{ color: '#D97706' }}>{fmtFull(instStats.totalDue)} EGP</span></span>
-            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مدفوع:' : 'Paid:'} <span className="font-semibold" style={{ color: '#059669' }}>{fmtFull(instStats.totalPaid)} EGP</span></span>
-            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'متأخر:' : 'Overdue:'} <span className="font-semibold" style={{ color: '#EF4444' }}>{fmtFull(instStats.totalOverdue)} EGP</span></span>
+            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مستحق:' : 'Due:'} <span className="font-bold" style={{ color: '#A66E08' }}>{fmtFull(instStats.totalDue)} EGP</span></span>
+            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مدفوع:' : 'Paid:'} <span className="font-semibold" style={{ color: '#117049' }}>{fmtFull(instStats.totalPaid)} EGP</span></span>
+            <span className="text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'متأخر:' : 'Overdue:'} <span className="font-semibold" style={{ color: '#D6403B' }}>{fmtFull(instStats.totalOverdue)} EGP</span></span>
             <span className="ms-auto text-content-muted dark:text-content-muted-dark">{filteredInstallments.length} {lang === 'ar' ? 'سجل' : 'records'}</span>
           </div>
 
@@ -654,7 +654,7 @@ export default function CommissionsPage() {
           label={lang === 'ar' ? 'إجمالي العمولات' : 'Total Commissions'}
           value={fmtMoney(kpis.total)}
           sub={`${fmtFull(kpis.total)} EGP`}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={Clock}
@@ -668,7 +668,7 @@ export default function CommissionsPage() {
           label={lang === 'ar' ? 'معتمد' : 'Approved'}
           value={fmtMoney(kpis.approved)}
           sub={`${fmtFull(kpis.approved)} EGP`}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={Banknote}
@@ -1096,7 +1096,7 @@ export default function CommissionsPage() {
         </span>
         <span className="text-content-muted dark:text-content-muted-dark">
           {lang === 'ar' ? 'معتمد:' : 'Approved:'}{' '}
-          <span className="font-semibold" style={{ color: '#4A7AAB' }}>{fmtFull(kpis.approved)} EGP</span>
+          <span className="font-semibold" style={{ color: '#2F6BD3' }}>{fmtFull(kpis.approved)} EGP</span>
         </span>
         <span className="text-content-muted dark:text-content-muted-dark">
           {lang === 'ar' ? 'مصروف:' : 'Paid:'}{' '}

@@ -10,18 +10,18 @@ import {
 import { PageSkeleton } from '../../components/ui';
 
 const STATUS_COLORS = {
-  new: '#3B82F6',
-  contacted: '#F59E0B',
-  following: '#10B981',
-  has_opportunity: '#8B5CF6',
+  new: '#2F6BD3',
+  contacted: '#C9860A',
+  following: '#158A57',
+  has_opportunity: '#5A63C4',
   disqualified: '#6B7280',
   inactive: '#9CA3AF',
 };
 
 const TEMP_COLORS = {
-  hot: '#EF4444',
-  warm: '#F59E0B',
-  cool: '#3B82F6',
+  hot: '#D6403B',
+  warm: '#C9860A',
+  cool: '#2F6BD3',
   cold: '#6B7280',
 };
 

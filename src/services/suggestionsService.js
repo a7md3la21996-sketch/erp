@@ -92,7 +92,7 @@ function analyzeStuckOpportunities(opportunities) {
         description_en: `Opportunity at "${opp.stage}" stage with no update for ${days} days.`,
         action_label_ar: 'عرض الفرصة',
         action_label_en: 'View Opportunity',
-        action_path: '/crm/opportunities',
+        action_path: '/sales/deals',
         entity: 'opportunity',
         entity_id: opp.id,
       }));
@@ -194,7 +194,7 @@ function analyzeHighValueAtRisk(opportunities) {
         description_en: `Opportunity worth ${budget.toLocaleString()} at early stage for ${days} days.`,
         action_label_ar: 'عرض الفرصة',
         action_label_en: 'View Opportunity',
-        action_path: '/crm/opportunities',
+        action_path: '/sales/deals',
         entity: 'opportunity',
         entity_id: opp.id,
       }));

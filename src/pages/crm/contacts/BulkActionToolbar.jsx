@@ -28,6 +28,7 @@ export default function BulkActionToolbar({
   setBulkDropdownOpen,
   // Options
   BULK_TYPE_OPTIONS,
+  BULK_CATEGORY_OPTIONS,
   BULK_SOURCE_OPTIONS,
   BULK_DEPT_OPTIONS,
   BULK_STATUS_OPTIONS,
@@ -64,11 +65,10 @@ export default function BulkActionToolbar({
       role="toolbar"
       aria-label={isRTL ? 'إجراءات جماعية' : 'Bulk actions'}
       style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
-      className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 pt-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto
+      className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 pt-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap
                  bg-gradient-to-br from-[#0a1929] to-[#132337] dark:from-[#0a1929] dark:to-[#132337]
                  border-t border-brand-500/30
-                 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]
-                 max-h-[55vh]">
+                 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
       {/* Count + Deselect — always white-on-dark since the bar gradient stays dark */}
       <div className="flex items-center gap-2 me-2">
         <span className="text-[13px] font-bold text-slate-200">
@@ -93,7 +93,26 @@ export default function BulkActionToolbar({
           <div role="menu" className={`${dropdownPanelCls} min-w-[160px] max-w-[calc(100vw-2rem)]`}>
             {BULK_TYPE_OPTIONS.map(opt => (
               <button key={opt.value} role="menuitem" onClick={() => handleBulkChangeField('contact_type', opt.value, 'Type Change')} className={dropdownItemCls}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TYPE[opt.value]?.color || '#4A7AAB' }} />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TYPE[opt.value]?.color || '#2F6BD3' }} />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>}
+
+      {/* Change Lead Category */}
+      {perms.canBulkContacts && (BULK_CATEGORY_OPTIONS?.length > 0) && <div className="relative">
+        <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'category' ? null : 'category')}
+          aria-expanded={bulkDropdownOpen === 'category'} aria-haspopup="menu"
+          className={`${dropdownBtnCls('category')} text-slate-200`}>
+          <Tag size={12} /> {isRTL ? 'التصنيف' : 'Category'} <ChevronDown size={10} />
+        </button>
+        {bulkDropdownOpen === 'category' && (
+          <div role="menu" className={`${dropdownPanelCls} min-w-[160px] max-w-[calc(100vw-2rem)]`}>
+            {BULK_CATEGORY_OPTIONS.map(opt => (
+              <button key={opt.value} role="menuitem" onClick={() => handleBulkChangeField('lead_category', opt.value, 'Category Change')} className={dropdownItemCls}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color || '#2F6BD3' }} />
                 {opt.label}
               </button>
             ))}

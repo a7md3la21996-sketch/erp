@@ -84,40 +84,26 @@ async function enrichOpps(opps) {
 }
 
 // ─── Fetch all opportunities with related data ───
-export async function fetchOpportunities({ role, userId, teamId, page = 0, pageSize = 200 } = {}) {
+// Opportunities are retired (deal-events model). This is a COMPATIBILITY SHIM:
+// it reads `deals` and maps them to the legacy opportunity shape (stage/budget/
+// department) so existing consumers — SalesForecast, Performance, reports,
+// GlobalSearch — keep working without a rewrite. status→stage mapping:
+// won→closed_won, lost→closed_lost, everything else passes through.
+export async function fetchOpportunities({ role, userId, teamId } = {}) {
   try {
-    let query = supabase
-      .from('opportunities')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (role === 'sales_agent') {
-      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      if (agentUser?.full_name_en) {
-        query = query.eq('assigned_to_name', agentUser.full_name_en);
-      } else {
-        query = query.eq('assigned_to', userId);
-      }
-    } else if (role === 'team_leader' || role === 'sales_manager') {
-      // Fail-closed (May 17 incident). Empty team must NOT mean "all opps".
-      if (!teamId) return [];
-      const names = await getTeamMemberNames(role, teamId);
-      if (names.length === 0) return [];
-      query = query.in('assigned_to_name', names);
-    }
-
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
-    const rangedQuery = query.range(from, to);
-    const { data, error } = await rq(() => rangedQuery, 'fetchOpportunities');
+    let query = supabase.from('deals').select('*').order('created_at', { ascending: false });
+    query = await applyRoleFilter(query, 'assigned_to', { role, userId, teamId });
+    const { data, error } = await rq(() => query.range(0, 999), 'fetchOpportunities(deals shim)');
     if (error) throw error;
-    if (data?.length) {
-      const enriched = await enrichOpps(data);
-      return enriched.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }
-    return [];
+    return (data || []).map(d => ({
+      ...d,
+      stage: d.status === 'won' ? 'closed_won' : d.status === 'lost' ? 'closed_lost' : (d.status || 'new_deal'),
+      budget: d.deal_value,
+      department: d.department || 'sales',
+      assigned_to_name: d.agent_en || d.agent_ar || null,
+    }));
   } catch (err) {
-    reportError('opportunitiesService', 'query', err);
+    reportError('opportunitiesService', 'fetchOpportunities(deals shim)', err);
     return [];
   }
 }

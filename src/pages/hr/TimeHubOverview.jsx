@@ -54,9 +54,9 @@ export default function TimeHubOverview({ isRTL, lang }) {
     }
     const lateOrAbsent = (summary.absent || 0) + (summary.late || 0);
     const ratio = summary.total ? lateOrAbsent / summary.total : 0;
-    if (ratio < 0.05) return { label_ar: 'ممتاز', label_en: 'Excellent', color: '#10B981', icon: CheckCircle2 };
-    if (ratio < 0.15) return { label_ar: 'جيد', label_en: 'Good', color: '#4A7AAB', icon: CheckCircle2 };
-    return { label_ar: 'يحتاج متابعة', label_en: 'Needs Attention', color: '#F59E0B', icon: AlertTriangle };
+    if (ratio < 0.05) return { label_ar: 'ممتاز', label_en: 'Excellent', color: '#158A57', icon: CheckCircle2 };
+    if (ratio < 0.15) return { label_ar: 'جيد', label_en: 'Good', color: '#2F6BD3', icon: CheckCircle2 };
+    return { label_ar: 'يحتاج متابعة', label_en: 'Needs Attention', color: '#C9860A', icon: AlertTriangle };
   }, [summary]);
 
   if (loading) return <PageSkeleton hasKpis tableRows={4} />;
@@ -103,25 +103,25 @@ export default function TimeHubOverview({ isRTL, lang }) {
           icon={CheckCircle2}
           label={isRTL ? 'حاضر' : 'Present'}
           value={summary?.present || 0}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           icon={XCircle}
           label={isRTL ? 'غائب' : 'Absent'}
           value={summary?.absent || 0}
-          color="#EF4444"
+          color="#D6403B"
         />
         <KpiCard
           icon={AlertTriangle}
           label={isRTL ? 'متأخر' : 'Late'}
           value={summary?.late || 0}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <KpiCard
           icon={CalendarOff}
           label={isRTL ? 'طلبات إجازة معلقة' : 'Pending Leave'}
           value={pendingLeaves.length}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
       </div>
 

@@ -454,7 +454,7 @@ export default function APIDocsPage() {
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 16px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <BookOpen size={22} style={{ color: '#4A7AAB' }} />
+        <BookOpen size={22} style={{ color: '#2F6BD3' }} />
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary }}>
           {t('API Documentation', 'توثيق API')}
         </h1>
@@ -500,7 +500,7 @@ export default function APIDocsPage() {
                   display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                   padding: '9px 12px', borderRadius: 10, border: 'none',
                   background: isActive ? 'rgba(74,122,171,0.15)' : 'transparent',
-                  color: isActive ? '#4A7AAB' : textPrimary,
+                  color: isActive ? '#2F6BD3' : textPrimary,
                   cursor: 'pointer', fontSize: 13, fontWeight: isActive ? 600 : 400,
                   textAlign: isRTL ? 'right' : 'left', marginBottom: 2,
                   transition: 'all 0.15s',
@@ -525,7 +525,7 @@ export default function APIDocsPage() {
                 width: 40, height: 40, borderRadius: 12,
                 background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Code2 size={20} style={{ color: '#4A7AAB' }} />
+                <Code2 size={20} style={{ color: '#2F6BD3' }} />
               </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: textPrimary }}>
@@ -552,7 +552,7 @@ export default function APIDocsPage() {
           {/* Functions */}
           <div style={{ ...{ background: cardBg, border: cardBorder, borderRadius: 16, padding: 24 }, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <FileText size={16} style={{ color: '#4A7AAB' }} />
+              <FileText size={16} style={{ color: '#2F6BD3' }} />
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: textPrimary }}>
                 {t('Functions', 'الدوال')} ({activeData.functions.length})
               </h3>
@@ -568,7 +568,7 @@ export default function APIDocsPage() {
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <code style={{
-                          fontSize: 14, fontWeight: 700, color: '#4A7AAB',
+                          fontSize: 14, fontWeight: 700, color: '#2F6BD3',
                           fontFamily: "'SF Mono', 'Fira Code', monospace",
                         }}>
                           {fn.name}
@@ -577,7 +577,7 @@ export default function APIDocsPage() {
                           onClick={() => handleCopy(`${fn.name}(${fn.params})`, `fn-${i}`)}
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                            color: copiedId === `fn-${i}` ? '#10b981' : textSecondary, display: 'flex',
+                            color: copiedId === `fn-${i}` ? '#158A57' : textSecondary, display: 'flex',
                           }}
                           title="Copy"
                         >
@@ -585,7 +585,7 @@ export default function APIDocsPage() {
                         </button>
                       </div>
                       <div style={{ fontSize: 12, color: textSecondary, fontFamily: 'monospace', marginBottom: 6 }}>
-                        ({fn.params || ''}) → <span style={{ color: '#f59e0b' }}>{fn.returns}</span>
+                        ({fn.params || ''}) → <span style={{ color: '#C9860A' }}>{fn.returns}</span>
                       </div>
                       <div style={{ fontSize: 13, color: textPrimary, lineHeight: 1.5 }}>
                         {isRTL ? fn.desc.ar : fn.desc.en}
@@ -601,7 +601,7 @@ export default function APIDocsPage() {
           <div style={{ ...{ background: cardBg, border: cardBorder, borderRadius: 16, padding: 24 } }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Code2 size={16} style={{ color: '#4A7AAB' }} />
+                <Code2 size={16} style={{ color: '#2F6BD3' }} />
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: textPrimary }}>
                   {t('Example Usage', 'مثال الاستخدام')}
                 </h3>
@@ -612,7 +612,7 @@ export default function APIDocsPage() {
                   display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
                   background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.3)',
                   borderRadius: 8, cursor: 'pointer',
-                  color: copiedId === 'example' ? '#10b981' : '#4A7AAB', fontSize: 12,
+                  color: copiedId === 'example' ? '#158A57' : '#2F6BD3', fontSize: 12,
                 }}
               >
                 {copiedId === 'example' ? <Check size={12} /> : <Copy size={12} />}

@@ -117,12 +117,12 @@ export default function KnowledgeBasePage() {
     border: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)',
     text: isDark ? '#e2e8f0' : '#1e293b',
     textMuted: isDark ? '#94a3b8' : '#64748b',
-    accent: '#4A7AAB',
+    accent: '#2F6BD3',
     accentLight: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
     inputBg: isDark ? '#0f172a' : '#f1f5f9',
     hoverBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-    danger: '#EF4444',
-    pinColor: '#F59E0B',
+    danger: '#D6403B',
+    pinColor: '#C9860A',
   };
 
   // Fetch articles
@@ -217,7 +217,7 @@ export default function KnowledgeBasePage() {
   // ── Render ────────────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 80 }}>
-      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#4A7AAB', borderRadius: '50%' }} />
+      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2F6BD3', borderRadius: '50%' }} />
     </div>
   );
 
@@ -235,7 +235,7 @@ export default function KnowledgeBasePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
-            background: 'linear-gradient(135deg, #2B4C6F, #4A7AAB)',
+            background: 'linear-gradient(135deg, #2B4C6F, #2F6BD3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <BookOpen size={20} color="#fff" />

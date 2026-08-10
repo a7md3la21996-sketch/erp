@@ -45,7 +45,7 @@ const ALL_PAGES = flattenNav(NAV_ITEMS);
 const ENTITY_CONFIG = {
   contact: {
     icon: Users,
-    color: '#4A7AAB',
+    color: '#2F6BD3',
     label: { ar: 'جهات الاتصال', en: 'Contacts' },
     labelSingle: { ar: 'جهة اتصال', en: 'Contact' },
     path: '/contacts',
@@ -55,11 +55,11 @@ const ENTITY_CONFIG = {
     color: '#2B4C6F',
     label: { ar: 'الفرص', en: 'Opportunities' },
     labelSingle: { ar: 'فرصة', en: 'Opportunity' },
-    path: '/crm/opportunities',
+    path: '/sales/deals',
   },
   task: {
     icon: CheckSquare,
-    color: '#F59E0B',
+    color: '#C9860A',
     label: { ar: 'المهام', en: 'Tasks' },
     labelSingle: { ar: 'مهمة', en: 'Task' },
     path: '/tasks',
@@ -657,7 +657,7 @@ export default function GlobalSearch({ onClose }) {
                                 : itemType === 'page'
                                   ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
                                   : (color + '15'),
-                              color: itemType === 'history' ? '#8BA8C8' : itemType === 'page' ? '#4A7AAB' : color,
+                              color: itemType === 'history' ? '#8BA8C8' : itemType === 'page' ? '#2F6BD3' : color,
                             }}
                           >
                             {itemType === 'history' ? <Clock size={16} /> : itemType === 'page' && Icon ? <Icon size={16} /> : getTypeIcon(itemType)}

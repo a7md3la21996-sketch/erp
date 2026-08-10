@@ -24,11 +24,11 @@ function save(list) {
 
 // ── Config maps ─────────────────────────────────────────────────────────
 export const TRIGGER_ENTITIES = {
-  contact:     { ar: 'جهة اتصال',    en: 'Contact',     color: '#3B82F6' },
-  opportunity: { ar: 'فرصة بيعية',    en: 'Opportunity',  color: '#8B5CF6' },
-  deal:        { ar: 'صفقة',          en: 'Deal',         color: '#10B981' },
-  task:        { ar: 'مهمة',          en: 'Task',         color: '#F59E0B' },
-  leave:       { ar: 'إجازة',         en: 'Leave',        color: '#EF4444' },
+  contact:     { ar: 'جهة اتصال',    en: 'Contact',     color: '#2F6BD3' },
+  opportunity: { ar: 'فرصة بيعية',    en: 'Opportunity',  color: '#5A63C4' },
+  deal:        { ar: 'صفقة',          en: 'Deal',         color: '#158A57' },
+  task:        { ar: 'مهمة',          en: 'Task',         color: '#C9860A' },
+  leave:       { ar: 'إجازة',         en: 'Leave',        color: '#D6403B' },
 };
 
 export const TRIGGER_EVENTS = {
@@ -59,12 +59,12 @@ export const CONDITION_OPERATORS = {
 };
 
 export const ACTION_TYPES = {
-  send_notification: { ar: 'إرسال إشعار',     en: 'Send Notification',  icon: 'Bell',         color: '#6366F1' },
-  assign_to:         { ar: 'تعيين إلى',        en: 'Assign To',         icon: 'UserPlus',     color: '#3B82F6' },
-  change_status:     { ar: 'تغيير الحالة',     en: 'Change Status',     icon: 'RefreshCw',    color: '#F59E0B' },
-  change_field:      { ar: 'تغيير حقل',        en: 'Change Field',      icon: 'Edit3',        color: '#8B5CF6' },
-  create_task:       { ar: 'إنشاء مهمة',       en: 'Create Task',       icon: 'ClipboardList', color: '#10B981' },
-  send_sms:          { ar: 'إرسال رسالة',      en: 'Send SMS',          icon: 'MessageSquare', color: '#EC4899' },
+  send_notification: { ar: 'إرسال إشعار',     en: 'Send Notification',  icon: 'Bell',         color: '#5A63C4' },
+  assign_to:         { ar: 'تعيين إلى',        en: 'Assign To',         icon: 'UserPlus',     color: '#2F6BD3' },
+  change_status:     { ar: 'تغيير الحالة',     en: 'Change Status',     icon: 'RefreshCw',    color: '#C9860A' },
+  change_field:      { ar: 'تغيير حقل',        en: 'Change Field',      icon: 'Edit3',        color: '#5A63C4' },
+  create_task:       { ar: 'إنشاء مهمة',       en: 'Create Task',       icon: 'ClipboardList', color: '#158A57' },
+  send_sms:          { ar: 'إرسال رسالة',      en: 'Send SMS',          icon: 'MessageSquare', color: '#C14D7E' },
 };
 
 export const ENTITY_FIELDS = {

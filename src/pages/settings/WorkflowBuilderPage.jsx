@@ -26,7 +26,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 16px',
       }}>
-        <GitBranch size={28} color="#4A7AAB" />
+        <GitBranch size={28} color="#2F6BD3" />
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
         {isRTL ? 'لا توجد سير عمل' : 'No Workflows Yet'}
@@ -37,7 +37,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
       <button onClick={onAdd} style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+        background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
       }}>
         <Plus size={15} />
         {isRTL ? 'إنشاء سير عمل' : 'New Workflow'}
@@ -279,7 +279,7 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
           <button onClick={handleSave} disabled={!canSave} style={{
             display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8,
             border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
-            background: canSave ? '#4A7AAB' : (isDark ? '#1e3a5f' : '#e2e8f0'),
+            background: canSave ? '#2F6BD3' : (isDark ? '#1e3a5f' : '#e2e8f0'),
             color: canSave ? '#fff' : (isDark ? '#64748b' : '#94a3b8'), fontSize: 13, fontWeight: 600,
             opacity: canSave ? 1 : 0.6,
           }}>
@@ -310,7 +310,7 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
         <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))} style={{
             background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            color: form.enabled ? '#10B981' : (isDark ? '#64748b' : '#94a3b8'), fontSize: 13, fontWeight: 600, padding: 0,
+            color: form.enabled ? '#158A57' : (isDark ? '#64748b' : '#94a3b8'), fontSize: 13, fontWeight: 600, padding: 0,
           }}>
             {form.enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
             {form.enabled ? (isRTL ? 'مفعّل' : 'Enabled') : (isRTL ? 'معطّل' : 'Disabled')}
@@ -323,11 +323,11 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
 
         {/* Step 1: Trigger */}
         <div style={{ width: '100%', maxWidth: 540 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#2F6BD3', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {isRTL ? 'الخطوة 1 — المشغّل' : 'Step 1 — Trigger'}
           </div>
           <FlowCard
-            color="#3B82F6"
+            color="#2F6BD3"
             isDark={isDark}
             icon={Zap}
             title={isRTL ? 'عندما' : 'When'}
@@ -360,13 +360,13 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
         {/* Step 2: Conditions */}
         <div style={{ width: '100%', maxWidth: 540 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#C9860A', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {isRTL ? 'الخطوة 2 — الشروط' : 'Step 2 — Conditions'}
             </div>
             <button onClick={addCondition} style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6,
-              border: `1px dashed ${isDark ? '#F59E0B44' : '#F59E0B66'}`, background: 'none',
-              color: '#F59E0B', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+              border: `1px dashed ${isDark ? '#C9860A44' : '#C9860A66'}`, background: 'none',
+              color: '#C9860A', cursor: 'pointer', fontSize: 11, fontWeight: 600,
             }}>
               <Plus size={12} />
               {isRTL ? 'إضافة شرط' : 'Add Condition'}
@@ -376,11 +376,11 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
           {form.conditions.length === 0 ? (
             <div style={{
               background: isDark ? '#132337' : '#ffffff',
-              border: `1px dashed ${isDark ? '#F59E0B33' : '#F59E0B44'}`, borderRadius: 12,
+              border: `1px dashed ${isDark ? '#C9860A33' : '#C9860A44'}`, borderRadius: 12,
               padding: '16px 20px', textAlign: 'center',
-              borderLeft: '4px solid #F59E0B',
+              borderLeft: '4px solid #C9860A',
             }}>
-              <Filter size={16} color="#F59E0B" style={{ marginBottom: 4 }} />
+              <Filter size={16} color="#C9860A" style={{ marginBottom: 4 }} />
               <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 {isRTL ? 'بدون شروط — سيتم التنفيذ دائماً' : 'No conditions — will always execute'}
               </div>
@@ -393,8 +393,8 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
                       <button onClick={() => updateCondition(i, 'connector', cond.connector === 'and' ? 'or' : 'and')} style={{
                         padding: '2px 12px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                        background: cond.connector === 'and' ? '#3B82F620' : '#F59E0B20',
-                        color: cond.connector === 'and' ? '#3B82F6' : '#F59E0B',
+                        background: cond.connector === 'and' ? '#2F6BD320' : '#C9860A20',
+                        color: cond.connector === 'and' ? '#2F6BD3' : '#C9860A',
                         fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                       }}>
                         {cond.connector === 'and' ? (isRTL ? 'و' : 'AND') : (isRTL ? 'أو' : 'OR')}
@@ -402,7 +402,7 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
                     </div>
                   )}
                   <FlowCard
-                    color="#F59E0B"
+                    color="#C9860A"
                     isDark={isDark}
                     icon={Filter}
                     title={`${isRTL ? 'شرط' : 'Condition'} ${i + 1}`}
@@ -446,13 +446,13 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
         {/* Step 3: Actions */}
         <div style={{ width: '100%', maxWidth: 540 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#158A57', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {isRTL ? 'الخطوة 3 — الإجراءات' : 'Step 3 — Actions'}
             </div>
             <button onClick={addAction} style={{
               display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6,
-              border: `1px dashed ${isDark ? '#10B98144' : '#10B98166'}`, background: 'none',
-              color: '#10B981', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+              border: `1px dashed ${isDark ? '#158A5744' : '#158A5766'}`, background: 'none',
+              color: '#158A57', cursor: 'pointer', fontSize: 11, fontWeight: 600,
             }}>
               <Plus size={12} />
               {isRTL ? 'إضافة إجراء' : 'Add Action'}
@@ -462,11 +462,11 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
           {form.actions.length === 0 ? (
             <div style={{
               background: isDark ? '#132337' : '#ffffff',
-              border: `1px dashed ${isDark ? '#10B98133' : '#10B98144'}`, borderRadius: 12,
+              border: `1px dashed ${isDark ? '#158A5733' : '#158A5744'}`, borderRadius: 12,
               padding: '16px 20px', textAlign: 'center',
-              borderLeft: '4px solid #10B981',
+              borderLeft: '4px solid #158A57',
             }}>
-              <Play size={16} color="#10B981" style={{ marginBottom: 4 }} />
+              <Play size={16} color="#158A57" style={{ marginBottom: 4 }} />
               <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 {isRTL ? 'أضف إجراء واحد على الأقل' : 'Add at least one action'}
               </div>
@@ -479,7 +479,7 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
                 return (
                   <FlowCard
                     key={i}
-                    color={actionInfo?.color || '#10B981'}
+                    color={actionInfo?.color || '#158A57'}
                     isDark={isDark}
                     icon={IconComp}
                     title={`${isRTL ? 'إجراء' : 'Action'} ${i + 1}`}
@@ -530,12 +530,12 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
             {/* Trigger */}
             <div style={{
               background: isDark ? '#132337' : '#f0f9ff', borderRadius: 10, padding: 12, marginBottom: 12,
-              borderLeft: '3px solid #3B82F6',
+              borderLeft: '3px solid #2F6BD3',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Zap size={14} color="#3B82F6" />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6' }}>{isRTL ? 'المشغّل' : 'Trigger'}</span>
-                <CheckCircle size={14} color="#10B981" />
+                <Zap size={14} color="#2F6BD3" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#2F6BD3' }}>{isRTL ? 'المشغّل' : 'Trigger'}</span>
+                <CheckCircle size={14} color="#158A57" />
               </div>
               <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 {testResults.trigger.entity} / {testResults.trigger.event}
@@ -558,16 +558,16 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
             {/* Condition Results */}
             {testResults.conditionResults.length > 0 && (
               <div style={{
-                background: isDark ? '#132337' : (testResults.conditionsPass ? '#f0fdf4' : '#fef2f2'),
+                background: isDark ? '#132337' : (testResults.conditionsPass ? '#f0fdf4' : '#FBEDEC'),
                 borderRadius: 10, padding: 12, marginBottom: 12,
-                borderLeft: `3px solid ${testResults.conditionsPass ? '#10B981' : '#EF4444'}`,
+                borderLeft: `3px solid ${testResults.conditionsPass ? '#158A57' : '#D6403B'}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <Filter size={14} color="#F59E0B" />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{isRTL ? 'الشروط' : 'Conditions'}</span>
+                  <Filter size={14} color="#C9860A" />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#C9860A' }}>{isRTL ? 'الشروط' : 'Conditions'}</span>
                   {testResults.conditionsPass
-                    ? <CheckCircle size={14} color="#10B981" />
-                    : <XCircle size={14} color="#EF4444" />
+                    ? <CheckCircle size={14} color="#158A57" />
+                    : <XCircle size={14} color="#D6403B" />
                   }
                 </div>
                 {testResults.conditionResults.map((cr, i) => (
@@ -575,7 +575,7 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
                     display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 4,
                     color: isDark ? '#e2e8f0' : '#1e293b',
                   }}>
-                    {cr.passed ? <CheckCircle size={12} color="#10B981" /> : <XCircle size={12} color="#EF4444" />}
+                    {cr.passed ? <CheckCircle size={12} color="#158A57" /> : <XCircle size={12} color="#D6403B" />}
                     <span style={{ fontFamily: 'monospace' }}>{cr.field}</span>
                     <span style={{ color: isDark ? '#64748b' : '#94a3b8' }}>{cr.operator}</span>
                     <span style={{ fontWeight: 600 }}>{cr.value || '(empty)'}</span>
@@ -588,11 +588,11 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
             {/* Actions */}
             <div style={{
               background: isDark ? '#132337' : '#f0fdf4', borderRadius: 10, padding: 12,
-              borderLeft: '3px solid #10B981',
+              borderLeft: '3px solid #158A57',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Play size={14} color="#10B981" />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>{isRTL ? 'الإجراءات' : 'Actions'}</span>
+                <Play size={14} color="#158A57" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#158A57' }}>{isRTL ? 'الإجراءات' : 'Actions'}</span>
               </div>
               {testResults.actionsWouldExecute.length > 0 ? (
                 testResults.actionsWouldExecute.map((a, i) => (
@@ -600,14 +600,14 @@ function WorkflowEditor({ workflow, onSave, onCancel, isRTL, isDark }) {
                     display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 4,
                     color: isDark ? '#e2e8f0' : '#1e293b',
                   }}>
-                    <CheckCircle size={12} color="#10B981" />
+                    <CheckCircle size={12} color="#158A57" />
                     <span style={{ fontWeight: 600 }}>{a.label}</span>
                     {a.config?.title && <span style={{ color: isDark ? '#64748b' : '#94a3b8' }}>— {a.config.title}</span>}
                   </div>
                 ))
               ) : (
                 <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <AlertTriangle size={12} color="#F59E0B" />
+                  <AlertTriangle size={12} color="#C9860A" />
                   {isRTL ? 'لن يتم تنفيذ أي إجراءات (الشروط لم تتحقق)' : 'No actions would execute (conditions not met)'}
                 </div>
               )}
@@ -682,7 +682,7 @@ export default function WorkflowBuilderPage() {
             background: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <GitBranch size={18} color="#4A7AAB" />
+            <GitBranch size={18} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -696,7 +696,7 @@ export default function WorkflowBuilderPage() {
         <button onClick={() => setEditing({})} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+          background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           <Plus size={15} />
           {isRTL ? 'سير عمل جديد' : 'New Workflow'}
@@ -761,8 +761,8 @@ export default function WorkflowBuilderPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                         <span style={{
                           display: 'inline-block', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          background: (entityInfo?.color || '#4A7AAB') + '18',
-                          color: entityInfo?.color || '#4A7AAB',
+                          background: (entityInfo?.color || '#2F6BD3') + '18',
+                          color: entityInfo?.color || '#2F6BD3',
                         }}>
                           {isRTL ? (entityInfo?.ar || wf.trigger?.entity) : (entityInfo?.en || wf.trigger?.entity)}
                         </span>
@@ -802,7 +802,7 @@ export default function WorkflowBuilderPage() {
                     <td style={{ padding: '12px 14px' }}>
                       <button onClick={() => handleToggle(wf.id)} style={{
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                        color: wf.enabled ? '#10B981' : (isDark ? '#64748b' : '#94a3b8'),
+                        color: wf.enabled ? '#158A57' : (isDark ? '#64748b' : '#94a3b8'),
                         display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600,
                       }}>
                         {wf.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
@@ -824,7 +824,7 @@ export default function WorkflowBuilderPage() {
                         <button onClick={() => setDeleteConfirm(wf.id)} style={{
                           width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
                           background: isDark ? '#1e3a5f22' : '#f1f5f9',
-                          color: '#EF4444',
+                          color: '#D6403B',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
                           <Trash2 size={13} />
@@ -852,7 +852,7 @@ export default function WorkflowBuilderPage() {
             borderRadius: 16, padding: 24, width: 360,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <AlertTriangle size={20} color="#EF4444" />
+              <AlertTriangle size={20} color="#D6403B" />
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
                 {isRTL ? 'حذف سير العمل' : 'Delete Workflow'}
               </h3>
@@ -870,7 +870,7 @@ export default function WorkflowBuilderPage() {
               </button>
               <button onClick={() => handleDelete(deleteConfirm)} style={{
                 padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                border: 'none', background: '#EF4444', color: '#fff',
+                border: 'none', background: '#D6403B', color: '#fff',
               }}>
                 {isRTL ? 'حذف' : 'Delete'}
               </button>

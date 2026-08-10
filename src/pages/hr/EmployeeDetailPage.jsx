@@ -68,7 +68,7 @@ export default function EmployeeDetailPage() {
   );
 
   if (!emp) return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-surface-bg dark:bg-surface-bg-dark min-h-screen flex flex-col items-center justify-center text-center">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen flex flex-col items-center justify-center text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
         <User size={28} className="text-red-500" />
       </div>
@@ -91,7 +91,7 @@ export default function EmployeeDetailPage() {
   const tabsToShow = TABS.filter(t => t.key !== 'disciplinary' || canViewDisciplinary);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Back button */}
       <button
         onClick={() => navigate('/hr/employees')}
@@ -161,8 +161,8 @@ function EmployeeHeader({ emp, departments, isRTL, lang }) {
   const statusBadge = isFormer
     ? { color: '#6B7280', label_ar: 'سابق', label_en: 'Former' }
     : emp.employment_type === 'probation'
-      ? { color: '#F59E0B', label_ar: 'فترة تجربة', label_en: 'Probation' }
-      : { color: '#10B981', label_ar: 'نشط', label_en: 'Active' };
+      ? { color: '#C9860A', label_ar: 'فترة تجربة', label_en: 'Probation' }
+      : { color: '#158A57', label_ar: 'نشط', label_en: 'Active' };
 
   return (
     <Card className="p-5 md:p-6 mb-5">
@@ -235,7 +235,7 @@ function KpiStrip({ emp, canViewSalary, isRTL, lang }) {
         icon={CalendarDays}
         label={lang === 'ar' ? 'رصيد الإجازة' : 'Leave Balance'}
         value={`${emp.leave_balance ?? '—'} ${lang === 'ar' ? 'يوم' : 'days'}`}
-        color="#4A7AAB"
+        color="#2F6BD3"
       />
       <KpiCard
         icon={Clock}

@@ -17,8 +17,8 @@ import {
 } from 'recharts';
 
 // ── Helpers ───────────────────────────────────────────────────────────
-const PRIORITY_COLORS = { urgent: '#ef4444', high: '#f97316', medium: '#eab308', low: '#22c55e' };
-const STATUS_COLORS = { open: '#3b82f6', in_progress: '#8b5cf6', resolved: '#22c55e', breached: '#ef4444', escalated: '#f97316' };
+const PRIORITY_COLORS = { urgent: '#D6403B', high: '#DD6327', medium: '#C9860A', low: '#158A57' };
+const STATUS_COLORS = { open: '#2F6BD3', in_progress: '#5A63C4', resolved: '#158A57', breached: '#D6403B', escalated: '#DD6327' };
 
 function formatMinutes(mins, isRTL) {
   if (mins >= 1440) {
@@ -42,12 +42,12 @@ function getTimeRemaining(deadline) {
   const now = new Date();
   const end = new Date(deadline);
   const diff = end - now;
-  if (diff <= 0) return { text: 'Overdue', color: '#ef4444', minutes: 0 };
+  if (diff <= 0) return { text: 'Overdue', color: '#D6403B', minutes: 0 };
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return { text: `${mins}m`, color: mins < 15 ? '#ef4444' : mins < 30 ? '#eab308' : '#22c55e', minutes: mins };
+  if (mins < 60) return { text: `${mins}m`, color: mins < 15 ? '#D6403B' : mins < 30 ? '#C9860A' : '#158A57', minutes: mins };
   const hrs = Math.floor(mins / 60);
   const remMins = mins % 60;
-  return { text: `${hrs}h ${remMins}m`, color: hrs < 1 ? '#eab308' : '#22c55e', minutes: mins };
+  return { text: `${hrs}h ${remMins}m`, color: hrs < 1 ? '#C9860A' : '#158A57', minutes: mins };
 }
 
 const ENTITIES = [
@@ -133,7 +133,7 @@ export default function SLAManagementPage() {
 
   const totalPages = Math.ceil(ticketTotal / pageSize);
 
-  const complianceColor = stats.complianceRate >= 90 ? '#22c55e' : stats.complianceRate >= 70 ? '#eab308' : '#ef4444';
+  const complianceColor = stats.complianceRate >= 90 ? '#158A57' : stats.complianceRate >= 70 ? '#C9860A' : '#D6403B';
 
   // ── Styles ──────────────────────────────────────────────────────────
   const cardBg = isDark ? '#1e293b' : '#ffffff';
@@ -150,7 +150,7 @@ export default function SLAManagementPage() {
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: active ? 600 : 400,
-    background: active ? (isDark ? '#3b82f6' : '#3b82f6') : 'transparent',
+    background: active ? (isDark ? '#2F6BD3' : '#2F6BD3') : 'transparent',
     color: active ? '#ffffff' : textSecondary,
     transition: 'all 0.2s',
     display: 'flex',
@@ -159,7 +159,7 @@ export default function SLAManagementPage() {
   });
 
   const btnPrimary = {
-    background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+    background: '#2F6BD3', color: '#fff', border: 'none', borderRadius: 8,
     padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 500,
     display: 'flex', alignItems: 'center', gap: 6,
   };
@@ -183,7 +183,7 @@ export default function SLAManagementPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Shield size={24} color="#3b82f6" />
+            <Shield size={24} color="#2F6BD3" />
             {isRTL ? 'إدارة اتفاقيات مستوى الخدمة' : 'SLA Management'}
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: textSecondary }}>
@@ -255,10 +255,10 @@ function DashboardTab({
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         <KpiCard icon={Shield} label={isRTL ? 'نسبة الامتثال' : 'Compliance Rate'} value={`${stats.complianceRate}%`} color={complianceColor} />
-        <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الاستجابة' : 'Avg Response Time'} value={formatMinutes(stats.avgResponseTime, isRTL)} color="#3b82f6" />
-        <KpiCard icon={Timer} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution Time'} value={formatMinutes(stats.avgResolutionTime, isRTL)} color="#8b5cf6" />
-        <KpiCard icon={Zap} label={isRTL ? 'تذاكر نشطة' : 'Active Tickets'} value={stats.activeTickets} color="#f97316" />
-        <KpiCard icon={AlertTriangle} label={isRTL ? 'منتهكة' : 'Breached'} value={stats.totalBreached} color="#ef4444" />
+        <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الاستجابة' : 'Avg Response Time'} value={formatMinutes(stats.avgResponseTime, isRTL)} color="#2F6BD3" />
+        <KpiCard icon={Timer} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution Time'} value={formatMinutes(stats.avgResolutionTime, isRTL)} color="#5A63C4" />
+        <KpiCard icon={Zap} label={isRTL ? 'تذاكر نشطة' : 'Active Tickets'} value={stats.activeTickets} color="#DD6327" />
+        <KpiCard icon={AlertTriangle} label={isRTL ? 'منتهكة' : 'Breached'} value={stats.totalBreached} color="#D6403B" />
       </div>
 
       {/* Performance Chart */}
@@ -276,7 +276,7 @@ function DashboardTab({
                 contentStyle={{ background: cardBg, border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 12 }}
                 labelStyle={{ color: textPrimary }}
               />
-              <Bar dataKey="compliance" fill="#3b82f6" radius={[4, 4, 0, 0]} name={isRTL ? 'الامتثال %' : 'Compliance %'} />
+              <Bar dataKey="compliance" fill="#2F6BD3" radius={[4, 4, 0, 0]} name={isRTL ? 'الامتثال %' : 'Compliance %'} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -325,7 +325,7 @@ function DashboardTab({
         {(filters.status || filters.priority || filters.entity || filters.search) && (
           <button
             onClick={() => { setFilters({ status: '', priority: '', entity: '', search: '' }); setPage(1); }}
-            style={{ ...btnSecondary, color: '#ef4444' }}
+            style={{ ...btnSecondary, color: '#D6403B' }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </button>
@@ -372,7 +372,7 @@ function DashboardTab({
                     return (
                       <tr key={ticket.id} style={{
                         borderBottom: `1px solid ${borderColor}`,
-                        background: isBreached ? (isDark ? '#7f1d1d20' : '#fef2f2') : 'transparent',
+                        background: isBreached ? (isDark ? '#7f1d1d20' : '#FBEDEC') : 'transparent',
                       }}>
                         <td style={{ padding: '12px 16px', color: textPrimary, fontWeight: 500 }}>
                           <div>{ticket.entityName}</div>
@@ -393,14 +393,14 @@ function DashboardTab({
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           {ticket.status === 'resolved' ? (
-                            <span style={{ color: '#22c55e', fontWeight: 500 }}><CheckCircle2 size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 4 }} />{isRTL ? 'تم الحل' : 'Resolved'}</span>
+                            <span style={{ color: '#158A57', fontWeight: 500 }}><CheckCircle2 size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 4 }} />{isRTL ? 'تم الحل' : 'Resolved'}</span>
                           ) : (
                             <span style={{ color: timeLeft.color, fontWeight: 600, fontFamily: 'monospace' }}>{timeLeft.text}</span>
                           )}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           {ticket.firstResponseAt ? (
-                            <span style={{ color: '#22c55e', fontSize: 12 }}><Check size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 2 }} />{isRTL ? 'تمت' : 'Done'}</span>
+                            <span style={{ color: '#158A57', fontSize: 12 }}><Check size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 2 }} />{isRTL ? 'تمت' : 'Done'}</span>
                           ) : respTime ? (
                             <span style={{ color: respTime.color, fontWeight: 500, fontSize: 12, fontFamily: 'monospace' }}>{respTime.text}</span>
                           ) : '-'}
@@ -411,7 +411,7 @@ function DashboardTab({
                               <button
                                 onClick={async () => { await respondToTicket(ticket.id); loadData(); }}
                                 title={isRTL ? 'استجابة' : 'Respond'}
-                                style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#3b82f6', borderColor: '#3b82f620' }}
+                                style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#2F6BD3', borderColor: '#2F6BD320' }}
                               >
                                 <Play size={12} /> {isRTL ? 'استجابة' : 'Respond'}
                               </button>
@@ -420,7 +420,7 @@ function DashboardTab({
                               <button
                                 onClick={async () => { await resolveTicket(ticket.id); loadData(); }}
                                 title={isRTL ? 'حل' : 'Resolve'}
-                                style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#22c55e', borderColor: '#22c55e20' }}
+                                style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#158A57', borderColor: '#158A5720' }}
                               >
                                 <CheckCircle2 size={12} /> {isRTL ? 'حل' : 'Resolve'}
                               </button>
@@ -484,7 +484,7 @@ function PoliciesTab({
               {policy.builtIn && (
                 <span style={{
                   position: 'absolute', top: 12, [isRTL ? 'left' : 'right']: 12,
-                  ...badgeStyle('#3b82f6'), fontSize: 10,
+                  ...badgeStyle('#2F6BD3'), fontSize: 10,
                 }}>
                   {isRTL ? 'مدمج' : 'Built-in'}
                 </span>
@@ -511,7 +511,7 @@ function PoliciesTab({
                 <span style={badgeStyle(PRIORITY_COLORS[policy.priority])}>
                   {PRIORITIES.find(p => p.value === policy.priority)?.[isRTL ? 'ar' : 'en']}
                 </span>
-                <span style={badgeStyle(policy.active ? '#22c55e' : '#94a3b8')}>
+                <span style={badgeStyle(policy.active ? '#158A57' : '#94a3b8')}>
                   {policy.active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'معطل' : 'Inactive')}
                 </span>
               </div>
@@ -545,7 +545,7 @@ function PoliciesTab({
                   onClick={() => { setEditingPolicy(policy); setShowPolicyModal(true); }}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#3b82f6', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
+                    color: '#2F6BD3', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
                   }}
                 >
                   <Edit2 size={13} /> {isRTL ? 'تعديل' : 'Edit'}
@@ -555,7 +555,7 @@ function PoliciesTab({
                     onClick={() => setShowDeleteConfirm(policy.id)}
                     style={{
                       background: 'transparent', border: 'none', cursor: 'pointer',
-                      color: '#ef4444', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
+                      color: '#D6403B', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
                     }}
                   >
                     <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
@@ -565,13 +565,13 @@ function PoliciesTab({
                 <button
                   onClick={async () => { await updatePolicy(policy.id, { active: !policy.active }); loadData(); }}
                   style={{
-                    background: policy.active ? '#22c55e20' : (isDark ? '#33415520' : '#f1f5f9'),
+                    background: policy.active ? '#158A5720' : (isDark ? '#33415520' : '#f1f5f9'),
                     border: 'none', cursor: 'pointer', borderRadius: 20, width: 44, height: 24,
                     position: 'relative', transition: 'all 0.2s',
                   }}
                 >
                   <div style={{
-                    width: 18, height: 18, borderRadius: '50%', background: policy.active ? '#22c55e' : '#94a3b8',
+                    width: 18, height: 18, borderRadius: '50%', background: policy.active ? '#158A57' : '#94a3b8',
                     position: 'absolute', top: 3,
                     [policy.active ? (isRTL ? 'left' : 'right') : (isRTL ? 'right' : 'left')]: 3,
                     transition: 'all 0.2s',
@@ -610,8 +610,8 @@ function PoliciesTab({
             border: `1px solid ${borderColor}`,
           }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#ef444420', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                <Trash2 size={24} color="#ef4444" />
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#D6403B20', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <Trash2 size={24} color="#D6403B" />
               </div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: textPrimary }}>
                 {isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}
@@ -632,7 +632,7 @@ function PoliciesTab({
               </button>
               <button
                 onClick={() => handleDelete(showDeleteConfirm)}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#D6403B', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
               >
                 {isRTL ? 'حذف' : 'Delete'}
               </button>
@@ -824,7 +824,7 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
               <label style={{ ...labelStyle, margin: 0 }}>{isRTL ? 'مستويات التصعيد' : 'Escalation Levels'}</label>
               <button onClick={addEscalation} style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                color: '#3b82f6', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4,
+                color: '#2F6BD3', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4,
               }}>
                 <Plus size={14} /> {isRTL ? 'إضافة' : 'Add'}
               </button>
@@ -851,7 +851,7 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
                 >
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
-                <button onClick={() => removeEscalation(idx)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}>
+                <button onClick={() => removeEscalation(idx)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 2 }}>
                   <X size={14} />
                 </button>
               </div>
@@ -864,13 +864,13 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
             <button
               onClick={() => setForm(f => ({ ...f, active: !f.active }))}
               style={{
-                background: form.active ? '#22c55e20' : (isDark ? '#33415520' : '#f1f5f9'),
+                background: form.active ? '#158A5720' : (isDark ? '#33415520' : '#f1f5f9'),
                 border: 'none', cursor: 'pointer', borderRadius: 20, width: 44, height: 24,
                 position: 'relative', transition: 'all 0.2s',
               }}
             >
               <div style={{
-                width: 18, height: 18, borderRadius: '50%', background: form.active ? '#22c55e' : '#94a3b8',
+                width: 18, height: 18, borderRadius: '50%', background: form.active ? '#158A57' : '#94a3b8',
                 position: 'absolute', top: 3,
                 [form.active ? (isRTL ? 'left' : 'right') : (isRTL ? 'right' : 'left')]: 3,
                 transition: 'all 0.2s',

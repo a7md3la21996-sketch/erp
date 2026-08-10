@@ -36,7 +36,7 @@ function ObjectiveCard({ obj, isRTL, isDark, lang, onEdit, onDelete, onUpdateKR,
   const progress = computeObjectiveProgress(obj);
   const statusOpt = OBJ_STATUS_OPTIONS.find(s => s.value === obj.status);
   const statusColor = statusOpt?.color || '#94a3b8';
-  const progressColor = progress >= 70 ? '#10B981' : progress >= 40 ? '#F59E0B' : '#EF4444';
+  const progressColor = progress >= 70 ? '#158A57' : progress >= 40 ? '#C9860A' : '#D6403B';
 
   return (
     <div style={{
@@ -104,7 +104,7 @@ function ObjectiveCard({ obj, isRTL, isDark, lang, onEdit, onDelete, onUpdateKR,
             </button>
             <button onClick={e => { e.stopPropagation(); onDelete(obj.id); }} style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6,
-              color: '#EF4444',
+              color: '#D6403B',
             }}>
               <Trash2 size={15} />
             </button>
@@ -375,7 +375,7 @@ function ObjectiveModal({ isOpen, onClose, onSave, editObj, isDark, isRTL, lang 
             <button onClick={addKR} style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '5px 12px', borderRadius: 8,
-              background: 'rgba(74,122,171,0.12)', color: '#4A7AAB',
+              background: 'rgba(74,122,171,0.12)', color: '#2F6BD3',
               border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
               flexDirection: isRTL ? 'row-reverse' : 'row',
             }}>
@@ -393,7 +393,7 @@ function ObjectiveModal({ isOpen, onClose, onSave, editObj, isDark, isRTL, lang 
             }}>
               <button onClick={() => removeKR(idx)} style={{
                 position: 'absolute', top: 8, right: isRTL ? 'auto' : 8, left: isRTL ? 8 : 'auto',
-                background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#EF4444',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#D6403B',
               }}>
                 <X size={14} />
               </button>
@@ -452,7 +452,7 @@ function ObjectiveModal({ isOpen, onClose, onSave, editObj, isDark, isRTL, lang 
             disabled={!form.title.trim()}
             style={{
               padding: '8px 20px', borderRadius: 8, border: 'none',
-              background: !form.title.trim() ? '#94a3b8' : '#4A7AAB',
+              background: !form.title.trim() ? '#94a3b8' : '#2F6BD3',
               color: '#ffffff', fontSize: 13, fontWeight: 600, cursor: form.title.trim() ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', gap: 6,
               flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -601,7 +601,7 @@ export default function GoalsPage() {
             background: 'rgba(74,122,171,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Target size={22} color="#4A7AAB" />
+            <Target size={22} color="#2F6BD3" />
           </div>
           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -617,7 +617,7 @@ export default function GoalsPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 18px', borderRadius: 10, border: 'none',
-            background: '#4A7AAB', color: '#ffffff',
+            background: '#2F6BD3', color: '#ffffff',
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
             flexDirection: isRTL ? 'row-reverse' : 'row',
           }}
@@ -638,8 +638,8 @@ export default function GoalsPage() {
               key={q}
               onClick={() => { setQuarter(q); setPage(1); }}
               style={{
-                padding: '7px 16px', borderRadius: 8, border: '1px solid ' + (quarter === q ? '#4A7AAB' : (isDark ? '#ffffff15' : '#e2e8f0')),
-                background: quarter === q ? '#4A7AAB' : (isDark ? '#1a2332' : '#ffffff'),
+                padding: '7px 16px', borderRadius: 8, border: '1px solid ' + (quarter === q ? '#2F6BD3' : (isDark ? '#ffffff15' : '#e2e8f0')),
+                background: quarter === q ? '#2F6BD3' : (isDark ? '#1a2332' : '#ffffff'),
                 color: quarter === q ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -666,11 +666,11 @@ export default function GoalsPage() {
 
       {/* KPI Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 20 }}>
-        <KpiCard icon={Target} label={isRTL ? 'إجمالي الأهداف' : 'Total Objectives'} value={summary.total} sub={`${quarter} ${year}`} color="#4A7AAB" />
-        <KpiCard icon={BarChart3} label={isRTL ? 'متوسط التقدم' : 'Avg Progress'} value={`${summary.avgProgress}%`} sub={isRTL ? 'جميع الأهداف' : 'All objectives'} color={summary.avgProgress >= 60 ? '#10B981' : '#F59E0B'} />
-        <KpiCard icon={CheckCircle} label={isRTL ? 'على المسار' : 'On Track'} value={summary.onTrack} sub={isRTL ? 'هدف' : 'objectives'} color="#10B981" />
-        <KpiCard icon={AlertTriangle} label={isRTL ? 'في خطر' : 'At Risk'} value={summary.atRisk} sub={isRTL ? 'هدف' : 'objectives'} color="#F59E0B" />
-        <KpiCard icon={TrendingDown} label={isRTL ? 'متأخر' : 'Behind'} value={summary.behind} sub={isRTL ? 'هدف' : 'objectives'} color="#EF4444" />
+        <KpiCard icon={Target} label={isRTL ? 'إجمالي الأهداف' : 'Total Objectives'} value={summary.total} sub={`${quarter} ${year}`} color="#2F6BD3" />
+        <KpiCard icon={BarChart3} label={isRTL ? 'متوسط التقدم' : 'Avg Progress'} value={`${summary.avgProgress}%`} sub={isRTL ? 'جميع الأهداف' : 'All objectives'} color={summary.avgProgress >= 60 ? '#158A57' : '#C9860A'} />
+        <KpiCard icon={CheckCircle} label={isRTL ? 'على المسار' : 'On Track'} value={summary.onTrack} sub={isRTL ? 'هدف' : 'objectives'} color="#158A57" />
+        <KpiCard icon={AlertTriangle} label={isRTL ? 'في خطر' : 'At Risk'} value={summary.atRisk} sub={isRTL ? 'هدف' : 'objectives'} color="#C9860A" />
+        <KpiCard icon={TrendingDown} label={isRTL ? 'متأخر' : 'Behind'} value={summary.behind} sub={isRTL ? 'هدف' : 'objectives'} color="#D6403B" />
       </div>
 
       {/* SmartFilter */}

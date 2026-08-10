@@ -4,25 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { logView, getEntityViewers } from '../../../services/viewTrackingService';
+import { logView } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download, Building2 } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Briefcase, UserCheck, Megaphone, Settings, DollarSign, ChevronDown, ChevronUp, MoreVertical, Pin, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, Building2, Plus } from 'lucide-react';
 
 // Lazy-loaded so the recharts vendor chunk doesn't ship with every contact open.
 // Wrapped with lazyRetry so stale chunk references after a deploy auto-recover
 // via reload instead of surfacing "text/html is not a valid JS MIME type".
 const CampaignHistoryChart = lazyRetry(() => import('./CampaignHistoryChart'));
-import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
-import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities, getAssignmentHistory,
 } from '../../../services/contactsService';
-import { createOpportunity, updateOpportunity } from '../../../services/opportunitiesService';
-import { createNotification } from '../../../services/notificationsService';
+import { updateOpportunity } from '../../../services/opportunitiesService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
-import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
-import { useFocusTrap } from '../../../utils/hooks';
+import { fetchTasks, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
+import { logInteraction } from '../../../services/interactionsService';
+import { useFocusTrap, useClickOutside } from '../../../utils/hooks';
 import EditContactModal from './EditContactModal';
 import DistributeLeadModal from './DistributeLeadModal';
 import PullOtherLeadsModal from './PullOtherLeadsModal';
@@ -33,28 +31,50 @@ import ResaleUnitsTab from './ResaleUnitsTab';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
-import { getLocalAuditLogs, ACTION_TYPES, logAction } from '../../../services/auditService';
+import { getLocalAuditLogs, ACTION_TYPES } from '../../../services/auditService';
 import { notifyNewComment } from '../../../services/notificationService';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
-import { getWonDeals } from '../../../services/dealsService';
+import DealEventModal from './DealEventModal';
+import MeetingModal from './MeetingModal';
 import { reportError } from '../../../utils/errorReporter';
 import supabase from '../../../lib/supabase';
 import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
 import PrintPreview from '../../../components/ui/PrintPreview';
-import {
-  logMessage as logWhatsAppMessage, getTemplates as getWhatsAppTemplates,
-  generateWhatsAppLink, fillTemplate, getMessagesByContact,
-} from '../../../services/whatsappService';
+import WhatsAppQuickPopup from './WhatsAppQuickPopup';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
-  TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
-  Chip, ScorePill, PhoneCell, getDeptStages, deptStageLabel,
-  agentInitials,
+  TEMP, TYPE, fmtBudget, daysSince, initials,
+  Chip, ScorePill, getDeptStages, deptStageLabel,
+  agentInitials, normalizePhone,
 } from './constants';
+import { generateWhatsAppLink } from '../../../services/whatsappService';
 
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock };
+
+// Bilingual labels for the Audit section's field-level change diffs. Unknown
+// fields fall back to the raw column name.
+const AUDIT_FIELD_LABELS = {
+  full_name: { ar: 'الاسم', en: 'Name' }, phone: { ar: 'التليفون', en: 'Phone' }, phone2: { ar: 'تليفون 2', en: 'Phone 2' }, email: { ar: 'الإيميل', en: 'Email' },
+  contact_status: { ar: 'الحالة', en: 'Status' }, temperature: { ar: 'الحرارة', en: 'Temperature' }, lead_score: { ar: 'التقييم', en: 'Score' },
+  my_status: { ar: 'الحالة', en: 'Status' }, my_temperature: { ar: 'الحرارة', en: 'Temperature' }, my_score: { ar: 'التقييم', en: 'Score' },
+  source: { ar: 'المصدر', en: 'Source' }, company: { ar: 'الشركة', en: 'Company' }, job_title: { ar: 'المسمى', en: 'Job title' }, budget_min: { ar: 'أقل ميزانية', en: 'Min budget' },
+  budget_max: { ar: 'أعلى ميزانية', en: 'Max budget' }, assigned_to_name: { ar: 'المسؤول', en: 'Assigned to' }, lead_category: { ar: 'التصنيف', en: 'Category' },
+  notes: { ar: 'ملاحظات', en: 'Notes' }, disqualify_reason: { ar: 'سبب الاستبعاد', en: 'Disqualify reason' }, disqualify_note: { ar: 'ملاحظة الاستبعاد', en: 'Disqualify note' },
+  campaign_name: { ar: 'الحملة', en: 'Campaign' }, contact_type: { ar: 'النوع', en: 'Type' }, is_blacklisted: { ar: 'القائمة السوداء', en: 'Blacklisted' },
+};
+// Safe stringify for an audit from/to value (some are JSON objects like agent_statuses).
+// ISO timestamps render as a short local date instead of a raw 2026-…Z string.
+const auditVal = (x) => {
+  if (x == null || x === '') return '—';
+  if (typeof x === 'object') return JSON.stringify(x);
+  if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}T[\d:.]+/.test(x)) {
+    const d = new Date(x);
+    if (!isNaN(d)) return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  return String(x);
+};
 
 // Module-level cache for the drawer's per-contact data. Arrow-key navigation
 // fires through contacts faster than the network can respond; without a cache
@@ -77,26 +97,26 @@ function SectionPlaceholder({ label }) {
 }
 
 const TIMELINE_CONFIG = {
-  activity:    { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },
-  task:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
-  opportunity: { color: '#10B981', bg: 'rgba(16,185,129,0.10)',  defaultIcon: Target },
-  comment:     { color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)',  defaultIcon: MessageSquare },
-  document:    { color: '#EC4899', bg: 'rgba(236,72,153,0.10)',  defaultIcon: FileUp },
+  activity:    { color: '#2F6BD3', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },
+  task:        { color: '#C9860A', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
+  opportunity: { color: '#158A57', bg: 'rgba(16,185,129,0.10)',  defaultIcon: Target },
+  comment:     { color: '#5A63C4', bg: 'rgba(139,92,246,0.10)',  defaultIcon: MessageSquare },
+  document:    { color: '#C14D7E', bg: 'rgba(236,72,153,0.10)',  defaultIcon: FileUp },
   audit:       { color: '#6B8DB5', bg: 'rgba(107,141,181,0.10)', defaultIcon: History },
-  deal:        { color: '#0F766E', bg: 'rgba(15,118,110,0.10)',  defaultIcon: Award },
+  deal:        { color: '#0B5A53', bg: 'rgba(15,118,110,0.10)',  defaultIcon: Award },
 };
 
 // Department tab config
 const DEPT_TABS = {
-  sales:      { key: 'opportunities', label_ar: 'الفرص',     label_en: 'Opportunities', icon: Target,    color: '#10B981' },
+  sales:      { key: 'opportunities', label_ar: 'الفرص',     label_en: 'Opportunities', icon: Target,    color: '#158A57' },
   hr:         { key: 'recruitment',   label_ar: 'التوظيف',   label_en: 'Recruitment',   icon: UserCheck, color: '#6B21A8' },
-  marketing:  { key: 'campaigns',     label_ar: 'الحملات',   label_en: 'Campaigns',     icon: Megaphone, color: '#F59E0B' },
-  operations: { key: 'orders',        label_ar: 'الطلبات',   label_en: 'Orders',        icon: Settings,  color: '#4A7AAB' },
-  finance:    { key: 'invoices',      label_ar: 'الفواتير',  label_en: 'Invoices',      icon: DollarSign, color: '#0F766E' },
+  marketing:  { key: 'campaigns',     label_ar: 'الحملات',   label_en: 'Campaigns',     icon: Megaphone, color: '#C9860A' },
+  operations: { key: 'orders',        label_ar: 'الطلبات',   label_en: 'Orders',        icon: Settings,  color: '#2F6BD3' },
+  finance:    { key: 'invoices',      label_ar: 'الفواتير',  label_en: 'Invoices',      icon: DollarSign, color: '#0B5A53' },
 };
 
 // ── Contact Drawer ─────────────────────────────────────────────────────────
-export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, initialAction = false, onPrev, onNext, onPin, isPinned, onLogCall, onReminder, onDelete, onRequestDisqualify }) {
+export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onPrev, onNext, onPin, isPinned, onReminder, onDelete, onRequestDisqualify }) {
   // Drawer ref for focus trap + restore — was missing accessibility scaffolding.
   // Tabbing now stays inside the drawer; focus returns to the opener on close.
   const drawerRef = useRef(null);
@@ -106,6 +126,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showPullLeads, setShowPullLeads] = useState(false);
   const [showHandOff, setShowHandOff] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
+  // Deal-events model. dealModal = { status, dealId?, initialFields? } | null
+  // (dealId set ⇒ advancing an existing deal; null ⇒ creating a new one).
+  const [dealModal, setDealModal] = useState(null);
+  // A lead can have several deals (one per unit) — the Deal tab lists them all.
+  const [dealRows, setDealRows] = useState([]);
+  const [dealLoading, setDealLoading] = useState(false);
+  // Meetings tab: { mode: 'happened' | 'scheduled' } | null
+  const [meetingModal, setMeetingModal] = useState(null);
   // Quick status change popover anchored on the hero status chip — lets the
   // viewer flip their own status without opening the full TakeActionForm.
   const [showQuickStatus, setShowQuickStatus] = useState(false);
@@ -117,10 +145,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // When the hero action buttons (Meeting / Note) open the TakeActionForm
   // they preset the activity type so the user lands on the right tab.
   const [actionPresetType, setActionPresetType] = useState(null);
-  // Inline quick-note composer in the hero — log a note in one keystroke
-  // without opening the full TakeActionForm.
-  const [quickNote, setQuickNote] = useState('');
-  const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   // Single-scroll mode: each tab now renders as a `<section>` in the
   // scroll. Heavy components (ResaleUnitsTab, CommentsSection,
   // DocumentsSection — they each self-fetch on mount) are deferred until
@@ -130,56 +154,53 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [mountedSections, setMountedSections] = useState(() => new Set(['activity']));
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  // WhatsApp quick-send: only the open/close flag lives here (keyboard-nav
+  // guards read it). Message/template/recent-message state + their fetches
+  // now live in WhatsAppQuickPopup, which mounts only when opened — so we no
+  // longer fetch WA history on every contact navigation.
   const [showWAPopup, setShowWAPopup] = useState(false);
-  const [waMessage, setWaMessage] = useState('');
-  const [waSelectedTpl, setWaSelectedTpl] = useState('');
-  const [waTemplates, setWaTemplates] = useState([]);
-  useEffect(() => {
-    const load = async () => {
-      try { const t = await getWhatsAppTemplates(true); setWaTemplates(Array.isArray(t) ? t : []); } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA templates:', err); setWaTemplates([]); }
-    };
-    load();
-  }, []);
-  const [recentWAMessages, setRecentWAMessages] = useState([]);
-  useEffect(() => {
-    // Clear synchronously on contact change so the previous contact's
-    // messages don't flash for the brief window before the new fetch resolves.
-    setRecentWAMessages([]);
-    if (!contact?.id) return;
-    const cid = contact.id;
-    const load = async () => {
-      try {
-        const msgs = await getMessagesByContact(cid);
-        // Guard against late response after contact already changed
-        if (cid !== contact.id) return;
-        setRecentWAMessages(Array.isArray(msgs) ? msgs.slice(0, 5) : []);
-      } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA messages:', err); }
-    };
-    load();
-  }, [contact?.id]);
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const [tab, setTab] = useState('activity');
-  const [selectedAgent, setSelectedAgent] = useState('all');
-  // showAddAgent + addAgent* state removed in Phase 3 — picker UI is gone.
-  const [editCampaign, setEditCampaign] = useState(false);
-  const [campaignSearch, setCampaignSearch] = useState('');
+  // showAddAgent + addAgent* + selectedAgent state removed — per-agent picker UI is gone.
+  // campaignsList feeds EditContactModal's campaign picker (see render below).
   const [campaignsList, setCampaignsList] = useState([]);
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [showActionForm, setShowActionForm] = useState(initialAction);
-  const [showOppModal, setShowOppModal] = useState(false);
+  // Opened only by the "+ سجّل" FAB (always with a preset type) — never auto-open.
+  const [showActionForm, setShowActionForm] = useState(false);
+  const [showLogMenu, setShowLogMenu] = useState(false); // "+ سجّل" speed-dial
+  // Close the speed-dial on an outside click WITHOUT an overlay div — an
+  // inset-0 backdrop over the drawer swallowed wheel/touch so the timeline
+  // couldn't scroll while the menu was open. useClickOutside listens on
+  // document instead, leaving scrolling untouched.
+  const fabRef = useRef(null);
+  useClickOutside(fabRef, () => setShowLogMenu(false), showLogMenu);
+  // Admin/operations "Audit" tab: aggregated viewers of THIS lead across all
+  // employees. Fetched from the view_logs table (getEntityViewers reads only
+  // this device's localStorage, so it can't show other people's views).
+  const [viewers, setViewers] = useState([]);
+  const [viewersLoading, setViewersLoading] = useState(false);
 
-  // Guarded ESC: closes the drawer only when no inner modal is open. The
+  // Guarded ESC: closes the drawer only when no inner surface is open. The
   // useEscClose hook uses capture-phase + stopImmediatePropagation, so without
-  // this guard the drawer would steal ESC from any modal stacked over it
-  // (Edit, Distribute, HandOff, etc.) and close behind them.
+  // this guard the drawer would steal ESC from anything stacked over it and
+  // close behind it. First ESC dismisses the top-most inner surface (the "+ سجّل"
+  // menu / log form / meeting / deal modal); the drawer only closes when nothing
+  // is layered on top. Modals with their own useEscClose (Edit, SMS, Distribute…)
+  // are just guarded here so this handler doesn't fire behind them.
   useEscClose(() => {
-    if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview
+    if (showLogMenu) { setShowLogMenu(false); return; }
+    if (showQuickStatus) { setShowQuickStatus(false); return; }
+    if (showQuickTemp) { setShowQuickTemp(false); return; }
+    if (showActionForm) { setShowActionForm(false); setActionPresetType(null); return; }
+    if (meetingModal) { setMeetingModal(null); return; }
+    if (dealModal) { setDealModal(null); return; }
+    if (showEdit || showSMSModal || showWAPopup || showPrintPreview
       || showDistribute || showPullLeads || showHandOff || showDrawerMenu) return;
     onClose();
   });
@@ -189,6 +210,17 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const { profile, hasPermission } = useAuth();
   const isSalesAgent = profile?.role === 'sales_agent';
   const isAdmin = profile?.role === 'admin' || profile?.role === 'operations';
+  // Managers/leaders/admins manage other reps' leads, so they should SEE (and,
+  // where an editor exists, edit) the assignee's per-agent temperature/score —
+  // not just their own. Single-assignment means contact.temperature /
+  // contact.lead_score are the current owner's values, so no ambiguity.
+  const isManagerViewer = isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader';
+  // Ownership is decided by ID, never by the denormalized assigned_to_name.
+  // That name can drift (e.g. the same user's leads were stamped both
+  // "saeed yasser" and "saeed yasser saeed"), and a name mismatch used to make
+  // the owner's own leads read-only — temperature hidden, status locked. The id
+  // is the source of truth.
+  const isOwner = !!(contact?.assigned_to && profile?.id && contact.assigned_to === profile.id);
   // audit_logs SELECT is admin-only after the RLS tightening — skip the
   // fetch for users who can't read it. Otherwise we waste a query that
   // returns empty and renders an empty audit timeline section.
@@ -233,20 +265,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const myAssign = [...assignmentHistory].reverse().find(h => h.to === selfName || h.to === profile?.full_name_ar || h.to === profile?.full_name_en);
     return myAssign ? new Date(myAssign.at) : null;
   }, [hidePreviousHistory, assignmentHistory, profile, isRTL]);
-  const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
-  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'', assigned_to_name: isSalesAgent ? selfName : '' });
 
   // Get agents list for assignment dropdown. Team-scoped: a sales_manager or
   // team_leader only sees their own team members in the picker, so they
   // can't reassign to agents outside their scope.
-  const [agentsList, setAgentsList] = useState([]);
   useEffect(() => {
-    import('../../../services/opportunitiesService').then(({ fetchTeamAgents }) => {
-      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(agents => {
-        setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
-      }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
-    }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
-    // Load campaigns for quick edit
+    // Load campaigns for EditContactModal's campaign picker.
     import('../../../services/marketingService').then(({ fetchCampaigns }) => {
       fetchCampaigns().then(c => setCampaignsList(c || [])).catch(() => {});
     }).catch(() => {});
@@ -290,16 +314,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     // across contact navigation (same JSX tree), so the cached refs stay
     // valid and the IntersectionObserver effect can re-observe them.
     setMountedSections(new Set(['activity']));
-    // selectedAgent kept at 'all' — the per-agent profile selector UI was
-    // removed (status/temp edit inline now), so this filter shouldn't hide
-    // anything from the timeline / opportunities list anymore.
-    setSelectedAgent('all');
-    // Clear WhatsApp draft state. Without this, the template & message
-    // body composed for contact A leak into the popup when the user
-    // navigates to contact B via arrow keys, which previously caused
-    // wrong-recipient sends.
-    setWaMessage('');
-    setWaSelectedTpl('');
+    // (WhatsApp draft state now lives in WhatsAppQuickPopup, which re-fetches
+    // per contact.id and clears itself — no reset needed here.)
   }, [contact.id]);
 
   // Lazy-mount sections when they scroll into view. Heavy sections
@@ -343,10 +359,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEffect(() => {
     let cancelled = false;
     const cid = String(contact.id);
+    // Key the cache by VIEWER + contact — the cached payload is RLS-scoped to the
+    // viewer (other agents' activities, admin-only audits), so a different user
+    // sharing the same tab within the 60s TTL must NOT read the previous user's
+    // cache. Without the profile prefix it leaked across a same-tab user switch.
+    const cacheKey = `${profile?.id || 'anon'}:${cid}`;
     const contactStamp = contact.updated_at || null;
 
     // Cache hit — apply immediately and skip network entirely.
-    const cached = _drawerDataCache.get(cid);
+    const cached = _drawerDataCache.get(cacheKey);
     const cacheFresh = cached && Date.now() - cached.ts < DRAWER_CACHE_TTL;
     const cacheMatchesContact = cached && (cached.contactStamp === contactStamp);
     const cacheMatchesRefresh = cached && (cached.drawerRefresh === drawerRefresh);
@@ -354,42 +375,52 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       setActivities(cached.activities || []);
       setTasks(cached.tasks || []);
       setOpportunities(cached.opportunities || []);
-      setExtraSources(cached.extraSources || { comments: [], documents: [], audits: [], deals: [] });
+      setExtraSources(cached.extraSources || { comments: [], documents: [], audits: [] });
       setLoadingData(false);
       return;
     }
 
     setLoadingData(true);
     const timer = setTimeout(() => {
+      // ── Timeline-critical (activities + tasks + opportunities) — resolve these
+      //    FIRST and reveal the timeline immediately, instead of waiting on the
+      //    comments/documents/audits round-trips that belong to other tabs.
       Promise.allSettled([
         fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
         fetchTasks({ contactId: contact.id, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
         fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-        getComments('contact', cid).catch(() => []),
-        getDocumentsByEntity('contact', cid).catch(() => []),
-        getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar, contactId: cid }).catch(() => []),
-        canViewAudit ? getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-      ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
+      ]).then(([actsRes, tasksRes, oppsRes]) => {
         if (cancelled) return;
         const activities = actsRes.status === 'fulfilled' ? actsRes.value : [];
         const tasks = tasksRes.status === 'fulfilled' ? tasksRes.value : [];
         const opportunities = oppsRes.status === 'fulfilled' ? oppsRes.value : [];
-        const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
-        const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
-        const deals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
-        const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
-        const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
-        const extraSources = { comments, documents, audits, deals };
         setActivities(activities);
         setTasks(tasks);
         setOpportunities(opportunities);
-        setExtraSources(extraSources);
         setLoadingData(false);
-        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now(), contactStamp, drawerRefresh });
+        const prev = _drawerDataCache.get(cacheKey) || {};
+        _drawerDataCache.set(cacheKey, { ...prev, activities, tasks, opportunities, ts: Date.now(), contactStamp, drawerRefresh });
       });
-    }, 250);
+      // ── Secondary (Comments / Documents / Audit tabs) — load in the background;
+      //    the timeline never waits on these.
+      Promise.allSettled([
+        getComments('contact', cid).catch(() => []),
+        getDocumentsByEntity('contact', cid).catch(() => []),
+        isAdmin ? getLocalAuditLogs({ limit: 200, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ]).then(([commentsRes, docsRes, auditsRes]) => {
+        if (cancelled) return;
+        const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
+        const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
+        const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
+        const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
+        const extraSources = { comments, documents, audits };
+        setExtraSources(extraSources);
+        const prev = _drawerDataCache.get(cacheKey) || {};
+        _drawerDataCache.set(cacheKey, { ...prev, extraSources, ts: prev.ts || Date.now(), contactStamp, drawerRefresh });
+      });
+    }, 80);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [contact.id, contact.updated_at, drawerRefresh, canViewAudit]);
+  }, [contact.id, contact.updated_at, drawerRefresh, isAdmin, profile?.id, profile?.role, profile?.team_id]);
 
   // Realtime invalidator: subscribe to activities/tasks/opportunities for the
   // currently open contact. When any change comes in, drop the cached entry
@@ -398,25 +429,77 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEffect(() => {
     if (!contact?.id) return undefined;
     const cid = String(contact.id);
+    const cacheKey = `${profile?.id || 'anon'}:${cid}`;
     const channel = supabase
       .channel(`drawer_${cid}`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'activities', filter: `contact_id=eq.${cid}` },
-        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
+        () => { _drawerDataCache.delete(cacheKey); setDrawerRefresh(n => n + 1); })
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'tasks', filter: `contact_id=eq.${cid}` },
-        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'opportunities', filter: `contact_id=eq.${cid}` },
-        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
+        () => { _drawerDataCache.delete(cacheKey); setDrawerRefresh(n => n + 1); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [contact?.id]);
+  }, [contact?.id, profile?.id]);
+
+  // Admin/operations only: fetch who has viewed this lead (all employees) once
+  // the Audit section is mounted (scrolled to / tab clicked) — avoids a query
+  // on every drawer open. Aggregates view_logs rows per user.
+  useEffect(() => {
+    if (!isAdmin || !contact?.id || !mountedSections.has('audit')) return undefined;
+    let cancelled = false;
+    setViewersLoading(true);
+    (async () => {
+      const { data, error } = await supabase
+        .from('view_logs')
+        .select('user_id, user_name, user_role, viewed_at')
+        .eq('entity_type', 'contact')
+        .eq('entity_id', String(contact.id))
+        .order('viewed_at', { ascending: false })
+        .limit(1000);
+      if (cancelled) return;
+      if (error) { setViewers([]); setViewersLoading(false); return; }
+      const map = new Map();
+      for (const l of data || []) {
+        const cur = map.get(l.user_id) || { user_id: l.user_id, user_name: l.user_name, user_role: l.user_role, views: 0, last_view: l.viewed_at, first_view: l.viewed_at };
+        cur.views += 1;
+        if (l.viewed_at > cur.last_view) cur.last_view = l.viewed_at;
+        if (l.viewed_at < cur.first_view) cur.first_view = l.viewed_at;
+        map.set(l.user_id, cur);
+      }
+      setViewers([...map.values()].sort((a, b) => new Date(b.last_view) - new Date(a.last_view)));
+      setViewersLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [isAdmin, contact?.id, mountedSections]);
+
+  // Load the lead's current deal for the Deal tab (any status), refreshed when
+  // a milestone is logged (drawerRefresh bump).
+  useEffect(() => {
+    if (!contact?.id) return undefined;
+    let cancelled = false;
+    setDealLoading(true);
+    (async () => {
+      const { data, error } = await supabase.from('deals')
+        .select('id, deal_number, status, deal_value, down_payment, unit_code, project_ar, project_en, notes, agent_ar, agent_en, created_at, updated_at')
+        .eq('contact_id', contact.id).order('created_at', { ascending: false });
+      if (cancelled) return;
+      setDealRows(error ? [] : (data || []));
+      setDealLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [contact?.id, drawerRefresh]);
 
   // Arrow key navigation between contacts
   useEffect(() => {
     const handler = (e) => {
-      if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview) return;
+      // Don't switch the underlying lead while ANY inner surface is open — the
+      // log form / meeting / deal modal, the "+ سجّل" menu, or the older modals.
+      // Navigating away mid-entry silently discards what the rep was typing.
+      if (showActionForm || showLogMenu || meetingModal || dealModal
+        || showQuickStatus || showQuickTemp
+        || showEdit || showSMSModal || showWAPopup || showPrintPreview
+        || showDistribute || showPullLeads || showHandOff || showDrawerMenu) return;
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
       // Reading-direction-aware: in LTR, Left = previous, Right = next.
@@ -428,132 +511,53 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onPrev, onNext, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview, isRTL]);
+  }, [onPrev, onNext, showActionForm, showLogMenu, meetingModal, dealModal, showQuickStatus, showQuickTemp, showEdit, showSMSModal, showWAPopup, showPrintPreview, showDistribute, showPullLeads, showHandOff, showDrawerMenu, isRTL]);
 
-  // Touch gestures (mobile): swipe horizontally to navigate prev/next,
-  // pull down from the top to close. Both share a touch listener so we
-  // can distinguish horizontal vs vertical intent on the same gesture
-  // and avoid hijacking normal scrolling inside the drawer.
-  const SWIPE_NAV_THRESHOLD = 90;
-  const PULL_CLOSE_THRESHOLD = 130;
-  const [pullCloseDistance, setPullCloseDistance] = useState(0);
-  useEffect(() => {
-    const node = drawerRef.current;
-    if (!node) return;
-    let startX = 0, startY = 0, scrollAtStart = 0, locked = null;
-    const findScroller = () => node.querySelector('.flex-1.overflow-y-auto') || node;
-    const onStart = (e) => {
-      if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview || showDistribute || showPullLeads || showHandOff || showDrawerMenu) return;
-      const t = e.touches[0];
-      startX = t.clientX; startY = t.clientY;
-      scrollAtStart = findScroller().scrollTop;
-      locked = null;
-    };
-    const onMove = (e) => {
-      if (!startX) return;
-      const t = e.touches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      // First decisive movement decides which gesture this is. After that,
-      // ignore the other axis for the rest of the touch — keeps normal
-      // vertical scrolling smooth even if the finger drifts sideways.
-      if (locked == null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-        locked = Math.abs(dx) > Math.abs(dy) * 1.4 ? 'h' : 'v';
-      }
-      // Pull-down: only if the inner scroller was already at the top when
-      // the gesture began. Otherwise it's just normal scrolling.
-      if (locked === 'v' && dy > 0 && scrollAtStart === 0) {
-        setPullCloseDistance(Math.min(dy * 0.6, PULL_CLOSE_THRESHOLD * 1.4));
-      }
-    };
-    const onEnd = (e) => {
-      if (!startX) return;
-      const t = (e.changedTouches && e.changedTouches[0]) || { clientX: startX, clientY: startY };
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      const reset = () => { startX = 0; startY = 0; setPullCloseDistance(0); locked = null; };
-      // Pull-down close
-      if (locked === 'v' && dy > PULL_CLOSE_THRESHOLD && scrollAtStart === 0) {
-        reset();
-        onClose?.();
-        return;
-      }
-      // Horizontal swipe nav (RTL-aware)
-      if (locked === 'h' && Math.abs(dx) > SWIPE_NAV_THRESHOLD) {
-        // In LTR a leftward swipe (dx < 0) means "go to next" because the
-        // user is pushing the current card away to reveal the next one;
-        // RTL flips this.
-        const goNext = isRTL ? dx > 0 : dx < 0;
-        const goPrev = !goNext;
-        reset();
-        if (goNext && onNext) onNext();
-        else if (goPrev && onPrev) onPrev();
-        return;
-      }
-      reset();
-    };
-    node.addEventListener('touchstart', onStart, { passive: true });
-    node.addEventListener('touchmove', onMove, { passive: true });
-    node.addEventListener('touchend', onEnd);
-    node.addEventListener('touchcancel', onEnd);
-    return () => {
-      node.removeEventListener('touchstart', onStart);
-      node.removeEventListener('touchmove', onMove);
-      node.removeEventListener('touchend', onEnd);
-      node.removeEventListener('touchcancel', onEnd);
-    };
-  }, [onPrev, onNext, onClose, isRTL, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview, showDistribute, showPullLeads, showHandOff, showDrawerMenu]);
-  const pullCloseRatio = Math.min(pullCloseDistance / PULL_CLOSE_THRESHOLD, 1);
 
-  useEffect(() => {
-    if (!showOppModal) return;
-    const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); setShowOppModal(false); } };
-    document.addEventListener('keydown', handler, true);
-    return () => document.removeEventListener('keydown', handler, true);
-  }, [showOppModal]);
-
-  const handleSaveActivity = async (form, opts = {}) => {
-    let activitySaved = false;
+  // Unified action path: TakeActionForm (and, later, the other entry points)
+  // hand a single payload to logInteraction, which guarantees the invariants
+  // (activity + mandatory follow-up + supersede + optional status). Here we
+  // just fire it and reconcile the drawer's local state with what it did.
+  const handleLogInteraction = async (payload) => {
     try {
-      const act = await createActivity({
-        ...form,
-        contact_id: contact.id,
-        user_id: profile?.id || null,
-        user_name_ar: profile?.full_name_ar || '',
-        user_name_en: profile?.full_name_en || '',
+      await logInteraction(contact.id, {
+        ...payload,
+        actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
       });
-      setActivities(prev => [act, ...prev]);
-      toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
-      activitySaved = true;
+      // Reload the drawer's activities + tasks from the DB so the timeline and
+      // task list match EXACTLY what logInteraction wrote — including the
+      // trigger's supersede and createActivity's done-marking. (Same mechanism
+      // the Meetings tab uses; avoids optimistic state showing a just-completed
+      // follow-up as "cancelled".)
+      setDrawerRefresh(n => n + 1);
+      // Sync the parent list + drawer contact (status / last activity) without a
+      // second DB write — logInteraction already persisted it.
+      const patch = { ...contact, last_activity_at: new Date().toISOString(), _skipDbUpdate: true };
+      if (payload.statusChange?.to && payload.statusChange.to !== payload.statusChange.from) {
+        patch.contact_status = payload.statusChange.to;
+        if (payload.statusChange.dqReason) patch.disqualify_reason = payload.statusChange.dqReason;
+      }
+      onUpdate?.(patch);
+      toast.success(isRTL ? 'تم الحفظ' : 'Saved');
     } catch (err) {
-      console.error('Activity save error:', err?.message || err);
-      toast.error(isRTL ? `حدث خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
-    }
-    // Auto-status-from-activity REMOVED per policy (May 2026): reps
-    // complained the system was silently moving their leads from one
-    // status to another after every call result. contact_status is now
-    // user-driven only — the rep uses the status dropdown when they
-    // want to change it. The activity itself is still saved so the
-    // history/feedback log is intact; we just don't touch the status.
-    // The "not interested" → DQ prompt below is kept because it's a UI
-    // confirmation, not a silent write.
-    if (!activitySaved) return;
-    if (opts.skipAutoStatus) return;
-    if ((form.result || '') === 'not_interested' && contact.contact_status !== 'disqualified') {
-      toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
+      if (err?.message === 'FOLLOWUP_REQUIRED') {
+        toast.error(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else {
+        reportError('ContactDrawer', 'handleLogInteraction', err);
+        toast.error(err?.message || (isRTL ? 'فشل الحفظ' : 'Save failed'));
+      }
+      throw err; // let TakeActionForm keep the form open for a retry
     }
   };
 
-  const handleSaveTask = async (taskData) => {
-    try {
-      const savedTask = await createTask({ ...taskData, assigned_to: profile?.id || null, assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '' });
-      setTasks(prev => [savedTask, ...prev]);
-    } catch (err) {
-      // The "saved locally" toast was a relic — we don't actually persist
-      // tasks anywhere offline, so the message lied to the user. Surface
-      // the real failure so they can retry instead of trusting a phantom save.
-      toast.error(err.message || (isRTL ? 'فشل حفظ المهمة' : 'Failed to save task'));
-    }
+  // Floating WhatsApp FAB = just OPEN the chat (fast path). It does NOT log
+  // anything — merely opening the chat isn't proof the rep messaged the lead,
+  // and auto-logging every tap only noised up the timeline. To RECORD a real
+  // WhatsApp interaction the rep uses the "+ سجّل" FAB → WhatsApp (which also
+  // sets the follow-up), or the ⋮ "WhatsApp with template" composer's Send.
+  const openWhatsAppDirect = () => {
+    if (!contact.phone) return;
+    window.open(generateWhatsAppLink(normalizePhone(contact.phone).replace('+', '')), '_blank');
   };
 
   // Quick stage change for an opportunity — updates opportunities.stage
@@ -586,36 +590,49 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         created_at: new Date().toISOString(),
       });
       setActivities(prev => [act, ...prev]);
-    } catch {}
+    } catch (e) { reportError('ContactDrawer', 'handleStageChange:activity', e); }
+    // Invalidate the cache so the stage change survives a re-nav within the 60s
+    // TTL (opportunities aren't on the realtime channel, so the optimistic
+    // setOpportunities alone reverts on a cache hit).
+    setDrawerRefresh(n => n + 1);
     toast.success(isRTL ? 'تم تحديث المرحلة' : 'Stage updated');
   };
 
-  // Inline quick-note submit — same path as TakeActionForm but skips
-  // the auto-status promotion (notes shouldn't change contact_status).
-  const submitQuickNote = async () => {
-    const text = quickNote.trim();
-    if (!text || quickNoteSaving) return;
-    setQuickNoteSaving(true);
+  // Deal-events model: after a milestone is logged, just drop a timeline entry
+  // and refresh the Deal tab. The lead's contact_status is NOT touched — the
+  // user controls status manually (per request).
+  const handleDealEventSaved = async ({ status }) => {
+    setDealModal(null);
+    const label = isRTL
+      ? { reserved: 'حجز', contracted: 'عقد', won: 'بيع', lost: 'خسارة' }
+      : { reserved: 'Reserved', contracted: 'Contracted', won: 'Won', lost: 'Lost' };
     try {
-      await handleSaveActivity({ type: 'note', description: text }, { skipAutoStatus: true });
-      setQuickNote('');
-    } finally {
-      setQuickNoteSaving(false);
-    }
+      const act = await createActivity({
+        type: 'deal_event',
+        notes: `${isRTL ? 'صفقة' : 'Deal'}: ${label[status] || status}`,
+        contact_id: contact.id, user_id: profile?.id || null,
+        user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '',
+        dept: 'sales', created_at: new Date().toISOString(),
+      });
+      setActivities(prev => [act, ...prev]);
+    } catch (err) { reportError('ContactDrawer', 'handleDealEventSaved:activity', err); }
+    toast.success(isRTL ? 'تم تسجيل الصفقة' : 'Deal logged');
+    setDrawerRefresh(n => n + 1);
+  };
+
+  // Meetings are stored as activities (type='meeting'); refresh pulls them back.
+  const handleMeetingSaved = () => {
+    setMeetingModal(null);
+    toast.success(isRTL ? 'تم حفظ الاجتماع' : 'Meeting saved');
+    setDrawerRefresh(n => n + 1);
   };
 
   // Handle contact status change from TakeActionForm (per-agent)
   const handleStatusChange = async (newStatus, dqReason) => {
     if (onUpdate) {
-      // If has_opportunity selected, check if THIS agent has an opportunity on this contact
-      if (newStatus === 'has_opportunity') {
-        const myName = profile?.full_name_en || profile?.full_name_ar;
-        const myOpp = (opportunities || []).some(o => o.assigned_to_name === myName);
-        if (!myOpp) {
-          setShowOppModal(true);
-          return;
-        }
-      }
+      // Phase B: "has_opportunity" is now just a plain status — selecting it no
+      // longer forces creating an opportunity record. (Deals are closed via the
+      // Close-Deal wizard instead.)
       const oldStatus = contact.contact_status;
       // DQ requires a reason — DB constraint enforces this. If the caller
       // sent an empty/missing reason for a disqualified update, defer to
@@ -635,26 +652,49 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
       }
-      // Await the parent's update so we only log + toast success on actual
-      // DB success. Without await, the drawer used to show "Lead status
-      // updated" while the parent simultaneously showed "Save failed" if
-      // RLS denied the write — confusing the user with contradictory toasts.
+      // OPTIMISTIC: the parent updates its state synchronously, so the hero chip
+      // flips instantly — confirm right away instead of gating the toast on the
+      // DB round-trip (that felt slow). The write + the hidden status_change
+      // activity both run in the background; on failure the parent rolls back
+      // and shows its own error toast.
+      toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
+      onUpdate(updates).catch(() => {});
+      (async () => {
+        try {
+          const statusLabels = { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+          await createActivity({
+            type: 'status_change',
+            notes: `${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}${dqReason ? ' (' + dqReason + ')' : ''}`,
+            contact_id: contact.id,
+            user_id: profile?.id || null,
+            user_name_ar: profile?.full_name_ar || '',
+            user_name_en: profile?.full_name_en || '',
+            dept: 'sales',
+            created_at: new Date().toISOString(),
+          });
+        } catch (err) {
+          reportError('ContactDrawer', 'handleStatusChange:activity', err);
+        }
+      })();
+    }
+  };
+
+  // Temperature change — same pattern as handleStatusChange (await parent,
+  // log activity, surface real errors).
+  const handleTemperatureChange = (newTemp) => {
+    if (!onUpdate || newTemp === contact.temperature) return;
+    const oldTemp = contact.temperature;
+    // OPTIMISTIC (see handleStatusChange): chip flips instantly, toast now, the
+    // write + hidden temperature_change activity run in the background; parent
+    // rolls back + error-toasts on failure.
+    toast.success(isRTL ? 'تم تحديث الحرارة' : 'Temperature updated');
+    onUpdate({ ...contact, temperature: newTemp }).catch(() => {});
+    (async () => {
       try {
-        await onUpdate(updates);
-      } catch {
-        // Parent already surfaced its own toast.error + rolled back; just bail.
-        return;
-      }
-      // Log status change in timeline. The status itself already saved
-      // above; if the activity insert fails (RLS, network, schema drift)
-      // we surface a non-blocking warning so the rep knows the timeline
-      // didn't capture the change, plus a Sentry report — previously
-      // this was a bare `catch {}` and timeline drift was invisible.
-      try {
-        const statusLabels = { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-        const act = await createActivity({
-          type: 'status_change',
-          notes: `${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}${dqReason ? ' (' + dqReason + ')' : ''}`,
+        const tempLabels = { hot: 'Hot', warm: 'Warm', cool: 'Cool', cold: 'Cold' };
+        await createActivity({
+          type: 'temperature_change',
+          notes: `Temperature: ${tempLabels[oldTemp] || oldTemp || '—'} → ${tempLabels[newTemp] || newTemp}`,
           contact_id: contact.id,
           user_id: profile?.id || null,
           user_name_ar: profile?.full_name_ar || '',
@@ -662,85 +702,36 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           dept: 'sales',
           created_at: new Date().toISOString(),
         });
-        setActivities(prev => [act, ...prev]);
       } catch (err) {
-        reportError('ContactDrawer', 'handleStatusChange:activity', err);
-        toast.warning(isRTL
-          ? 'تم تحديث الحالة، لكن فشل تسجيلها في السجل'
-          : 'Status updated, but timeline entry failed to save');
+        reportError('ContactDrawer', 'handleTemperatureChange:activity', err);
       }
-      toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
-    }
+    })();
   };
 
-  // Temperature change — same pattern as handleStatusChange (await parent,
-  // log activity, surface real errors).
-  const handleTemperatureChange = async (newTemp) => {
-    if (!onUpdate || newTemp === contact.temperature) return;
-    const oldTemp = contact.temperature;
-    try {
-      await onUpdate({ ...contact, temperature: newTemp });
-    } catch {
-      return;
-    }
-    try {
-      const tempLabels = { hot: 'Hot', warm: 'Warm', cool: 'Cool', cold: 'Cold' };
-      const act = await createActivity({
-        type: 'temperature_change',
-        notes: `Temperature: ${tempLabels[oldTemp] || oldTemp || '—'} → ${tempLabels[newTemp] || newTemp}`,
-        contact_id: contact.id,
-        user_id: profile?.id || null,
-        user_name_ar: profile?.full_name_ar || '',
-        user_name_en: profile?.full_name_en || '',
-        dept: 'sales',
-        created_at: new Date().toISOString(),
-      });
-      setActivities(prev => [act, ...prev]);
-    } catch (err) {
-      reportError('ContactDrawer', 'handleTemperatureChange:activity', err);
-      toast.warning(isRTL
-        ? 'تم تحديث الحرارة، لكن فشل تسجيلها في السجل'
-        : 'Temperature updated, but timeline entry failed to save');
-    }
-    toast.success(isRTL ? 'تم تحديث الحرارة' : 'Temperature updated');
-  };
 
-  const handleSaveOpp = async () => {
-    if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; }
-    if (!newOpp.assigned_to_name?.trim()) { toast.warning(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
-    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes, assigned_to_name: newOpp.assigned_to_name, title: contact.full_name, source: contact.source || 'manual', created_by: profile?.id || null, created_by_name: profile?.full_name_ar || profile?.full_name_en || null };
-    const resetForm = () => setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '', assigned_to_name: isSalesAgent ? selfName : '' });
-    try {
-      const saved = await createOpportunity(oppData);
-      const opp = { ...saved, contactName: contact.full_name, contacts: { id: contact.id, full_name: contact.full_name, phone: contact.phone, email: contact.email, department: contact.department, contact_type: contact.contact_type }, projects: { name_ar: newOpp.project, name_en: newOpp.project } };
-      setOpportunities(prev => [opp, ...prev]);
-      setShowOppModal(false);
-      resetForm();
-      toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created');
-      // Notify assigned agent (if not self)
-      if (newOpp.assigned_to_name !== selfName) {
-        createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
-      }
-      logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
-      // Auto-promote to has_opportunity REMOVED per policy (May 2026):
-      // reps were seeing their leads flip from following → has_opportunity
-      // without their input the moment an opp was created, and complaints
-      // about "the system is moving my leads on its own" pointed straight
-      // here. If they want the status to reflect the new opp, they can
-      // change it from the status dropdown.
-    } catch (err) {
-      console.error('Opportunity save error:', err?.message || err);
-      toast.error(isRTL ? `خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
-    }
-  };
-
-  const { drawerFields: df } = useSystemConfig();
-  if (!contact) return null;
+  const { drawerFields: df, activityResults } = useSystemConfig();
+  // Result-key → {ar,en} lookup across every activity type. Lets the timeline
+  // re-translate a stored `result` at display time instead of trusting the
+  // baked `description`, which was written in the LOGGER's UI language (so a
+  // call logged in Arabic used to read "لم يرد …" even for an English viewer).
+  const resultLabels = useMemo(() => {
+    const m = {};
+    Object.values(activityResults || {}).forEach((arr) => (arr || []).forEach((r) => {
+      if (r?.value) m[r.value] = { ar: r.label_ar, en: r.label_en };
+    }));
+    return m;
+  }, [activityResults]);
+  // No `if (!contact) return null` here — it sat between hooks (a Rules-of-Hooks
+  // violation). The drawer is only ever mounted via `{selected && <ContactDrawer
+  // contact={selected}/>}`, so contact is always defined; hooks above already
+  // dereference it. All hooks now run unconditionally.
   const show = (key) => !df || df[key] !== false; // default show if not configured
 
   const myTempKey = (() => {
-    const mn = profile?.full_name_en || profile?.full_name_ar;
-    return mn && contact.assigned_to_name === mn ? contact.temperature : null;
+    if (isOwner) return contact.temperature;
+    // Managers/admins see the assignee's temperature too.
+    if (isManagerViewer) return contact.temperature;
+    return null;
   })();
   const tempInfo = myTempKey ? TEMP[myTempKey] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
@@ -770,7 +761,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const openTaskCount = (tasks || []).filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
 
   // ── Extra timeline sources (comments, documents, audit, deals) ───────────
-  const [extraSources, setExtraSources] = useState({ comments: [], documents: [], audits: [], deals: [] });
+  const [extraSources, setExtraSources] = useState({ comments: [], documents: [], audits: [] });
 
   // Extra sources are now loaded in the main useEffect above
 
@@ -809,37 +800,25 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
   };
 
-  // ── Unified Timeline ─────────────────────────────────────────────────────
+  // ── Timeline — clean interaction log ─────────────────────────────────────
+  // Only genuine activities (call/whatsapp/email/meeting/note) + follow-up
+  // tasks. Deliberately EXCLUDED (each lives elsewhere now):
+  //   • status_change / temperature_change activities — noise here; current
+  //     values are in the hero, full change history is in the Audit tab.
+  //   • reassignment / ownership history — moved to the Audit tab.
+  //   • opportunities / comments / documents — each has its own tab.
+  //   • audit field-edits + deals — Audit tab / deal record.
+  const HIDDEN_TIMELINE_ACTIVITY_TYPES = new Set(['status_change', 'temperature_change', 'reassignment']);
   const timeline = useMemo(() => {
     const items = [];
-    (activities || []).forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
+    (activities || []).forEach(a => {
+      if (HIDDEN_TIMELINE_ACTIVITY_TYPES.has(a.type)) return;
+      items.push({ ...a, _type: 'activity', _date: a.created_at });
+    });
     (tasks || []).forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
-    opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
-    extraSources.comments.forEach(c => items.push({ ...c, _type: 'comment', _date: c.created_at }));
-    extraSources.documents.forEach(d => items.push({ ...d, _type: 'document', _date: d.uploaded_at || d.created_at }));
-    // Timeline should surface meaningful audit events only (status/stage/assignment-level
-    // changes, blacklist, merge, import). Generic 'update' audits are noisy — most of
-    // what changes on a contact is already captured by activities, comments, and
-    // assignment history. The full audit trail is still available at /settings/audit-log.
-    const HIGH_SIGNAL_AUDIT_ACTIONS = new Set([
-      'status_change','type_change','blacklist','unblacklist',
-      'reassign','bulk_reassign','bulk_add_agent','bulk_remove_agent',
-      'stage_change','temperature_change','score_change','assign',
-      'merge','import','delete','bulk_delete','note','batch_call',
-    ]);
-    extraSources.audits
-      .filter(a => HIGH_SIGNAL_AUDIT_ACTIONS.has(a.action))
-      .forEach(a => items.push({ ...a, _type: 'audit', _date: a.created_at }));
-    extraSources.deals.forEach(d => items.push({ ...d, _type: 'deal', _date: d.created_at }));
-    // Include assignment history in timeline
-    assignmentHistory.forEach(h => items.push({
-      ...h, _type: 'assignment', _date: h.at,
-      type: 'reassignment',
-      notes: `${h.from || '—'} → ${h.to}${h.notes ? ' · ' + h.notes : ''}`,
-      user_name_ar: h.by, user_name_en: h.by,
-    }));
     return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
-  }, [activities, tasks, opportunities, extraSources, assignmentHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activities, tasks]);
 
   const filteredTimeline = useMemo(() => {
     let items = timeline;
@@ -862,23 +841,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         return id === activityAgentFilter;
       });
     }
-    // Per-agent profile filter — activities always shown, only filter opps/tasks
-    if (selectedAgent !== 'all') {
-      items = items.filter(item => {
-        if (item._type === 'opportunity') return item.assigned_to_name === selectedAgent;
-        if (item._type === 'task') return item.assigned_to_name_en === selectedAgent || item.assigned_to_name_ar === selectedAgent;
-        return true; // activities, comments, audit, documents, deals — always shown
-      });
-    }
     return items;
-  }, [timeline, timelineFilter, activityAgentFilter, hidePreviousHistory, myAssignmentDate, selectedAgent]);
+  }, [timeline, timelineFilter, activityAgentFilter, hidePreviousHistory, myAssignmentDate]);
 
   // Grouped contact info for data tab
   const dataGroups = [
     {
       title: isRTL ? 'معلومات التواصل' : 'Lead Info',
       icon: Phone,
-      color: '#10B981',
+      color: '#158A57',
       rows: [
         show('phone') && { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone || '—' },
         show('phone2') && contact.phone2 && { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 },
@@ -889,7 +860,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {
       title: isRTL ? 'معلومات العمل' : 'Business Info',
       icon: Briefcase,
-      color: '#4A7AAB',
+      color: '#2F6BD3',
       rows: [
         show('company') && { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
         show('job_title') && { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
@@ -903,84 +874,38 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       ].filter(Boolean),
     },
     {
-      title: isRTL ? 'التوزيع والمصدر' : 'Assignment',
-      icon: Users,
-      color: '#F59E0B',
+      title: isRTL ? 'المصدر والتعيين' : 'Source & Assignment',
+      icon: UserCheck,
+      color: '#C9860A',
       rows: [
-        show('assigned_to_name') && !isSalesAgent && {
-          label: isRTL ? 'المسؤول' : 'Assigned',
-          val: contact.assigned_to_name || '—',
-          // Edit action removed in Phase 3 — assignment changes go through
-          // the More menu (Hand Off Lead transfers ownership; Distribute
-          // Lead clones for compete model).
-        },
-        show('assigned_by_name') && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
-        show('created_by_name') && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
-        show('source') && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-        show('campaign_name') && (() => {
-          const interactions = contact.campaign_interactions || [];
-          const uniqueCampaigns = [...new Set(interactions.map(i => i.campaign))];
-          if (uniqueCampaigns.length > 0) return { label: isRTL ? 'الحملات' : 'Campaigns', val: uniqueCampaigns.join(' · ') };
-          return { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' };
-        })(),
-        show('assigned_at') && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-        ...(show('dq_reason') && contact.contact_status === 'disqualified' ? [
-          { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'يرغب في بيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
-          ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
-        ] : []),
+        contact.source && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source) },
+        contact.campaign_name && { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name },
+        contact.assigned_by_name && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name },
+        contact.created_by_name && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name },
+        contact.assigned_at && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned', val: new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) },
       ].filter(Boolean),
     },
     {
-      title: isRTL ? 'الحالة والتقييم' : 'Status & Score',
+      title: isRTL ? 'معلومات إضافية' : 'More Info',
       icon: Star,
       color: '#6B21A8',
       rows: [
-        // Status: single-assignment now — one row labeled with the assignee's
-        // name (or "My Status" when the viewer is the assignee).
-        ...(show('contact_status') ? (() => {
-          const myName = profile?.full_name_en || profile?.full_name_ar;
-          const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
-          const names = getVisibleAssignees();
-          if (names.length === 0) return [{ label: isRTL ? 'الحالة' : 'Status', val: '—' }];
-          const name = names[0];
-          const s = contact.contact_status;
-          const isMine = name === myName;
-          return [{
-            label: isMine ? (isRTL ? 'حالتي' : 'My Status') : name,
-            val: s ? (statusLabels[s] || s) : '—',
-            color: statusColor(s),
-          }];
-        })() : []),
-        // Score: single value tied to the sole assignee.
-        ...(show('lead_score') ? (() => {
-          const names = getVisibleAssignees();
-          if (names.length === 0) return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: '—' }];
-          const v = contact.lead_score;
-          return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: v != null ? `${v}/100` : '—' }];
-        })() : []),
+        // Status + Lead Score removed — shown as chips in the hero.
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
         contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Lead #', val: contact.contact_number },
       ].filter(Boolean),
     },
     {
-      title: isRTL ? 'ملاحظات' : 'Notes',
-      icon: FileText,
-      color: '#8BA8C8',
+      title: isRTL ? 'الاستبعاد' : 'Disqualification',
+      icon: Ban,
+      color: '#D6403B',
       rows: [
-        show('notes') && { label: isRTL ? 'ملاحظات' : 'Notes', val: contact.notes || '—' },
+        (contact.contact_status === 'disqualified' && contact.disqualify_reason) && { label: isRTL ? 'السبب' : 'Reason', val: ({ resale: isRTL ? 'يرغب في بيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) },
+        (contact.contact_status === 'disqualified' && contact.disqualify_note) && { label: isRTL ? 'ملاحظة' : 'Note', val: contact.disqualify_note },
       ].filter(Boolean),
     },
-    {
-      title: isRTL ? 'التواريخ' : 'Dates',
-      icon: Clock,
-      color: '#6B8DB5',
-      rows: [
-        show('last_activity_at') && { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
-        show('created_at') && { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + new Date(contact.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '—' },
-      ].filter(Boolean),
-    },
+    // Dates group removed — created + last activity now in the hero meta row.
   ].filter(s => s.rows.length > 0);
 
   const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.06] text-xs gap-3';
@@ -1110,7 +1035,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const content = (() => {
       if (item._type === 'activity') {
         const actStatus = item.status || 'completed';
-        const STATUS_COLORS = { scheduled: '#3B82F6', completed: '#10B981', cancelled: '#EF4444' };
+        const STATUS_COLORS = { scheduled: '#2F6BD3', completed: '#158A57', cancelled: '#D6403B' };
         const STATUS_LABELS = { scheduled: { ar: 'مجدول', en: 'Scheduled' }, completed: { ar: 'مكتمل', en: 'Completed' }, cancelled: { ar: 'ملغي', en: 'Cancelled' } };
         return (
           <>
@@ -1127,6 +1052,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   const toName = pickName(item.to_user)
                     || (item.notes ? item.notes.split('→')[1]?.split(':')[0]?.trim() : '');
                   return `${fromName || '—'} → ${toName || '—'}`;
+                }
+                // Re-translate a stored result KEY to the viewer's language and
+                // keep the free note. The baked description was "<label> — <note>",
+                // so strip the label prefix and re-prepend the translated one.
+                const rl = item.result && resultLabels[item.result];
+                if (rl) {
+                  const label = (isRTL ? rl.ar : rl.en) || item.result;
+                  let note = item.notes;
+                  if (!note && item.description) {
+                    const sep = item.description.indexOf(' — ');
+                    note = sep >= 0 ? item.description.slice(sep + 3) : '';
+                  }
+                  return note ? `${label} — ${note}` : label;
                 }
                 return item.notes || item.description || (isRTL ? 'نشاط' : 'Activity');
               })()}</div>
@@ -1149,12 +1087,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               <div className="flex gap-1.5 mt-1.5">
                 <button onClick={(e) => { e.stopPropagation(); handleUpdateActivityStatus(item.id, 'completed'); }}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0 transition-colors"
-                  style={{ background: '#10B98122', color: '#10B981' }}>
+                  style={{ background: '#158A5722', color: '#158A57' }}>
                   <Check size={10} /> {isRTL ? 'اكتمل' : 'Complete'}
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); handleUpdateActivityStatus(item.id, 'cancelled'); }}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0 transition-colors"
-                  style={{ background: '#EF444422', color: '#EF4444' }}>
+                  style={{ background: '#D6403B22', color: '#D6403B' }}>
                   <XCircle size={10} /> {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
               </div>
@@ -1182,10 +1120,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             )}
             {metaLine}
             <div className="flex gap-1.5 flex-wrap mt-1">
-              <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB' }}>
+              <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#2F6BD3') + '22', color: pri?.color || '#2F6BD3' }}>
                 {isRTL ? pri?.ar : pri?.en}
               </span>
-              <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
+              <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#2F6BD3') + '22', color: st?.color || '#2F6BD3' }}>
                 {isRTL ? st?.ar : st?.en}
               </span>
               {item.due_date && (
@@ -1203,7 +1141,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           <>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(item.id).slice(-4)}</span>
-              <Chip label={deptStageLabel(item.stage, dept, isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
+              <Chip label={deptStageLabel(item.stage, dept, isRTL)} color="#158A57" bg="rgba(16,185,129,0.1)" />
             </div>
             {metaLine}
             <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex items-center gap-2 mt-0.5">
@@ -1218,7 +1156,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         const renderText = (text) => {
           if (!text) return '';
           const parts = text.split(/(@\S+)/g);
-          return parts.map((p, i) => p.startsWith('@') ? <span key={i} style={{ color: '#8B5CF6', fontWeight: 600 }}>{p}</span> : p);
+          return parts.map((p, i) => p.startsWith('@') ? <span key={i} style={{ color: '#5A63C4', fontWeight: 600 }}>{p}</span> : p);
         };
         return (
           <>
@@ -1271,7 +1209,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           <>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xs font-semibold text-content dark:text-content-dark">{item.deal_number || (isRTL ? 'صفقة' : 'Deal')}</span>
-              <Chip label={isRTL ? 'تم الإغلاق' : 'Closed Won'} color="#0F766E" bg="rgba(15,118,110,0.1)" />
+              <Chip label={isRTL ? 'تم الإغلاق' : 'Closed Won'} color="#0B5A53" bg="rgba(15,118,110,0.1)" />
             </div>
             {metaLine}
             <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex items-center gap-2 mt-0.5">
@@ -1304,48 +1242,38 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // ── Dept-specific tab labels ─────────────────────────────────────────────
   const tabs = [
     { key: 'activity', label: isRTL ? 'السجل' : 'Timeline', icon: Clock },
-    { key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon },
+    { key: 'deal', label: isRTL ? 'الصفقة' : 'Deal', icon: DollarSign },
+    { key: 'meetings', label: isRTL ? 'اجتماعات' : 'Meetings', icon: Users },
+    // Old sales "Opportunities" tab is retired — the Deal tab replaces it.
+    // Non-sales depts keep their tab (recruitment / campaigns / orders / invoices).
+    ...(deptTab.key === 'opportunities' ? [] : [{ key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon }]),
     { key: 'units', label: isRTL ? 'وحدات للبيع' : 'Units', icon: Building2 },
     { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
     { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
+    // Admin/operations-only oversight tab: full change history + who viewed.
+    ...(isAdmin ? [{ key: 'audit', label: isRTL ? 'السجل الكامل' : 'Audit', icon: History }] : []),
   ];
 
   // ── Per-agent status badges for the hero — one chip per assigned agent.
   // Viewer's chip is ringed so they spot themselves at a glance.
-  const heroStatusChips = (() => {
-    const myName = profile?.full_name_en || profile?.full_name_ar;
-    // Privacy clip: sales sees own only; managers/leaders see only their
-    // team's chips on shared contacts; admin/operations see everyone.
-    const names = getVisibleAssignees();
-    if (names.length === 0) return [];
-    const statusLabels = isRTL
-      ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
-      : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
-    return names.map(name => {
-      const s = contact.contact_status;
-      return {
-        name,
-        isMine: name === myName,
-        label: s ? (statusLabels[s] || s) : '—',
-        color: statusColor(s),
-      };
-    });
-  })();
+  // Next follow-up for the hero — derived from the earliest pending task (same
+  // fact the leads list shows), so the rep instantly sees the next step and
+  // whether it's overdue the moment the drawer opens.
+  const nextFollowup = useMemo(() => {
+    const pending = (tasks || []).filter(t => t.status === 'pending' && t.due_date);
+    if (!pending.length) return null;
+    const now = Date.now();
+    let nextDue = null, overdue = 0;
+    for (const t of pending) {
+      if (!nextDue || new Date(t.due_date) < new Date(nextDue)) nextDue = t.due_date;
+      if (new Date(t.due_date).getTime() < now) overdue += 1;
+    }
+    return { next_due: nextDue, pending_count: pending.length, overdue_count: overdue };
+  }, [tasks]);
 
-  // ── Info grid items (only non-empty) ───────────────────────────────────
-  const infoGridItems = [
-    contact.phone && { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone, isPhone: true },
-    contact.phone2 && { label: isRTL ? 'الهاتف 2' : 'Phone 2', val: contact.phone2, isPhone: true },
-    contact.email && { label: isRTL ? 'الإيميل' : 'Email', val: contact.email },
-    contact.company && { label: isRTL ? 'الشركة' : 'Company', val: contact.company },
-    contact.job_title && { label: isRTL ? 'المسمى' : 'Title', val: contact.job_title },
-    (contact.budget_min || contact.budget_max) && { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
-    contact.source && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source) },
-    contact.campaign_name && { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name },
-    contact.created_at && { label: isRTL ? 'الإنشاء' : 'Created', val: new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
-  ].filter(Boolean);
+  // heroStatusChips (per-agent status pills) retired — status now shows in the
+  // hero STATE BAR (single Status segment) alongside Temperature + Score.
 
   return (
     <>
@@ -1355,88 +1283,78 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {showHandOff && <HandOffLeadModal contact={contact} onClose={() => setShowHandOff(false)} onSuccess={() => { onClose?.(); /* lead now belongs to someone else; close the drawer */ }} />}
 
     {/* Quick Campaign Edit Modal */}
-    {editCampaign && (
-      <div className="fixed inset-0 bg-black/50 z-[960] flex items-center justify-center p-5" onClick={() => setEditCampaign(false)}>
-        <div onClick={e => e.stopPropagation()} dir={isRTL ? 'rtl' : 'ltr'} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[380px] overflow-hidden">
-          <div className="px-5 pt-4 pb-3 border-b border-edge dark:border-edge-dark flex justify-between items-center">
-            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'تغيير الحملة' : 'Change Campaign'}</h3>
-            <button onClick={() => setEditCampaign(false)} className="bg-transparent border-none text-content-muted cursor-pointer"><X size={16} /></button>
-          </div>
-          <div className="p-4">
-            <div className="mb-3 text-xs text-content-muted dark:text-content-muted-dark">
-              {isRTL ? 'الحملة الحالية:' : 'Current:'} <span className="font-bold text-content dark:text-content-dark">{contact.campaign_name || '—'}</span>
-            </div>
-            <input type="text" value={campaignSearch} onChange={e => setCampaignSearch(e.target.value)}
-              placeholder={isRTL ? 'ابحث عن حملة...' : 'Search campaign...'}
-              className="w-full px-3 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none mb-2"
-              autoFocus />
-            <div className="max-h-[250px] overflow-y-auto rounded-lg border border-edge dark:border-edge-dark">
-              {/* Clear campaign option */}
-              <button onClick={async () => {
-                if (onUpdate) onUpdate({ ...contact, campaign_name: null, _skipDbUpdate: true });
-                try {
-                  const { updateContact: uc } = await import('../../../services/contactsService');
-                  await uc(contact.id, { campaign_name: null });
-                } catch {}
-                setEditCampaign(false);
-                toast.success(isRTL ? 'تم مسح الحملة' : 'Campaign cleared');
-              }} className="w-full px-3 py-2.5 text-xs text-red-500 bg-transparent border-none cursor-pointer text-start hover:bg-red-500/[0.08] border-b border-edge dark:border-edge-dark">
-                {isRTL ? '✕ مسح الحملة' : '✕ Clear campaign'}
-              </button>
-              {campaignsList
-                .filter(c => !campaignSearch || (c.name_en || '').toLowerCase().includes(campaignSearch.toLowerCase()) || (c.name_ar || '').includes(campaignSearch))
-                .slice(0, 50)
-                .map(c => (
-                <button key={c.id} onClick={async () => {
-                  const newName = isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar);
-                  if (onUpdate) onUpdate({ ...contact, campaign_name: newName, campaign_id: c.id, _skipDbUpdate: true });
-                  try {
-                    const { updateContact: uc } = await import('../../../services/contactsService');
-                    await uc(contact.id, { campaign_name: newName, campaign_id: c.id });
-                  } catch {}
-                  setEditCampaign(false);
-                  toast.success(isRTL ? `تم تغيير الحملة لـ "${newName}"` : `Campaign changed to "${newName}"`);
-                }} className={`w-full px-3 py-2.5 text-xs bg-transparent border-none cursor-pointer text-start hover:bg-brand-500/[0.08] ${
-                  (contact.campaign_name === c.name_en || contact.campaign_name === c.name_ar) ? 'text-brand-500 font-bold bg-brand-500/[0.05]' : 'text-content dark:text-content-dark'
-                }`}>
-                  {isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'} role="dialog" aria-modal="true" aria-labelledby="drawer-contact-name">
       {/* Backdrop */}
       <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
 
-      {/* Drawer Panel — translates downward as the user pulls to close. */}
+      {/* Drawer Panel */}
       <div
         ref={drawerRef}
-        style={pullCloseDistance > 0 ? { transform: `translateY(${pullCloseDistance * 0.4}px)`, transition: 'none' } : { transition: 'transform 0.2s ease-out' }}
-        className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}
+        className={`contact-drawer relative w-[480px] md:w-[580px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}
       >
-        {/* Pull-down hint — only visible while pulling. The chevron flips
-            once the user passes the close threshold so they know they can
-            release. */}
-        {pullCloseDistance > 0 && (
-          <div
-            aria-hidden="true"
-            className="absolute top-0 inset-x-0 z-20 flex items-center justify-center text-content-muted dark:text-content-muted-dark pointer-events-none"
-            style={{ height: pullCloseDistance, opacity: pullCloseRatio }}
-          >
-            <ChevronDown
-              size={20}
-              className="transition-transform"
-              style={{ transform: `rotate(${pullCloseRatio >= 1 ? 180 : 0}deg)` }}
-            />
-            <span className="ms-1.5 text-[11px] font-semibold">
-              {pullCloseRatio >= 1 ? (isRTL ? 'اتركها للإغلاق' : 'Release to close') : (isRTL ? 'اسحب للإغلاق' : 'Pull to close')}
-            </span>
+        {/* ═══ FLOATING ACTION STACK — Log (opens the speed-dial) · Call · WhatsApp.
+            Icon-only, translucent + blurred so they never hide the timeline; each
+            shows its name for a moment on drawer-open and again on hover. ═══ */}
+        {canEditContact && !showActionForm && (
+          <div ref={fabRef}>
+            {showLogMenu && (
+              <div className="absolute bottom-[74px] end-5 z-40 flex flex-col-reverse items-end gap-2" role="menu">
+                {[
+                  { key: 'call', ar: 'مكالمة', en: 'Call', Icon: Phone, color: '#2F6BD3', open: () => { setActionPresetType('call'); setShowActionForm(true); } },
+                  { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp', Icon: MessageCircle, color: '#158A57', open: () => { setActionPresetType('whatsapp'); setShowActionForm(true); } },
+                  { key: 'meeting', ar: 'اجتماع', en: 'Meeting', Icon: Users, color: '#2B4C6F', open: () => setMeetingModal({ mode: 'happened' }) },
+                  { key: 'note', ar: 'ملاحظة', en: 'Note', Icon: Pencil, color: '#C9860A', open: () => { setActionPresetType('note'); setShowActionForm(true); } },
+                  { key: 'deal', ar: 'صفقة', en: 'Deal', Icon: DollarSign, color: '#5A63C4', open: () => setDealModal({ status: 'reserved', dealId: null }) },
+                ].map(t => (
+                  <button key={t.key} role="menuitem"
+                    onClick={() => { setShowLogMenu(false); t.open(); }}
+                    className="inline-flex items-center gap-2 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-full ps-1.5 pe-3.5 py-1.5 shadow-lg cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: t.color + '1A', color: t.color }}><t.Icon size={15} /></span>
+                    <span className="text-[12.5px] font-semibold text-content dark:text-content-dark">{isRTL ? t.ar : t.en}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="absolute bottom-5 end-5 z-40 flex flex-col-reverse items-end gap-3">
+              {/* Log (bottom, nearest the thumb) — opens the speed-dial menu.
+                  Each FAB shows its name ONLY on hover (no timed auto-label). */}
+              <div className="group flex items-center gap-2">
+                <span className="text-[12px] font-semibold bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark px-2.5 py-1 rounded-full border border-edge dark:border-edge-dark shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">{isRTL ? 'سجّل' : 'Log'}</span>
+                <button
+                  onClick={() => setShowLogMenu(v => !v)}
+                  aria-label={isRTL ? 'سجّل تواصل' : 'Log interaction'}
+                  aria-expanded={showLogMenu}
+                  aria-haspopup="menu"
+                  className="w-[54px] h-[54px] rounded-full flex items-center justify-center bg-brand-500 hover:bg-brand-600 text-white border border-brand-600 cursor-pointer shadow-lg shadow-brand-500/30 transition-all active:scale-95"
+                >
+                  {showLogMenu ? <X size={22} /> : <Plus size={22} />}
+                </button>
+              </div>
+              {/* Call (middle) — dials directly. Hidden while the menu is open. */}
+              {!showLogMenu && contact.phone && (
+                <div className="group flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <span className="text-[12px] font-semibold bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark px-2.5 py-1 rounded-full border border-edge dark:border-edge-dark shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">{isRTL ? 'اتصال' : 'Call'}</span>
+                  <a href={`tel:${contact.phone}`} aria-label={isRTL ? 'اتصال' : 'Call'}
+                    className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 border border-edge dark:border-edge-dark backdrop-blur-md no-underline cursor-pointer transition-all active:scale-95"
+                    style={{ background: 'color-mix(in srgb, #378ADD 20%, transparent)' }}>
+                    <Phone size={22} />
+                  </a>
+                </div>
+              )}
+              {/* WhatsApp (top) — opens the chat directly. Hidden while the menu is open. */}
+              {!showLogMenu && contact.phone && (
+                <div className="group flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <span className="text-[12px] font-semibold bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark px-2.5 py-1 rounded-full border border-edge dark:border-edge-dark shadow-lg whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">{isRTL ? 'واتساب' : 'WhatsApp'}</span>
+                  <button onClick={openWhatsAppDirect} aria-label={isRTL ? 'فتح واتساب' : 'Open WhatsApp'}
+                    className="w-[54px] h-[54px] rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-300 border border-edge dark:border-edge-dark backdrop-blur-md cursor-pointer transition-all active:scale-95"
+                    style={{ background: 'color-mix(in srgb, #1D9E75 20%, transparent)' }}>
+                    <MessageCircle size={22} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
-
         {/* ═══ STICKY TOP BAR ═══ */}
         <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
           <div className="flex items-center justify-between h-11 px-3">
@@ -1498,7 +1416,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           </button>
                         ),
                         // Communicate group
-                        (contact.email || contact.phone || onLogCall) && (
+                        (contact.email || contact.phone) && (
                           <div key="communicate">
                             {canEditContact && <Divider />}
                             <div className={sectionLabelCls}>{isRTL ? 'تواصل' : 'Communicate'}</div>
@@ -1508,15 +1426,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                               </a>
                             )}
                             {contact.phone && (
+                              <button onClick={() => { setShowWAPopup(true); setShowDrawerMenu(false); }} className={itemCls}>
+                                <MessageCircle size={13} className="text-emerald-600" /> {isRTL ? 'واتساب بقالب' : 'WhatsApp with template'}
+                              </button>
+                            )}
+                            {contact.phone && (
                               <button onClick={() => { setShowSMSModal(true); setShowDrawerMenu(false); }} className={itemCls}>
                                 <Send size={13} className="text-brand-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
                               </button>
                             )}
-                            {onLogCall && (
-                              <button onClick={() => { onLogCall(contact); setShowDrawerMenu(false); }} className={itemCls}>
-                                <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                              </button>
-                            )}
+                            {/* "Log Call" retired from the drawer — logging a call
+                                now goes through the "+ سجّل" FAB → Call (unified
+                                path). LogCallModal still serves the list/card rows. */}
                           </div>
                         ),
                         // Personal group
@@ -1524,7 +1445,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           <Divider />
                           <div className={sectionLabelCls}>{isRTL ? 'شخصي' : 'Personal'}</div>
                           <button onClick={handleToggleFav} className={itemCls}>
-                            <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} />
+                            <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#C9860A' : 'none'} />
                             {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
                           </button>
                           {onPin && (
@@ -1543,6 +1464,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         <div key="tools">
                           <Divider />
                           <div className={sectionLabelCls}>{isRTL ? 'أدوات' : 'Tools'}</div>
+                          {/* "Close Deal" removed — deals are logged from the Deal tab. */}
                           <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className={itemCls}>
                             <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
                           </button>
@@ -1628,7 +1550,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <Pin
                       size={13}
                       className="text-amber-500 shrink-0"
-                      fill="#F59E0B"
+                      fill="#C9860A"
                       aria-label={isRTL ? 'مثبّت' : 'Pinned'}
                     />
                   )}
@@ -1653,53 +1575,95 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     </span>
                   )}
                 </div>
-                {/* Phone / email / location subtitle */}
-                {(() => {
-                  const parts = [contact.phone, contact.email, contact.preferred_location].filter(Boolean);
-                  if (parts.length === 0) return null;
-                  return (
-                    <div className="text-[11.5px] text-content-muted dark:text-content-muted-dark mt-1.5 truncate">
-                      {parts.join(' · ')}
-                    </div>
-                  );
-                })()}
+                {/* Attribution fields live below (full-width label:value rows). */}
               </div>
             </div>
 
-            {/* Status / Temp / Score chips row + last contact pill */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {(() => {
-                const myName = profile?.full_name_en || profile?.full_name_ar;
-                const isMine = myName && contact.assigned_to_name === myName;
-                const canEditTemp = isMine && canEditContact;
-                // Show the chip even when no temperature is set IF the
-                // viewer can edit it — otherwise they'd have no entry point.
-                if (!tempInfo && !canEditTemp) return null;
-                const chipCls = `relative inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full transition-all ${canEditTemp ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`;
-                const chipStyle = tempInfo
-                  ? { color: tempInfo.color, background: tempInfo.bg }
-                  : { color: '#737373', background: 'rgba(115,115,115,0.1)' };
-                const chip = (
-                  <>
-                    {tempInfo?.Icon && <tempInfo.Icon size={11} />}
-                    {tempInfo ? (isRTL ? tempInfo.labelAr : tempInfo.label) : (isRTL ? 'حدّد الحرارة' : 'Set temp')}
-                    {canEditTemp && <ChevronDown size={10} className="opacity-70" />}
-                  </>
-                );
-                if (!canEditTemp) {
-                  return <span className={chipCls} style={chipStyle}>{chip}</span>;
-                }
-                return (
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowQuickTemp(s => !s)}
-                      className={chipCls}
-                      style={chipStyle}
-                      title={isRTL ? 'تغيير الحرارة' : 'Change temperature'}
-                      aria-haspopup="menu"
-                      aria-expanded={showQuickTemp}
-                    >
-                      {chip}
+                        {/* ═══ KEY FIELDS — compact 2-column grid (Dense direction). Uses the
+              drawer width properly; full detail lives in the Data tab. ═══ */}
+          {(() => {
+            const propType = { residential: isRTL ? 'سكني' : 'Residential', commercial: isRTL ? 'تجاري' : 'Commercial', administrative: isRTL ? 'إداري' : 'Administrative' };
+            const cells = [
+              contact.phone && { k: isRTL ? 'الهاتف' : 'Phone', v: contact.phone, ltr: true },
+              contact.source && { k: isRTL ? 'المصدر' : 'Source', v: isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source) },
+              contact.campaign_name && { k: isRTL ? 'الحملة' : 'Campaign', v: contact.campaign_name },
+              (contact.budget_min || contact.budget_max) && { k: isRTL ? 'الميزانية' : 'Budget', v: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
+              contact.interested_in_type && { k: isRTL ? 'مهتم بـ' : 'Interested', v: propType[contact.interested_in_type] || contact.interested_in_type },
+            ].filter(Boolean);
+            if (!cells.length) return null;
+            return (
+              <div className="grid grid-cols-2 gap-x-5 gap-y-3 mb-4">
+                {cells.map((f, i) => (
+                  <div key={i} className="min-w-0">
+                    <div className="text-[9.5px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{f.k}</div>
+                    <div className="text-[12.5px] font-semibold text-content dark:text-content-dark mt-0.5 truncate" dir={f.ltr ? 'ltr' : undefined}>{f.v}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* ═══ STATE BAR — Status · Temperature · Score in one structured,
+                bordered row (matching the fields grid). Segments open a change
+                popover; non-editors see them read-only. ═══ */}
+            {(() => {
+              const STATUS_OPTS = [
+                { v: 'new', label: isRTL ? 'جديد' : 'New', color: '#2F6BD3' },
+                { v: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted', color: '#C9860A' },
+                { v: 'following', label: isRTL ? 'متابعة' : 'Following', color: '#158A57' },
+                { v: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opportunity', color: '#117049' },
+                { v: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified', color: '#D6403B' },
+              ];
+              const cur = STATUS_OPTS.find(s => s.v === contact.contact_status);
+              const canEditState = (isOwner || isManagerViewer) && canEditContact;
+              const segBtn = 'w-full px-3 py-2 text-start flex items-center justify-between gap-1.5 bg-transparent border-none';
+              const segLbl = 'block text-[9px] uppercase tracking-wide text-content-muted dark:text-content-muted-dark';
+              return (
+                <div className="flex items-stretch rounded-xl border border-edge dark:border-edge-dark mb-3">
+                  {/* Status */}
+                  <div className="flex-1 min-w-0 relative">
+                    <button type="button" onClick={canEditState ? () => setShowQuickStatus(s => !s) : undefined}
+                      className={`${segBtn} ${canEditState ? 'cursor-pointer' : 'cursor-default'}`} aria-haspopup={canEditState ? 'menu' : undefined} aria-expanded={showQuickStatus}>
+                      <span className="min-w-0">
+                        <span className={segLbl}>{isRTL ? 'الحالة' : 'Status'}</span>
+                        <span className="block text-[12.5px] font-bold truncate" style={{ color: cur?.color || undefined }}>{cur?.label || (isRTL ? 'غير محدد' : '—')}</span>
+                      </span>
+                      {canEditState && <ChevronDown size={13} className="opacity-50 shrink-0" />}
+                    </button>
+                    {showQuickStatus && (
+                      <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setShowQuickStatus(false)} />
+                        <div role="menu" className="absolute top-full mt-1.5 start-0 z-[61] min-w-[180px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden">
+                          {STATUS_OPTS.map(opt => {
+                            const isCurrent = opt.v === contact.contact_status;
+                            return (
+                              <button key={opt.v} role="menuitem"
+                                onClick={() => { setShowQuickStatus(false); if (isCurrent) return; if (opt.v === 'disqualified' && onRequestDisqualify) onRequestDisqualify(contact); else handleStatusChange(opt.v); }}
+                                className={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start hover:bg-brand-500/10 ${isCurrent ? 'font-bold' : ''}`}
+                                style={isCurrent ? { color: opt.color, background: opt.color + '12' } : undefined}>
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color }} />
+                                <span className="flex-1">{opt.label}</span>
+                                {isCurrent && <Check size={12} style={{ color: opt.color }} />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="w-px bg-edge dark:bg-edge-dark shrink-0" />
+                  {/* Temperature */}
+                  <div className="flex-1 min-w-0 relative">
+                    <button type="button" onClick={canEditState ? () => setShowQuickTemp(s => !s) : undefined}
+                      className={`${segBtn} ${canEditState ? 'cursor-pointer' : 'cursor-default'}`} aria-haspopup={canEditState ? 'menu' : undefined} aria-expanded={showQuickTemp}>
+                      <span className="min-w-0">
+                        <span className={segLbl}>{isRTL ? 'الحرارة' : 'Temp'}</span>
+                        <span className="flex items-center gap-1 text-[12.5px] font-bold truncate" style={{ color: tempInfo?.color || undefined }}>
+                          {tempInfo?.Icon && <tempInfo.Icon size={12} />}
+                          {tempInfo ? (isRTL ? tempInfo.labelAr : tempInfo.label) : (isRTL ? 'غير محدد' : '—')}
+                        </span>
+                      </span>
+                      {canEditState && <ChevronDown size={13} className="opacity-50 shrink-0" />}
                     </button>
                     {showQuickTemp && (
                       <>
@@ -1709,8 +1673,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                             const opt = TEMP[v];
                             const isCurrent = contact.temperature === v;
                             return (
-                              <button key={v}
-                                role="menuitem"
+                              <button key={v} role="menuitem"
                                 onClick={() => { setShowQuickTemp(false); if (!isCurrent) handleTemperatureChange(v); }}
                                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-none bg-transparent text-start hover:bg-edge/40 dark:hover:bg-edge-dark/40 ${isCurrent ? 'font-bold' : ''}`}
                                 style={isCurrent && opt ? { color: opt.color, background: opt.color + '14' } : undefined}>
@@ -1724,375 +1687,102 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       </>
                     )}
                   </div>
-                );
-              })()}
-              {(() => {
-                const mn = profile?.full_name_en || profile?.full_name_ar;
-                const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
-                if (myScore == null || myScore <= 0) return null;
-                return (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-500">
-                    {myScore}/100
-                  </span>
-                );
-              })()}
-
-              {/* Per-agent status badges. Viewer's own chip is interactive
-                  — tap it to open the quick-status popover and flip status
-                  without going through the full TakeActionForm. Other
-                  people's chips stay read-only. The chip's React key
-                  includes the status, so changing it remounts the element
-                  and re-runs the fade-in animation as visual feedback. */}
-              {heroStatusChips.length > 0 ? (
-                <>
-                  {heroStatusChips.map(b => {
-                    const interactive = b.isMine && canEditContact;
-                    const chipCls = `inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full transition-all animate-in fade-in zoom-in-95 duration-300 ${b.isMine ? 'ring-1 ring-brand-500/40' : ''} ${interactive ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`;
-                    const chipStyle = { color: b.color, background: b.color + '18', border: `1px solid ${b.color}25` };
-                    // Key includes the status label so any status change
-                    // remounts the chip and re-runs the animate-in transition.
-                    const chipKey = `${b.name}:${b.label}`;
-                    if (!interactive) {
-                      return (
-                        <span key={chipKey} className={chipCls} style={chipStyle} title={b.name}>
-                          {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
-                          {b.label}
-                        </span>
-                      );
-                    }
-                    return (
-                      <div key={chipKey} className="relative">
-                        <button
-                          onClick={() => setShowQuickStatus(s => !s)}
-                          className={chipCls}
-                          style={chipStyle}
-                          title={isRTL ? 'تغيير الحالة' : 'Change status'}
-                          aria-haspopup="menu"
-                          aria-expanded={showQuickStatus}
-                        >
-                          {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
-                          {b.label}
-                          <ChevronDown size={10} className="opacity-70" />
-                        </button>
-                        {showQuickStatus && (
-                          <>
-                            <div className="fixed inset-0 z-[60]" onClick={() => setShowQuickStatus(false)} />
-                            <div role="menu"
-                              className="absolute top-full mt-1.5 start-1/2 -translate-x-1/2 z-[61] min-w-[180px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden">
-                              <div className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wide px-3 py-1.5 border-b border-edge/50 dark:border-edge-dark/50">
-                                {isRTL ? 'تغيير الحالة' : 'Change status'}
-                              </div>
-                              {[
-                                { v: 'new', label: isRTL ? 'جديد' : 'New', color: '#4A7AAB' },
-                                { v: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted', color: '#F59E0B' },
-                                { v: 'following', label: isRTL ? 'متابعة' : 'Following', color: '#10B981' },
-                                { v: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opportunity', color: '#059669' },
-                                { v: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified', color: '#EF4444' },
-                              ].map(opt => {
-                                const isCurrent = opt.v === contact.contact_status;
-                                return (
-                                  <button key={opt.v}
-                                    role="menuitem"
-                                    onClick={() => {
-                                      setShowQuickStatus(false);
-                                      if (isCurrent) return;
-                                      // Disqualified must capture a reason — defer to the parent's
-                                      // DisqualifyModal so the user picks a reason instead of
-                                      // dropping a status=disqualified row with dq_reason=NULL.
-                                      // The previous direct handleStatusChange call left ~150
-                                      // contacts in DQ-without-reason state.
-                                      if (opt.v === 'disqualified' && onRequestDisqualify) {
-                                        onRequestDisqualify(contact);
-                                      } else {
-                                        handleStatusChange(opt.v);
-                                      }
-                                    }}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start hover:bg-brand-500/10 ${isCurrent ? 'font-bold' : ''}`}
-                                    style={isCurrent ? { color: opt.color, background: opt.color + '12' } : undefined}>
-                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color }} />
-                                    <span className="flex-1">{opt.label}</span>
-                                    {isCurrent && <Check size={12} style={{ color: opt.color }} />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
+                  {contact.assigned_to_name && (
+                    <>
+                      <div className="w-px bg-edge dark:bg-edge-dark shrink-0" />
+                      <div className="flex-1 min-w-0 px-3 py-2">
+                        <span className={segLbl}>{isRTL ? 'المسؤول' : 'Owner'}</span>
+                        <span className="block text-[12.5px] font-bold text-content dark:text-content-dark truncate">{contact.assigned_to_name}</span>
                       </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <span className="inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
-                  {isRTL ? 'غير مخصّص' : 'Unassigned'}
-                </span>
-              )}
-              {/* Last contact pill — pushed to the end of the row */}
-              {contact.last_activity_at && (() => {
-                const d = daysSince(contact.last_activity_at);
-                const tone = d <= 3 ? 'text-emerald-600 dark:text-emerald-400' : d <= 7 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500';
-                const label = d === 0 ? (isRTL ? 'اليوم' : 'today') : (isRTL ? `منذ ${d} يوم` : `${d}d ago`);
-                return (
-                  <span className={`ms-auto text-[10.5px] font-semibold ${tone}`}>
-                    {isRTL ? 'آخر تواصل · ' : 'Last contact · '}{label}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ═══ NEXT FOLLOW-UP — a display strip (tinted by urgency); the single
+              most important triage fact. Read-only — set via a logged action. ═══ */}
+          {canEditContact && nextFollowup && (() => {
+            const fu = nextFollowup;
+            const due = new Date(fu.next_due);
+            const overdue = fu.overdue_count > 0;
+            const isToday = due.toDateString() === new Date().toDateString();
+            const tone = overdue
+              ? { wrap: 'bg-red-500/10 border-red-500/25', ic: 'bg-red-500', l: 'text-red-600 dark:text-red-400' }
+              : isToday
+                ? { wrap: 'bg-amber-500/10 border-amber-500/25', ic: 'bg-amber-500', l: 'text-amber-600 dark:text-amber-400' }
+                : { wrap: 'bg-brand-500/10 border-brand-500/25', ic: 'bg-brand-500', l: 'text-brand-600 dark:text-brand-400' };
+            const dateFmt = due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' }) + ' · ' + due.toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+            return (
+              <div className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border mb-3 ${tone.wrap}`}>
+                <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 ${tone.ic}`}><Bell size={15} /></span>
+                <span className="flex-1 min-w-0">
+                  <span className={`block text-[9.5px] font-bold uppercase tracking-wide ${tone.l}`}>
+                    {isRTL ? 'المتابعة الجاية' : 'Next follow-up'}{overdue ? ` · ${fu.overdue_count} ${isRTL ? 'متأخرة' : 'overdue'}` : ''}
                   </span>
-                );
-              })()}
-            </div>
+                  <span className="block text-[13px] font-bold text-content dark:text-content-dark truncate">{dateFmt}</span>
+                </span>
+              </div>
+            );
+          })()}
+
+          {/* Dates footer — created + last activity, each with day + time. */}
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-[10.5px] text-content-muted dark:text-content-muted-dark">
+            {contact.created_at && (
+              <span className="inline-flex items-center gap-1">
+                <Calendar size={11} aria-hidden="true" />
+                {isRTL ? 'أُنشئ' : 'Created'} {new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })} · {new Date(contact.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {contact.last_activity_at && (() => {
+              const d = daysSince(contact.last_activity_at);
+              const tone = d <= 3 ? 'text-emerald-600 dark:text-emerald-400' : d <= 7 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500';
+              const rel = d === 0 ? (isRTL ? 'اليوم' : 'today') : (isRTL ? `منذ ${d} يوم` : `${d}d ago`);
+              return (
+                <span className="inline-flex items-center gap-1">
+                  <Clock size={11} aria-hidden="true" />
+                  {isRTL ? 'آخر نشاط' : 'Last activity'} {new Date(contact.last_activity_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} · {new Date(contact.last_activity_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                  <span className={`font-semibold ${tone}`}>· {rel}</span>
+                </span>
+              );
+            })()}
+          </div>
           {/* end hero outer wrapper continues to wrap the rest of the content; closes much later */}
 
-          {/* ═══ ACTION BAR — 4 large buttons (Call · WhatsApp · Meeting · Note) ═══ */}
-          <div className="pb-4 grid grid-cols-4 gap-1.5">
-            {/* Call — primary, solid blue */}
-            {contact.phone ? (
-              <a href={`tel:${contact.phone}`} aria-label={isRTL ? 'اتصال' : 'Call contact'}
-                className="flex flex-col items-center gap-1 py-2.5 rounded-xl no-underline bg-blue-500 hover:bg-blue-600 text-white shadow-sm shadow-blue-500/20 transition-all active:scale-95 cursor-pointer">
-                <Phone size={17} />
-                <span className="text-[11px] font-bold">{isRTL ? 'اتصال' : 'Call'}</span>
-              </a>
-            ) : (
-              <div role="button" aria-disabled="true" aria-label={isRTL ? 'اتصال غير متاح — لا يوجد رقم' : 'Call unavailable — no phone'}
-                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark opacity-50 cursor-not-allowed">
-                <Phone size={17} />
-                <span className="text-[11px] font-semibold">{isRTL ? 'اتصال' : 'Call'}</span>
-              </div>
-            )}
+          {/* Direct-comms (Call · WhatsApp) moved to the floating action stack at
+              the bottom of the drawer — the hero stays pure info now. */}
 
-            {/* WhatsApp — emerald soft */}
-            {contact.phone ? (
-              <button onClick={() => setShowWAPopup(p => !p)} aria-label={isRTL ? 'إرسال واتساب' : 'Send WhatsApp'} aria-expanded={showWAPopup}
-                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border-none cursor-pointer transition-all active:scale-95">
-                <MessageCircle size={17} />
-                <span className="text-[11px] font-bold">{isRTL ? 'واتساب' : 'WhatsApp'}</span>
-              </button>
-            ) : (
-              <div role="button" aria-disabled="true" aria-label={isRTL ? 'واتساب غير متاح — لا يوجد رقم' : 'WhatsApp unavailable — no phone'}
-                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark opacity-50 cursor-not-allowed">
-                <MessageCircle size={17} />
-                <span className="text-[11px] font-semibold">{isRTL ? 'واتساب' : 'WhatsApp'}</span>
-              </div>
-            )}
-
-            {/* Meeting — purple soft (opens TakeActionForm preset to meeting) */}
-            <button onClick={() => { setTab('activity'); setActionPresetType('meeting'); setShowActionForm(true); }}
-              aria-label={isRTL ? 'تسجيل/جدولة موعد' : 'Log/schedule meeting'}
-              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-500/10 text-purple-700 dark:text-purple-400 hover:bg-purple-500/20 border-none cursor-pointer transition-all active:scale-95">
-              <Calendar size={17} />
-              <span className="text-[11px] font-bold">{isRTL ? 'موعد' : 'Meeting'}</span>
-            </button>
-
-            {/* Note — amber soft (opens TakeActionForm preset to note) */}
-            <button onClick={() => { setTab('activity'); setActionPresetType('note'); setShowActionForm(true); }}
-              aria-label={isRTL ? 'إضافة ملاحظة' : 'Add note'}
-              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-none cursor-pointer transition-all active:scale-95">
-              <Pencil size={17} />
-              <span className="text-[11px] font-bold">{isRTL ? 'ملاحظة' : 'Note'}</span>
-            </button>
-          </div>
-
-          {/* ═══ QUICK-NOTE COMPOSER — one-keystroke note logging ═══ */}
-          {canEditContact && (
-            <div className="pb-4">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark focus-within:border-brand-500/50 focus-within:bg-surface-card dark:focus-within:bg-surface-card-dark transition-colors">
-                <Pencil size={13} className="text-content-muted dark:text-content-muted-dark shrink-0" />
-                <input
-                  type="text"
-                  value={quickNote}
-                  onChange={e => setQuickNote(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitQuickNote(); } }}
-                  placeholder={isRTL ? 'اكتب ملاحظة سريعة... (اضغط Enter للحفظ)' : 'Quick note... (Enter to save)'}
-                  disabled={quickNoteSaving}
-                  className="flex-1 bg-transparent border-none outline-none text-[12.5px] text-content dark:text-content-dark placeholder:text-content-muted/60 dark:placeholder:text-content-muted-dark/60 font-cairo disabled:opacity-50"
-                />
-                {quickNote.trim() && (
-                  <button
-                    onClick={submitQuickNote}
-                    disabled={quickNoteSaving}
-                    aria-label={isRTL ? 'حفظ الملاحظة' : 'Save note'}
-                    className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center bg-brand-500 text-white border-none cursor-pointer hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-50">
-                    {quickNoteSaving ? (
-                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <Send size={12} />
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+            {/* Quick-note composer removed — notes are logged via the "+ سجّل"
+                FAB → Note (full note form). */}
 
             {/* ═══ WHATSAPP QUICK SEND POPUP ═══ */}
             {showWAPopup && contact.phone && (
-              <div className="mb-4 rounded-xl border border-[#25D366]/20 bg-[#25D366]/[0.03] dark:bg-[#25D366]/[0.05] p-3.5">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-bold text-[#25D366] flex items-center gap-1.5">
-                    <MessageCircle size={13} /> {isRTL ? 'إرسال واتساب' : 'Send WhatsApp'}
-                  </span>
-                  <button onClick={() => setShowWAPopup(false)} className="w-6 h-6 rounded-md flex items-center justify-center bg-transparent border-0 cursor-pointer text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
-                    <X size={13} />
-                  </button>
-                </div>
-                <select
-                  value={waSelectedTpl}
-                  onChange={e => {
-                    setWaSelectedTpl(e.target.value);
-                    if (e.target.value) {
-                      const tpl = waTemplates.find(t => t.id === e.target.value);
-                      if (tpl) {
-                        const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
-                        const filled = fillTemplate(body, {
-                          name: contact.full_name || '',
-                          company: contact.company || '',
-                          amount: '',
-                          date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
-                        });
-                        setWaMessage(filled);
-                      }
-                    }
-                  }}
-                  className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none mb-2 font-cairo"
-                >
-                  <option value="">{isRTL ? 'اختر قالب...' : 'Pick a template...'}</option>
-                  {waTemplates.map(t => (
-                    <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
-                  ))}
-                </select>
-                <textarea
-                  value={waMessage}
-                  onChange={e => setWaMessage(e.target.value)}
-                  placeholder={isRTL ? 'اكتب رسالة...' : 'Type a message...'}
-                  rows={3}
-                  className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none font-cairo"
-                  style={{ lineHeight: 1.5 }}
-                />
-                <div className="flex gap-2 mt-2.5">
-                  <button
-                    onClick={() => {
-                      const phone = normalizePhone(contact.phone).replace('+', '');
-                      const link = generateWhatsAppLink(phone, waMessage);
-                      logWhatsAppMessage({
-                        contact_id: contact.id,
-                        contact_name: contact.full_name,
-                        contact_phone: contact.phone,
-                        direction: 'outgoing',
-                        message: waMessage || '',
-                        template_id: waSelectedTpl || null,
-                        type: waSelectedTpl ? 'template' : 'text',
-                      });
-                      window.open(link, '_blank');
-                      setWaMessage('');
-                      setWaSelectedTpl('');
-                      setShowWAPopup(false);
-                    }}
-                    className="flex-1 py-2 rounded-lg border-0 text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
-                    style={{ background: '#25D366' }}
-                  >
-                    <Send size={12} /> {isRTL ? 'إرسال' : 'Send'}
-                  </button>
-                  <a
-                    href={generateWhatsAppLink(normalizePhone(contact.phone).replace('+', ''))}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="py-2 px-4 rounded-lg border border-[#25D366]/25 text-[#25D366] text-xs font-semibold no-underline flex items-center justify-center gap-1.5 hover:bg-[#25D366]/5 transition-colors"
-                  >
-                    <ExternalLink size={12} /> {isRTL ? 'فتح' : 'Open'}
-                  </a>
-                </div>
-                {recentWAMessages.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-[#25D366]/10">
-                    <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-                      {isRTL ? 'آخر الرسائل' : 'Recent Messages'}
-                    </span>
-                    {recentWAMessages.map(m => (
-                      <div key={m.id} className="flex items-start gap-1.5 mt-1.5">
-                        {m.direction === 'outgoing' ? <Send size={9} className="text-[#25D366] mt-0.5 flex-shrink-0" /> : <Download size={9} className="text-brand-500 mt-0.5 flex-shrink-0" />}
-                        <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate flex-1">{m.message?.slice(0, 50)}</span>
-                        <span className="text-[9px] text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-60">
-                          {new Date(m.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <WhatsAppQuickPopup contact={contact} isRTL={isRTL} onClose={() => setShowWAPopup(false)} onLogInteraction={handleLogInteraction} />
             )}
 
-            {/* ═══ INFO GRID ═══ */}
-            {infoGridItems.length > 0 && (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0 mb-4 px-1">
-                {infoGridItems.map((item, idx) => (
-                  <div key={idx} className="py-2 border-b border-edge/50 dark:border-edge-dark/50">
-                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-0.5 uppercase tracking-wide font-medium">{item.label}</div>
-                    {item.isPhone ? (
-                      <PhoneCell phone={item.val} />
-                    ) : (
-                      <div className="text-xs font-medium text-content dark:text-content-dark truncate">{item.val}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Notes preview */}
-            {contact.notes && (
-              <div className="text-[11px] text-content-muted dark:text-content-muted-dark bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/40 dark:border-edge-dark/40 rounded-lg px-3 py-2 mb-4 leading-relaxed line-clamp-2">
-                {contact.notes}
-              </div>
-            )}
-
-            {/* Privacy notice */}
-            {hidePreviousHistory && myAssignmentDate && (
-              <div className="mb-3 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
-                <p className="m-0 text-[10px] text-brand-500 font-medium">
-                  {isRTL
-                    ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
-                    : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
-                </p>
-              </div>
-            )}
-
-            {/* Assignment History Banner */}
-            {assignmentHistory.length > 0 && (
-              <div className="mb-3 p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/15">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <History size={12} className="text-amber-500" />
-                  <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                    {isRTL ? `تم تعيينه ${assignmentHistory.length} مرة` : `Reassigned ${assignmentHistory.length} time${assignmentHistory.length > 1 ? 's' : ''}`}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  {assignmentHistory.slice(-3).map((h, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-[10px] text-content-muted dark:text-content-muted-dark">
-                      <span className="font-semibold">{h.from || '—'}</span>
-                      <span className="opacity-40">→</span>
-                      <span className="font-semibold text-brand-500">{h.to}</span>
-                      <span className="opacity-50">· {new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
-                      {h.by && <span className="opacity-40">({isRTL ? 'بواسطة' : 'by'} {h.by})</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Info grid, notes, and assignment-history moved to the Data tab;
+                the privacy notice moved above the timeline (Activity tab). The
+                hero now stays lean: identity + status/temp + next follow-up. */}
           </div>
 
           {/* AGENT PROFILE SELECTOR + per-agent Status/Temp panel removed:
               after Phase 3 single-assignment there's exactly one agent per
-              contact, and status/temp are now both edited inline (status
-              chip in the hero opens a popover; temp card on the Data tab
-              opens a popover). The block was redundant noise. */}
+              contact, and status/temp are now both edited inline from the hero
+              (the status chip and the temperature chip each open a popover).
+              The block was redundant noise. */}
 
-          {/* ═══ TOC PILLS — sticky horizontal pills jump between sections ═══ */}
-          {/* Fade gradients at edges hint that the strip scrolls horizontally
-              on narrow viewports — without them users miss pills past the edge. */}
-          <div className="sticky top-0 z-[5] bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark relative">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 start-0 w-6 bg-gradient-to-r from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
-            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 end-0 w-6 bg-gradient-to-l from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
-            <div role="tablist" className="flex px-3 py-2 gap-1.5 overflow-x-auto scrollbar-none">
+          {/* ═══ TAB NAV + CONTENT ═══
+              Vertical rail on every viewport (slim on mobile to preserve
+              content width). Only the active section renders — no long scroll. */}
+          <div className="flex items-start">
+            <div role="tablist" className="sticky top-0 z-[5] bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-e border-edge dark:border-edge-dark flex flex-col gap-1.5 px-1.5 py-3 scrollbar-none w-[72px] md:w-[92px] shrink-0 self-start">
               {tabs.map(t => {
                 const TabIcon = t.icon;
                 const isActive = tab === t.key;
                 const badge =
-                  t.key === 'activity' ? actCount :
+                  t.key === 'activity' ? timeline.length :
+                  t.key === 'deal' ? dealRows.length :
+                  t.key === 'meetings' ? (activities || []).filter(a => a.type === 'meeting').length :
                   t.key === deptTab.key ? oppCount :
                   t.key === 'comments' ? extraSources.comments.length :
                   t.key === 'documents' ? extraSources.documents.length :
@@ -2105,27 +1795,21 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     key={t.key}
                     onClick={() => {
                       setTab(t.key);
-                      // Pre-mount the section so it's in the DOM before we
-                      // try to scroll to it (lazy-mount might not have fired
-                      // yet for sections far down the page).
+                      // Mount the section on demand (heavy sections self-fetch,
+                      // so we only pay for the tab the user actually opens).
                       setMountedSections(prev => prev.has(t.key) ? prev : new Set([...prev, t.key]));
-                      // Scroll the section into view in the next frame.
-                      requestAnimationFrame(() => {
-                        const node = document.getElementById(`sec-${t.key}`);
-                        node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      });
                     }}
                     title={t.label}
                     role="tab" aria-selected={isActive} aria-label={ariaLabel}
-                    className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer whitespace-nowrap transition-all border ${
+                    className={`relative w-full inline-flex flex-col items-center gap-1 rounded-lg px-1 py-2.5 cursor-pointer transition-all border ${
                       isActive
                         ? 'bg-brand-500 text-white border-brand-500 font-bold shadow-sm shadow-brand-500/20'
-                        : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold hover:bg-surface-bg dark:hover:bg-brand-500/10 hover:text-content dark:hover:text-content-dark'
+                        : 'bg-transparent border-transparent text-content-muted dark:text-content-muted-dark font-semibold hover:bg-surface-bg dark:hover:bg-brand-500/10 hover:text-content dark:hover:text-content-dark'
                     }`}>
-                    <TabIcon size={12} aria-hidden="true" />
-                    <span>{t.label}</span>
+                    <TabIcon size={17} aria-hidden="true" />
+                    <span className="text-[9.5px] leading-tight text-center">{t.label}</span>
                     {badge > 0 && (
-                      <span aria-hidden="true" className={`text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 ${
+                      <span aria-hidden="true" className={`absolute top-1 end-1 text-[9px] font-bold min-w-[15px] h-[15px] rounded-full flex items-center justify-center px-1 ${
                         isActive ? 'bg-white/25 text-white' : 'bg-brand-500/10 text-brand-500'
                       }`}>{badge}</span>
                     )}
@@ -2133,43 +1817,25 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 );
               })}
             </div>
-          </div>
 
-          {/* ═══ TAB CONTENT ═══ */}
-          <div id="drawer-tab-content" className="p-5 scroll-mt-12">
+          {/* ═══ TAB CONTENT — only the active section renders ═══ */}
+          <div id="drawer-tab-content" className="p-4 flex-1 min-w-0">
 
             {/* ══════ ACTIVITY ══════ */}
-            <section id="sec-activity" data-section-key="activity" className="scroll-mt-14 mb-8">
+            <section id="sec-activity" data-section-key="activity" className={tab === 'activity' ? 'mb-4' : 'hidden'}>
               <div>
-                {/* Take Action (full form) + New Opp — secondary, since hero has the
-                    primary 4 buttons. Smaller pill style keeps focus on the timeline. */}
-                <div className="flex gap-2 mb-3 flex-wrap">
-                  <button onClick={() => { setActionPresetType(null); setShowActionForm(p => !p); }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold cursor-pointer border transition-all ${
-                      showActionForm
-                        ? 'bg-brand-500 text-white border-brand-500'
-                        : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40 hover:text-brand-500'
-                    }`}>
-                    <Zap size={12} /> {isRTL ? 'إجراء كامل' : 'Full Action'}
-                  </button>
-                  <button onClick={() => setShowOppModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold cursor-pointer border bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40 hover:text-emerald-500 transition-all">
-                    <Plus size={12} /> {isRTL ? 'فرصة جديدة' : 'New Opp'}
-                  </button>
-                </div>
+                {/* Logging happens through the "+ سجّل" FAB (call/whatsapp/note/
+                    meeting/deal); the timeline below is read-only history. */}
 
-                {/* Take Action Form */}
-                {showActionForm && (
-                  <div className="mb-4">
-                    <TakeActionForm
-                      key={actionPresetType || 'default'}
-                      contact={contact}
-                      onSaveActivity={handleSaveActivity}
-                      onSaveTask={handleSaveTask}
-                      onStatusChange={handleStatusChange}
-                      onCancel={() => { setShowActionForm(false); setActionPresetType(null); }}
-                      initialType={actionPresetType}
-                    />
+                {/* Privacy notice — activities before the current agent's
+                    assignment are hidden (moved here from the hero). */}
+                {hidePreviousHistory && myAssignmentDate && (
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
+                    <p className="m-0 text-[10px] text-brand-500 font-medium">
+                      {isRTL
+                        ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
+                        : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
+                    </p>
                   </div>
                 )}
 
@@ -2178,14 +1844,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   <div className="flex gap-1.5 mb-3 flex-wrap">
                     {[
                       { key: 'all', label: isRTL ? 'الكل' : 'All', count: timeline.length },
-                      { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: activities.length },
-                      { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: (tasks || []).length },
-                      { key: 'opportunity', label: isRTL ? 'فرص' : 'Opps', count: opportunities.length },
-                      { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
-                      { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },
-                      { key: 'deal', label: isRTL ? 'صفقات' : 'Deals', count: extraSources.deals.length },
-                      { key: 'assignment', label: isRTL ? 'تغيير المسؤول' : 'Reassignments', count: (assignmentHistory || []).length },
-                      { key: 'audit', label: isRTL ? 'سجل' : 'Log', count: extraSources.audits.length },
+                      { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: timeline.filter(i => i._type === 'activity').length },
+                      { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: timeline.filter(i => i._type === 'task').length },
                     ].filter(f => f.key === 'all' || f.count > 0).map(f => (
                       <button key={f.key} onClick={() => setTimelineFilter(f.key)}
                         className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${
@@ -2277,8 +1937,154 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
             </section>
 
+            {/* ══════ DEAL (deal-events model — a lead can have several) ══════ */}
+            <section id="sec-deal" data-section-key="deal" className={tab === 'deal' ? 'mb-4' : 'hidden'}>
+              {(() => {
+                const DEAL_STATUS = isRTL
+                  ? { new_deal: 'جديدة', reserved: 'محجوز', contracted: 'متعاقد', won: 'مكسوبة', lost: 'خسارة' }
+                  : { new_deal: 'New', reserved: 'Reserved', contracted: 'Contracted', won: 'Won', lost: 'Lost' };
+                const DEAL_COLOR = { new_deal: '#6B7280', reserved: '#5A63C4', contracted: '#0B5A53', won: '#158A57', lost: '#D6403B' };
+                const fmt = (n) => n == null ? '—' : Number(n).toLocaleString(isRTL ? 'ar-EG' : 'en-US');
+                const ADVANCE = [
+                  { k: 'reserved', ar: 'حجز', en: 'Reserve', color: '#5A63C4' },
+                  { k: 'contracted', ar: 'عقد', en: 'Contract', color: '#0B5A53' },
+                  { k: 'won', ar: 'بيع', en: 'Won', color: '#158A57' },
+                  { k: 'lost', ar: 'خسارة', en: 'Lost', color: '#D6403B' },
+                ];
+                return (
+                  <>
+                    {/* New deal — a lead can reserve/contract more than one unit */}
+                    {canEditContact && (
+                      <button onClick={() => setDealModal({ status: 'reserved', dealId: null })}
+                        className="w-full mb-3 py-2.5 rounded-xl text-xs font-bold border border-dashed border-brand-500/50 text-brand-500 bg-brand-500/[0.06] cursor-pointer hover:bg-brand-500/10 transition-colors">
+                        + {isRTL ? 'صفقة / حجز جديد' : 'New deal / reservation'}
+                      </button>
+                    )}
+
+                    {dealLoading ? (
+                      <div className="py-8 text-center text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'جاري التحميل…' : 'Loading…'}</div>
+                    ) : dealRows.length === 0 ? (
+                      <div className="py-6 text-center text-[11px] text-content-muted dark:text-content-muted-dark rounded-xl border border-dashed border-edge dark:border-edge-dark">
+                        {isRTL ? 'مفيش صفقات لسه' : 'No deals yet'}
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {dealRows.map(dr => (
+                          <div key={dr.id} className="rounded-xl border border-edge dark:border-edge-dark p-3.5">
+                            <div className="flex items-center justify-between mb-2.5">
+                              <span className="text-[11px] font-mono text-content-muted dark:text-content-muted-dark">{dr.deal_number}{dr.unit_code ? ` · ${dr.unit_code}` : ''}</span>
+                              <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ color: DEAL_COLOR[dr.status] || '#6B7280', background: (DEAL_COLOR[dr.status] || '#6B7280') + '18' }}>
+                                {DEAL_STATUS[dr.status] || dr.status}
+                              </span>
+                            </div>
+                            <div className="flex gap-4 text-xs mb-1.5">
+                              <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'القيمة: ' : 'Value: '}</span><span className="font-bold text-content dark:text-content-dark">{fmt(dr.deal_value)}</span></div>
+                              <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المقدّم: ' : 'Down: '}</span><span className="font-bold text-content dark:text-content-dark">{fmt(dr.down_payment)}</span></div>
+                            </div>
+                            <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-2.5">
+                              {isRTL ? 'بواسطة: ' : 'By: '}{(isRTL ? (dr.agent_ar || dr.agent_en) : (dr.agent_en || dr.agent_ar)) || '—'}
+                              {dr.created_at ? ` · ${new Date(dr.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}` : ''}
+                            </div>
+                            {canEditContact && (
+                              <div className="flex gap-1.5 flex-wrap">
+                                {ADVANCE.filter(a => a.k !== dr.status).map(a => (
+                                  <button key={a.k} onClick={() => setDealModal({ status: a.k, dealId: dr.id, initialFields: { unit_code: dr.unit_code, deal_value: dr.deal_value, down_payment: dr.down_payment } })}
+                                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold border cursor-pointer transition-all active:scale-95"
+                                    style={{ color: a.color, borderColor: a.color + '55', background: a.color + '10' }}>
+                                    → {isRTL ? a.ar : a.en}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </section>
+
+            {/* ══════ MEETINGS ══════ */}
+            <section id="sec-meetings" data-section-key="meetings" className={tab === 'meetings' ? 'mb-4' : 'hidden'}>
+              {(() => {
+                const TYPE_LBL = isRTL
+                  ? { site_visit: 'معاينة', office: 'مكتب', online: 'أونلاين' }
+                  : { site_visit: 'Site visit', office: 'Office', online: 'Online' };
+                const meetings = (activities || []).filter(a => a.type === 'meeting');
+                const upcoming = meetings.filter(m => m.status === 'scheduled' && m.scheduled_date)
+                  .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
+                const past = meetings.filter(m => !(m.status === 'scheduled' && m.scheduled_date))
+                  .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+                const fmtDT = (d) => d ? new Date(d).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                const Row = (m, up) => (
+                  <div key={m.id} className="rounded-xl border border-edge dark:border-edge-dark p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">{TYPE_LBL[m.meeting_subtype] || (isRTL ? 'اجتماع' : 'Meeting')}</span>
+                      <div className="flex items-center gap-1.5">
+                        {m.status === 'cancelled' && <span className="text-[10px] font-bold px-1.5 py-px rounded-[5px] bg-red-500/15 text-red-500">{isRTL ? 'ملغي' : 'Cancelled'}</span>}
+                        <span className={`text-[10px] font-semibold ${up ? 'text-emerald-600 dark:text-emerald-400' : 'text-content-muted dark:text-content-muted-dark'}`}>{fmtDT(up ? m.scheduled_date : m.created_at)}</span>
+                      </div>
+                    </div>
+                    {m.notes && <div className="text-[11px] text-content dark:text-content-dark">{isRTL ? 'المكان: ' : 'Location: '}{m.notes}</div>}
+                    {m.result && <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة: ' : 'Outcome: '}{m.result}</div>}
+                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-1">
+                      {isRTL ? 'بواسطة: ' : 'By: '}{(isRTL ? (m.users?.full_name_ar || m.user_name_ar || m.user_name_en) : (m.users?.full_name_en || m.user_name_en || m.user_name_ar)) || '—'}
+                    </div>
+                    {/* Scheduled meetings can be marked as happened or cancelled — wires up
+                        the previously-unused handleUpdateActivityStatus. */}
+                    {m.status === 'scheduled' && canEditContact && (
+                      <div className="flex gap-2 mt-2 pt-2 border-t border-edge/50 dark:border-edge-dark/50">
+                        <button onClick={() => handleUpdateActivityStatus(m.id, 'completed')}
+                          className="flex-1 py-1.5 rounded-lg text-[11px] font-bold border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/[0.06] cursor-pointer hover:bg-emerald-500/10">
+                          {isRTL ? 'تم الحضور' : 'Mark done'}
+                        </button>
+                        <button onClick={() => handleUpdateActivityStatus(m.id, 'cancelled')}
+                          className="flex-1 py-1.5 rounded-lg text-[11px] font-bold border border-red-500/40 text-red-500 bg-red-500/[0.06] cursor-pointer hover:bg-red-500/10">
+                          {isRTL ? 'إلغاء' : 'Cancel'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+                return (
+                  <>
+                    {canEditContact && (
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <button onClick={() => setMeetingModal({ mode: 'happened' })}
+                          className="py-2.5 rounded-xl text-xs font-bold border border-brand-500/50 text-brand-500 bg-brand-500/[0.06] cursor-pointer hover:bg-brand-500/10 transition-colors">
+                          {isRTL ? 'سجّل اجتماع' : 'Log meeting'}
+                        </button>
+                        <button onClick={() => setMeetingModal({ mode: 'scheduled' })}
+                          className="py-2.5 rounded-xl text-xs font-bold border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/[0.06] cursor-pointer hover:bg-emerald-500/10 transition-colors">
+                          {isRTL ? 'احجز اجتماع' : 'Schedule meeting'}
+                        </button>
+                      </div>
+                    )}
+                    {upcoming.length > 0 && (
+                      <div className="mb-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1.5">{isRTL ? 'قادمة' : 'Upcoming'}</div>
+                        <div className="space-y-2">{upcoming.map(m => Row(m, true))}</div>
+                      </div>
+                    )}
+                    {past.length > 0 && (
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'حصلت' : 'Past'}</div>
+                        <div className="space-y-2">{past.map(m => Row(m, false))}</div>
+                      </div>
+                    )}
+                    {meetings.length === 0 && (
+                      <div className="py-6 text-center text-[11px] text-content-muted dark:text-content-muted-dark rounded-xl border border-dashed border-edge dark:border-edge-dark">
+                        {isRTL ? 'مفيش اجتماعات لسه' : 'No meetings yet'}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </section>
+
             {/* ══════ DEPARTMENT-SPECIFIC ══════ */}
-            <section id={`sec-${deptTab.key}`} data-section-key={deptTab.key} className="scroll-mt-14 mb-8">
+            <section id={`sec-${deptTab.key}`} data-section-key={deptTab.key} className={tab === deptTab.key ? 'mb-4' : 'hidden'}>
               <div>
                 {isSupplier ? (
                   <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
@@ -2295,9 +2101,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       <>
                         <div className="flex items-center justify-between mb-4">
                           <div className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'الفرص' : 'Opportunities'} <span className="text-content-muted dark:text-content-muted-dark font-normal">({oppCount})</span></div>
-                          <button onClick={() => setShowOppModal(true)} className="px-3 py-1.5 bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 text-xs font-semibold cursor-pointer flex items-center gap-1.5 hover:bg-emerald-500/[0.15] transition-colors">
-                            <Plus size={12} /> {isRTL ? 'فرصة جديدة' : 'New'}
-                          </button>
                         </div>
                         {loadingData ? (
                           <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
@@ -2305,9 +2108,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                             <span className="text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</span>
                           </div>
                         ) : (() => {
-                          const filteredOpps = selectedAgent !== 'all'
-                            ? opportunities.filter(o => o.assigned_to_name === selectedAgent || o.users?.full_name_en === selectedAgent || o.users?.full_name_ar === selectedAgent)
-                            : opportunities;
+                          const filteredOpps = opportunities;
                           return filteredOpps.length === 0 ? (
                           <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
                             <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
@@ -2320,7 +2121,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                             {filteredOpps.map(opp => {
                               const stages = getDeptStages(dept);
                               const currentStage = stages.find(s => s.id === opp.stage);
-                              const stageColor = currentStage?.color || '#10B981';
+                              const stageColor = currentStage?.color || '#158A57';
                               const isStageOpen = openStagePopoverFor === opp.id;
                               return (
                               <div
@@ -2522,14 +2323,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ RESALE UNITS (lazy) ══════ */}
-            <section id="sec-units" data-section-key="units" className="scroll-mt-14 mb-8">
+            <section id="sec-units" data-section-key="units" className={tab === 'units' ? 'mb-4' : 'hidden'}>
               {mountedSections.has('units')
                 ? <ResaleUnitsTab contact={contact} isRTL={isRTL} />
                 : <SectionPlaceholder label={isRTL ? 'الوحدات للبيع' : 'Resale units'} />}
             </section>
 
             {/* ══════ COMMENTS (lazy) ══════ */}
-            <section id="sec-comments" data-section-key="comments" className="scroll-mt-14 mb-8">
+            <section id="sec-comments" data-section-key="comments" className={tab === 'comments' ? 'mb-4' : 'hidden'}>
               {mountedSections.has('comments')
                 ? <CommentsSection
                     entity="contact"
@@ -2546,7 +2347,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ DOCUMENTS (lazy) ══════ */}
-            <section id="sec-documents" data-section-key="documents" className="scroll-mt-14 mb-8">
+            <section id="sec-documents" data-section-key="documents" className={tab === 'documents' ? 'mb-4' : 'hidden'}>
               {mountedSections.has('documents')
                 ? <DocumentsSection
                     entity="contact"
@@ -2557,75 +2358,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ DATA / DETAILS ══════ */}
-            <section id="sec-data" data-section-key="data" className="scroll-mt-14 mb-8">
+            <section id="sec-data" data-section-key="data" className={tab === 'data' ? 'mb-4' : 'hidden'}>
               <div>
-                {/* Score & Temperature Cards */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Lead Score card — the temperature editor lives only in the
+                    hero chip now (single source of truth), so it was removed here. */}
+                <div className="mb-4">
                   <div className="bg-brand-500/[0.05] rounded-xl p-3.5 border border-brand-500/10">
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-2 font-medium">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
                     {(() => {
                       const mn = profile?.full_name_en || profile?.full_name_ar;
-                      const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
+                      const myScore = (contact.assigned_to_name === mn || isManagerViewer) ? contact.lead_score : null;
                       return <ScorePill score={myScore != null ? Number(myScore) : null} />;
                     })()}
                   </div>
-                  {(() => {
-                    const myName = profile?.full_name_en || profile?.full_name_ar;
-                    const isMine = myName && contact.assigned_to_name === myName;
-                    const canEditTemp = isMine && canEditContact;
-                    const cardCls = `rounded-xl p-3.5 transition-all relative ${canEditTemp ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`;
-                    return (
-                      <div
-                        className={cardCls}
-                        style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.04)', border: `1px solid ${tempInfo?.color || '#4A7AAB'}15` }}
-                        onClick={canEditTemp ? () => setShowQuickTemp(v => !v) : undefined}
-                        role={canEditTemp ? 'button' : undefined}
-                        tabIndex={canEditTemp ? 0 : undefined}
-                        aria-haspopup={canEditTemp ? 'menu' : undefined}
-                        aria-expanded={canEditTemp ? showQuickTemp : undefined}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-medium">{isRTL ? 'الحرارة' : 'Temperature'}</span>
-                          {canEditTemp && <ChevronDown size={11} className="text-content-muted/60 dark:text-content-muted-dark/60" />}
-                        </div>
-                        {tempInfo?.Icon ? (
-                          <div className="flex items-center gap-1.5">
-                            <tempInfo.Icon size={15} color={tempInfo.color} />
-                            <span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-content-muted dark:text-content-muted-dark">{canEditTemp ? (isRTL ? 'اضغط للتحديد' : 'Tap to set') : '--'}</span>
-                        )}
-                        {canEditTemp && showQuickTemp && (
-                          <>
-                            <div className="fixed inset-0 z-[60]" onClick={(e) => { e.stopPropagation(); setShowQuickTemp(false); }} />
-                            <div
-                              className="absolute top-full mt-1 start-0 end-0 z-[61] rounded-xl border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
-                              onClick={(e) => e.stopPropagation()}
-                              role="menu"
-                            >
-                              {['hot', 'warm', 'cool', 'cold'].map(v => {
-                                const optTemp = TEMP[v];
-                                const isCurrent = contact.temperature === v;
-                                return (
-                                  <button
-                                    key={v}
-                                    onClick={() => { setShowQuickTemp(false); if (!isCurrent) handleTemperatureChange(v); }}
-                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-none transition-colors ${isCurrent ? 'bg-edge/40 dark:bg-edge-dark/40' : 'bg-transparent hover:bg-edge/30 dark:hover:bg-edge-dark/30'}`}
-                                    role="menuitem"
-                                  >
-                                    {optTemp?.Icon && <optTemp.Icon size={13} color={optTemp.color} />}
-                                    <span style={{ color: optTemp?.color }}>{isRTL ? optTemp?.labelAr : optTemp?.label}</span>
-                                    {isCurrent && <Check size={12} className="ms-auto text-content-muted dark:text-content-muted-dark" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 {/* Grouped Data Sections */}
@@ -2664,6 +2409,40 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   })}
                 </div>
 
+                {/* Notes (moved here from the hero) */}
+                {contact.notes && (
+                  <div className="mb-4 rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
+                      <FileText size={12} className="text-content-muted dark:text-content-muted-dark" />
+                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{isRTL ? 'ملاحظات' : 'Notes'}</span>
+                    </div>
+                    <div className="px-3.5 py-3 text-xs text-content dark:text-content-dark leading-relaxed whitespace-pre-wrap">{contact.notes}</div>
+                  </div>
+                )}
+
+                {/* Assignment history (moved here from the hero) */}
+                {assignmentHistory.length > 0 && (
+                  <div className="mb-4 p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/15">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <History size={12} className="text-amber-500" />
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        {isRTL ? `تم تعيينه ${assignmentHistory.length} مرة` : `Reassigned ${assignmentHistory.length} time${assignmentHistory.length > 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {assignmentHistory.slice(-3).map((h, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-[10px] text-content-muted dark:text-content-muted-dark">
+                          <span className="font-semibold">{h.from || '—'}</span>
+                          <span className="opacity-40">→</span>
+                          <span className="font-semibold text-brand-500">{h.to}</span>
+                          <span className="opacity-50">· {new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                          {h.by && <span className="opacity-40">({isRTL ? 'بواسطة' : 'by'} {h.by})</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Blacklist reason */}
                 {contact.is_blacklisted && contact.blacklist_reason && (
                   <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.06] border border-red-500/15 rounded-xl text-xs text-red-500 flex gap-2 items-start">
@@ -2672,43 +2451,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   </div>
                 )}
 
-                {/* Viewed By */}
-                {(() => {
-                  const viewers = getEntityViewers('contact', contact.id);
-                  if (viewers.length === 0) return null;
-                  return (
-                    <div
-                      className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden mb-4 shadow-sm"
-                      style={{ borderInlineStartWidth: '3px', borderInlineStartColor: '#6B21A8' }}
-                    >
-                      <div
-                        className="flex items-center gap-2.5 px-3.5 py-3 border-b border-edge/50 dark:border-edge-dark/50"
-                        style={{ background: 'linear-gradient(90deg, #6B21A814 0%, #6B21A804 100%)' }}
-                      >
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 bg-purple-500/22">
-                          <Star size={13} style={{ color: '#6B21A8' }} />
-                        </div>
-                        <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: '#6B21A8' }}>{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
-                        <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-auto font-semibold tabular-nums">{viewers.length}</span>
-                      </div>
-                      <div className="px-3.5 py-1 max-h-[180px] overflow-y-auto">
-                        {viewers.map(v => (
-                          <div key={v.user_id} className="flex items-center justify-between py-1.5 border-b border-edge/30 dark:border-edge-dark/30 last:border-b-0 text-[11px]">
-                            <div>
-                              <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
-                              {v.user_role && <span className="text-content-muted/50 dark:text-content-muted-dark/50 ms-1.5 text-[9px]">{v.user_role}</span>}
-                            </div>
-                            <div className="text-end">
-                              <span className="text-content-muted dark:text-content-muted-dark">
-                                {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(v.last_view).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
+                {/* Viewed By moved to the admin/ops "Audit" tab (all-employee
+                    viewers from view_logs) — the old localStorage-only block
+                    here was a this-device-only duplicate, removed. */}
 
                 {/* Custom Fields */}
                 <CustomFieldsRenderer entity="contact" entityId={contact.id} mode="edit" defaultCollapsed={false} />
@@ -2739,7 +2484,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <div className="mt-3 rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
                       <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
                         <div className="w-5 h-5 rounded-md flex items-center justify-center bg-brand-500/15">
-                          <Megaphone size={12} style={{ color: '#4A7AAB' }} />
+                          <Megaphone size={12} style={{ color: '#2F6BD3' }} />
                         </div>
                         <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">
                           {isRTL ? 'سجل الحملات' : 'Campaign History'}
@@ -2771,78 +2516,140 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 })()}
               </div>
             </section>
+
+            {/* ══════ AUDIT (admin/operations only) — full change history + viewers ══════ */}
+            {isAdmin && (
+            <section id="sec-audit" data-section-key="audit" className={tab === 'audit' ? 'mb-4' : 'hidden'}>
+              {/* Changes */}
+              <div className="flex items-center gap-2 mb-3">
+                <History size={14} className="text-brand-500" />
+                <h3 className="text-xs font-bold text-content dark:text-content-dark m-0">{isRTL ? 'كل التغييرات' : 'All Changes'}</h3>
+                <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark ms-auto">{extraSources.audits.length}</span>
+              </div>
+              {extraSources.audits.length === 0 ? (
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark py-3 text-center rounded-lg border border-dashed border-edge dark:border-edge-dark">
+                  {isRTL ? 'لا توجد تغييرات مسجّلة على هذا العميل' : 'No recorded changes for this lead'}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {extraSources.audits.map(a => {
+                    // Defensive filter: rows logged before the auditService fix
+                    // may still carry internal '_'-prefixed keys (e.g. _skipDbUpdate)
+                    // or the noisy last_activity_at — hide them here too.
+                    const chg = a.changes && typeof a.changes === 'object'
+                      ? Object.entries(a.changes).filter(([k]) => !k.startsWith('_') && k !== 'last_activity_at')
+                      : [];
+                    return (
+                      <div key={a.id} className="rounded-lg border border-edge/60 dark:border-edge-dark/60 bg-surface-bg/30 dark:bg-surface-bg-dark/20 px-3 py-2">
+                        <div className="flex items-center justify-between mb-1 gap-2">
+                          <span className="text-[11px] font-semibold text-content dark:text-content-dark truncate">{a.user_name || '—'}</span>
+                          <span className="text-[9px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">{new Date(a.created_at).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        {chg.length ? (
+                          <div className="space-y-0.5">
+                            {chg.map(([f, v]) => (
+                              <div key={f} className="text-[10.5px] text-content-muted dark:text-content-muted-dark">
+                                <span className="font-semibold text-content dark:text-content-dark">{(isRTL ? AUDIT_FIELD_LABELS[f]?.ar : AUDIT_FIELD_LABELS[f]?.en) || f}:</span>{' '}
+                                <span className="line-through opacity-60">{auditVal(v?.from)}</span>
+                                <span className="mx-1">→</span>
+                                <span className="text-content dark:text-content-dark font-medium">{auditVal(v?.to)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[10.5px] text-content-muted dark:text-content-muted-dark">{a.description || a.action}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Viewers */}
+              <div className="flex items-center gap-2 mt-6 mb-3">
+                <Users size={14} className="text-brand-500" />
+                <h3 className="text-xs font-bold text-content dark:text-content-dark m-0">{isRTL ? 'مين شاف العميل' : 'Viewers'}</h3>
+                <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length}</span>
+              </div>
+              {viewersLoading ? (
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark py-3 text-center">{isRTL ? 'جاري التحميل…' : 'Loading…'}</div>
+              ) : viewers.length === 0 ? (
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark py-3 text-center rounded-lg border border-dashed border-edge dark:border-edge-dark">
+                  {isRTL ? 'لا أحد شاهد هذا العميل بعد' : 'No one has viewed this lead yet'}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {viewers.map(v => (
+                    <div key={v.user_id} className="flex items-center gap-2.5 rounded-lg border border-edge/60 dark:border-edge-dark/60 bg-surface-bg/30 dark:bg-surface-bg-dark/20 px-3 py-2">
+                      <div className="w-7 h-7 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center text-[10px] font-bold shrink-0">{agentInitials(v.user_name || '?')}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-content dark:text-content-dark truncate">{v.user_name || v.user_id}</div>
+                        {v.user_role && <div className="text-[9px] text-content-muted dark:text-content-muted-dark">{v.user_role}</div>}
+                      </div>
+                      <div className="text-end shrink-0">
+                        <div className="text-[10px] font-bold text-brand-500">{v.views}×</div>
+                        <div className="text-[9px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">{new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+            )}
+          </div>
           </div>
         </div>
       </div>
     </div>
 
-    {/* ═══ New Opportunity Modal ═══ */}
-    {showOppModal && (
-      <div onClick={() => setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50 backdrop-blur-[2px]">
-        <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl p-6 w-full max-w-[440px] border border-edge dark:border-edge-dark shadow-2xl">
-          <div className="flex justify-between items-center mb-5">
-            <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? 'فرصة جديدة' : 'New Opportunity'}</h3>
-            <button onClick={() => setShowOppModal(false)} className="w-7 h-7 rounded-lg flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
-              <X size={16} />
-            </button>
-          </div>
-          <div className="mb-4 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
-            <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'العميل:' : 'Lead:'}</span>
-            <span className="text-xs font-semibold text-content dark:text-content-dark ms-1.5">{contact.full_name}</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {[
-              { key: 'project', label_ar: 'المشروع', label_en: 'Project', type: 'text' },
-              { key: 'budget', label_ar: 'الميزانية', label_en: 'Budget', type: 'number' },
-              { key: 'notes', label_ar: 'ملاحظات', label_en: 'Notes', type: 'text' },
-            ].map(f => (
-              <div key={f.key}>
-                <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? f.label_ar : f.label_en}</label>
-                <input type={f.type} value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit focus:border-brand-500 transition-colors"
-                  style={{ textAlign: isRTL ? 'right' : 'left', direction: isRTL ? 'rtl' : 'ltr' }} />
-              </div>
-            ))}
-            <div>
-              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
-              {isSalesAgent ? (
-                <Input value={newOpp.assigned_to_name} disabled className="w-full" />
-              ) : (
-                <Select value={newOpp.assigned_to_name} onChange={e => setNewOpp(p => ({ ...p, assigned_to_name: e.target.value }))} className="w-full">
-                  <option value="">{isRTL ? '-- اختر السيلز --' : '-- Select Agent --'}</option>
-                  {selfName && <option value={selfName}>{selfName} {isRTL ? '(أنا)' : '(Me)'}</option>}
-                  {agentsList.filter(a => a !== selfName).map(a => <option key={a} value={a}>{a}</option>)}
-                </Select>
-              )}
-            </div>
-            <div>
-              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? 'المرحلة' : 'Stage'}</label>
-              <Select value={newOpp.stage} onChange={e => setNewOpp(p => ({ ...p, stage: e.target.value }))} className="w-full">
-                {getDeptStages(dept).map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-              </Select>
-            </div>
-            {[
-              { key: 'temperature', label_ar: 'الحرارة', label_en: 'Temperature', options: [{ v: 'hot', ar: 'ساخن', en: 'Hot' }, { v: 'warm', ar: 'دافئ', en: 'Warm' }, { v: 'cool', ar: 'فاتر', en: 'Cool' }, { v: 'cold', ar: 'بارد', en: 'Cold' }] },
-              { key: 'priority', label_ar: 'الأولوية', label_en: 'Priority', options: [{ v: 'urgent', ar: 'عاجل', en: 'Urgent' }, { v: 'high', ar: 'عالي', en: 'High' }, { v: 'medium', ar: 'متوسط', en: 'Medium' }, { v: 'low', ar: 'منخفض', en: 'Low' }] },
-            ].map(f => (
-              <div key={f.key}>
-                <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? f.label_ar : f.label_en}</label>
-                <Select value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))} className="w-full">
-                  {f.options.map(o => <option key={o.v} value={o.v}>{isRTL ? o.ar : o.en}</option>)}
-                </Select>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2.5 mt-5">
-            <Button className="flex-1" size="sm" onClick={handleSaveOpp}>
-              {isRTL ? 'حفظ' : 'Save'}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowOppModal(false)}>
-              {isRTL ? 'إلغاء' : 'Cancel'}
-            </Button>
+    {/* Deal-events modal — create a new deal or advance a specific one */}
+    {dealModal && (
+      <DealEventModal
+        contact={contact}
+        initialStatus={dealModal.status}
+        dealId={dealModal.dealId}
+        initialFields={dealModal.initialFields || {}}
+        isRTL={isRTL}
+        onClose={() => setDealModal(null)}
+        onSaved={handleDealEventSaved}
+      />
+    )}
+
+    {/* ═══ Unified log sheet — opened by the "+ سجّل" FAB (call/whatsapp/note).
+         TakeActionForm presented as a modal centered over the drawer panel. ═══ */}
+    {showActionForm && (
+      <div
+        className="fixed inset-0 z-[930] flex bg-black/50 backdrop-blur-[2px]"
+        dir={isRTL ? 'rtl' : 'ltr'}
+        onClick={() => { setShowActionForm(false); setActionPresetType(null); }}
+      >
+        {/* Spacer mirrors the drawer's own backdrop so the modal region lands
+            exactly over the drawer panel (not centered on the whole viewport). */}
+        <div className="flex-1" aria-hidden="true" />
+        <div className="w-[480px] md:w-[580px] max-w-[100vw] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div onClick={e => e.stopPropagation()} className="w-full sm:max-w-[440px] max-h-[92vh] overflow-y-auto">
+          <TakeActionForm
+            key={actionPresetType || 'default'}
+            contact={contact}
+            onLogInteraction={handleLogInteraction}
+            onCancel={() => { setShowActionForm(false); setActionPresetType(null); }}
+            initialType={actionPresetType}
+          />
           </div>
         </div>
       </div>
+    )}
+
+    {/* Meeting modal — log a happened meeting or schedule an upcoming one */}
+    {meetingModal && (
+      <MeetingModal
+        contact={contact}
+        mode={meetingModal.mode}
+        profile={profile}
+        isRTL={isRTL}
+        onClose={() => setMeetingModal(null)}
+        onSaved={handleMeetingSaved}
+      />
     )}
 
     {/* Send SMS Modal */}

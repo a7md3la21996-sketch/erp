@@ -317,11 +317,11 @@ export function fillTemplate(template, variables = {}) {
 
 // ── Category helpers ───────────────────────────────────────────
 export const TEMPLATE_CATEGORIES = [
-  { id: 'greeting', label: 'Greeting', label_ar: 'ترحيب', color: '#10B981' },
-  { id: 'follow_up', label: 'Follow Up', label_ar: 'متابعة', color: '#4A7AAB' },
-  { id: 'appointment', label: 'Appointment', label_ar: 'موعد', color: '#8B5CF6' },
-  { id: 'payment', label: 'Payment', label_ar: 'دفع', color: '#F59E0B' },
-  { id: 'promotion', label: 'Promotion', label_ar: 'ترويج', color: '#EC4899' },
+  { id: 'greeting', label: 'Greeting', label_ar: 'ترحيب', color: '#158A57' },
+  { id: 'follow_up', label: 'Follow Up', label_ar: 'متابعة', color: '#2F6BD3' },
+  { id: 'appointment', label: 'Appointment', label_ar: 'موعد', color: '#5A63C4' },
+  { id: 'payment', label: 'Payment', label_ar: 'دفع', color: '#C9860A' },
+  { id: 'promotion', label: 'Promotion', label_ar: 'ترويج', color: '#C14D7E' },
   { id: 'custom', label: 'Custom', label_ar: 'مخصص', color: '#6B7280' },
 ];
 

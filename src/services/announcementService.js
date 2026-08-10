@@ -6,18 +6,18 @@ import { P } from '../config/roles';
 
 // ── Categories ─────────────────────────────────────────────────────────
 export const CATEGORIES = {
-  general:     { ar: 'عام',        en: 'General',     color: '#4A7AAB' },
-  policy:      { ar: 'سياسات',     en: 'Policy',      color: '#8B5CF6' },
-  event:       { ar: 'فعالية',     en: 'Event',       color: '#10B981' },
-  maintenance: { ar: 'صيانة',      en: 'Maintenance', color: '#F59E0B' },
-  urgent:      { ar: 'عاجل',       en: 'Urgent',      color: '#EF4444' },
+  general:     { ar: 'عام',        en: 'General',     color: '#2F6BD3' },
+  policy:      { ar: 'سياسات',     en: 'Policy',      color: '#5A63C4' },
+  event:       { ar: 'فعالية',     en: 'Event',       color: '#158A57' },
+  maintenance: { ar: 'صيانة',      en: 'Maintenance', color: '#C9860A' },
+  urgent:      { ar: 'عاجل',       en: 'Urgent',      color: '#D6403B' },
 };
 
 export const PRIORITIES = {
   low:    { ar: 'منخفض',  en: 'Low',    color: '#94a3b8' },
-  normal: { ar: 'عادي',   en: 'Normal', color: '#4A7AAB' },
-  high:   { ar: 'مرتفع',  en: 'High',   color: '#F59E0B' },
-  urgent: { ar: 'عاجل',   en: 'Urgent', color: '#EF4444' },
+  normal: { ar: 'عادي',   en: 'Normal', color: '#2F6BD3' },
+  high:   { ar: 'مرتفع',  en: 'High',   color: '#C9860A' },
+  urgent: { ar: 'عاجل',   en: 'Urgent', color: '#D6403B' },
 };
 
 // ── CRUD ───────────────────────────────────────────────────────────────

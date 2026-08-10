@@ -95,10 +95,10 @@ export function isContractEndingSoon(contractEndDate, alertDays = 30) {
 }
 
 export const CONTRACT_TYPES = {
-  full_time:  { ar: 'دوام كامل',    en: 'Full Time',   color: '#4A7AAB' },
+  full_time:  { ar: 'دوام كامل',    en: 'Full Time',   color: '#2F6BD3' },
   part_time:  { ar: 'دوام جزئي',    en: 'Part Time',   color: '#6B8DB5' },
-  freelance:  { ar: 'فريلانس',      en: 'Freelance',   color: '#4A7AAB' },
-  probation:  { ar: 'فترة تجربة',   en: 'Probation',   color: '#EF4444' },
+  freelance:  { ar: 'فريلانس',      en: 'Freelance',   color: '#2F6BD3' },
+  probation:  { ar: 'فترة تجربة',   en: 'Probation',   color: '#D6403B' },
 };
 
 export const WORK_TYPES = {
@@ -111,11 +111,11 @@ export const WORK_TYPES = {
 export const OT_MULTIPLIERS = ['1x', '1.5x', '2x', 'Fixed'];
 
 export const POLICY_CATEGORIES = {
-  leave:      { ar: 'الإجازات',         en: 'Leave',      color: '#4A7AAB', icon: 'Umbrella' },
+  leave:      { ar: 'الإجازات',         en: 'Leave',      color: '#2F6BD3', icon: 'Umbrella' },
   attendance: { ar: 'الحضور والعمل',    en: 'Attendance', color: '#2B4C6F', icon: 'Clock' },
-  payroll:    { ar: 'الرواتب',          en: 'Payroll',    color: '#4A7AAB', icon: 'Banknote' },
+  payroll:    { ar: 'الرواتب',          en: 'Payroll',    color: '#2F6BD3', icon: 'Banknote' },
   employment: { ar: 'التوظيف',          en: 'Employment', color: '#6B8DB5', icon: 'FileText' },
-  alerts:     { ar: 'التنبيهات',        en: 'Alerts',     color: '#EF4444', icon: 'Bell' },
+  alerts:     { ar: 'التنبيهات',        en: 'Alerts',     color: '#D6403B', icon: 'Bell' },
 };
 
 export const COMPETENCIES = [

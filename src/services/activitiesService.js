@@ -19,15 +19,15 @@ const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
-  call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#4A7AAB', dept: ['sales','finance'] },
+  call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#2F6BD3', dept: ['sales','finance'] },
   whatsapp:      { ar: 'واتساب',        en: 'WhatsApp',      icon: 'MessageCircle',color: '#2B4C6F', dept: ['sales'] },
   email:         { ar: 'إيميل',         en: 'Email',         icon: 'Mail',         color: '#6B8DB5', dept: ['sales','hr','finance'] },
   meeting:       { ar: 'مقابلة',        en: 'Meeting',       icon: 'Users',        color: '#2B4C6F', dept: ['sales','hr','finance'] },
   note:          { ar: 'ملاحظة',        en: 'Note',          icon: 'FileText',     color: '#8BA8C8', dept: ['sales','hr','finance'] },
-  interview:     { ar: 'مقابلة',        en: 'Interview',     icon: 'UserCheck',    color: '#4A7AAB', dept: ['hr'] },
-  warning:       { ar: 'إنذار',         en: 'Warning',       icon: 'AlertTriangle',color: '#EF4444', dept: ['hr'] },
+  interview:     { ar: 'مقابلة',        en: 'Interview',     icon: 'UserCheck',    color: '#2F6BD3', dept: ['hr'] },
+  warning:       { ar: 'إنذار',         en: 'Warning',       icon: 'AlertTriangle',color: '#D6403B', dept: ['hr'] },
   evaluation:    { ar: 'تقييم',         en: 'Evaluation',    icon: 'Star',         color: '#6B8DB5', dept: ['hr'] },
-  invoice:       { ar: 'فاتورة',        en: 'Invoice',       icon: 'Receipt',      color: '#4A7AAB', dept: ['finance'] },
+  invoice:       { ar: 'فاتورة',        en: 'Invoice',       icon: 'Receipt',      color: '#2F6BD3', dept: ['finance'] },
   payment:       { ar: 'دفعة',          en: 'Payment',       icon: 'Banknote',     color: '#2B4C6F', dept: ['finance'] },
 };
 

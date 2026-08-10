@@ -8,10 +8,10 @@ import {
 const SEEN_KEY = 'platform_changelog_seen';
 
 const CATEGORIES = {
-  feature: { icon: Sparkles, color: '#22c55e', bg: 'rgba(34,197,94,0.1)', en: 'Feature', ar: 'ميزة جديدة' },
-  improvement: { icon: Zap, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', en: 'Improvement', ar: 'تحسين' },
-  fix: { icon: Bug, color: '#eab308', bg: 'rgba(234,179,8,0.1)', en: 'Fix', ar: 'إصلاح' },
-  security: { icon: Shield, color: '#ef4444', bg: 'rgba(239,68,68,0.1)', en: 'Security', ar: 'أمان' },
+  feature: { icon: Sparkles, color: '#158A57', bg: 'rgba(34,197,94,0.1)', en: 'Feature', ar: 'ميزة جديدة' },
+  improvement: { icon: Zap, color: '#2F6BD3', bg: 'rgba(59,130,246,0.1)', en: 'Improvement', ar: 'تحسين' },
+  fix: { icon: Bug, color: '#C9860A', bg: 'rgba(234,179,8,0.1)', en: 'Fix', ar: 'إصلاح' },
+  security: { icon: Shield, color: '#D6403B', bg: 'rgba(239,68,68,0.1)', en: 'Security', ar: 'أمان' },
 };
 
 const CHANGELOG = [
@@ -287,7 +287,7 @@ export default function ChangelogPage() {
   const cardBg = isDark ? '#1a2332' : '#ffffff';
   const cardBorder = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)';
   const pageBg = isDark ? '#0a1929' : '#f8fafc';
-  const accent = '#4A7AAB';
+  const accent = '#2F6BD3';
 
   // Mark all as seen on mount
   useEffect(() => {
@@ -458,7 +458,7 @@ export default function ChangelogPage() {
                             padding: '2px 8px',
                             borderRadius: 10,
                             background: 'rgba(34,197,94,0.15)',
-                            color: '#22c55e',
+                            color: '#158A57',
                             fontSize: 10,
                             fontWeight: 700,
                           }}>

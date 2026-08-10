@@ -69,10 +69,10 @@ export default function EmployeeTimeTab({ emp, isRTL, lang }) {
           </Link>
         </div>
         <div className="px-5 py-4 grid grid-cols-2 gap-3">
-          <StatTile icon={CheckCircle2} label={isRTL ? 'حضور' : 'Present'} value={stats.present} color="#10B981" isRTL={isRTL} />
-          <StatTile icon={XCircle} label={isRTL ? 'غياب' : 'Absent'} value={stats.absent} color="#EF4444" isRTL={isRTL} />
-          <StatTile icon={AlertCircle} label={isRTL ? 'تأخير' : 'Late'} value={stats.late} color="#F59E0B" isRTL={isRTL} />
-          <StatTile icon={CalendarOff} label={isRTL ? 'إجازة' : 'On Leave'} value={stats.onLeave} color="#4A7AAB" isRTL={isRTL} />
+          <StatTile icon={CheckCircle2} label={isRTL ? 'حضور' : 'Present'} value={stats.present} color="#158A57" isRTL={isRTL} />
+          <StatTile icon={XCircle} label={isRTL ? 'غياب' : 'Absent'} value={stats.absent} color="#D6403B" isRTL={isRTL} />
+          <StatTile icon={AlertCircle} label={isRTL ? 'تأخير' : 'Late'} value={stats.late} color="#C9860A" isRTL={isRTL} />
+          <StatTile icon={CalendarOff} label={isRTL ? 'إجازة' : 'On Leave'} value={stats.onLeave} color="#2F6BD3" isRTL={isRTL} />
           <div className={`col-span-2 mt-1 pt-3 border-t border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجمالي الساعات' : 'Total Hours'}</span>
             <span className="text-sm font-bold text-brand-500 tabular-nums">{stats.totalHours}h</span>
@@ -180,13 +180,13 @@ function StatTile({ icon: Icon, label, value, color, isRTL }) {
 
 function StatusBadge({ status, isRTL }) {
   const map = {
-    present: { ar: 'حضور', en: 'Present', color: '#10B981' },
-    absent: { ar: 'غياب', en: 'Absent', color: '#EF4444' },
-    late: { ar: 'تأخير', en: 'Late', color: '#F59E0B' },
-    leave: { ar: 'إجازة', en: 'Leave', color: '#4A7AAB' },
-    pending: { ar: 'معلق', en: 'Pending', color: '#F59E0B' },
-    approved: { ar: 'موافق', en: 'Approved', color: '#10B981' },
-    rejected: { ar: 'مرفوض', en: 'Rejected', color: '#EF4444' },
+    present: { ar: 'حضور', en: 'Present', color: '#158A57' },
+    absent: { ar: 'غياب', en: 'Absent', color: '#D6403B' },
+    late: { ar: 'تأخير', en: 'Late', color: '#C9860A' },
+    leave: { ar: 'إجازة', en: 'Leave', color: '#2F6BD3' },
+    pending: { ar: 'معلق', en: 'Pending', color: '#C9860A' },
+    approved: { ar: 'موافق', en: 'Approved', color: '#158A57' },
+    rejected: { ar: 'مرفوض', en: 'Rejected', color: '#D6403B' },
     holiday: { ar: 'عطلة', en: 'Holiday', color: '#6B8DB5' },
   };
   const cfg = map[status] || { ar: status, en: status, color: '#6B7280' };

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Merge, Briefcase, CheckCircle2, Send } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
-import { updateContact, deleteContact } from '../../../services/contactsService';
+import { updateContact, deleteContact, createActivity } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { logAction } from '../../../services/auditService';
 import { createNotification } from '../../../services/notificationsService';
@@ -10,6 +10,10 @@ import { getTemplates, renderBody } from '../../../services/smsTemplateService';
 import { reportError } from '../../../utils/errorReporter';
 import { getDeptStages } from './constants';
 import { Button, SelectedContactsList } from '../../../components/ui';
+
+// English status labels for timeline activity notes — mirrors the map the
+// drawer's handleStatusChange uses so DQ entries read like other transitions.
+const STATUS_EN = { new: 'New', contacted: 'Contacted', following: 'Following', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
 
 // ── Merge Preview Modal ──────────────────────────────────────────────
 export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTargets, setMergeMode, contacts, setContacts, setSelectedIds, isRTL }) {
@@ -55,7 +59,7 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-3 sm:p-5">
       <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-4 sm:p-6 w-full max-w-[95vw] sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
-          <h3 className="m-0 text-content dark:text-content-dark text-base font-bold flex items-center gap-2"><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
+          <h3 className="m-0 text-content dark:text-content-dark text-base font-bold flex items-center gap-2"><Merge size={18} color="#1E3E77" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
           <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={18} /></button>
         </div>
         <div className="overflow-x-auto">
@@ -317,6 +321,22 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
                 // flag), so an 8s window is enough to catch an accidental
                 // misclick. Failed rows weren't mutated, so they're skipped.
                 const successIds = ids.filter(id => !failedIds.includes(id));
+                // Timeline activity per disqualified lead (same reason as the
+                // single path below) — so a bulk DQ shows in each lead's timeline
+                // for all roles, not just the admin-only audit trail.
+                successIds.forEach(id => {
+                  const b = beforeMap.get(id);
+                  createActivity({
+                    type: 'status_change',
+                    notes: `${STATUS_EN[b?.contact_status] || b?.contact_status || '—'} → Disqualified (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`,
+                    contact_id: id,
+                    user_id: profile?.id || null,
+                    user_name_ar: profile?.full_name_ar || '',
+                    user_name_en: profile?.full_name_en || '',
+                    dept: 'sales',
+                    created_at: new Date().toISOString(),
+                  }).catch(() => {});
+                });
                 const undoBulkDq = async () => {
                   try {
                     await Promise.allSettled(successIds.map(id => {
@@ -354,6 +374,22 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               try {
                 await updateContact(c.id, dqUpdates);
                 logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+                // Also write a timeline activity — disqualify IS a status change,
+                // but this modal path (unlike the drawer's handleStatusChange) only
+                // logged to audit_logs, which the timeline hides for everyone (not
+                // whitelisted) and non-admins can't even read. So a DQ from the
+                // drawer never appeared in the timeline. A status_change activity
+                // shows for all roles, same as every other status transition.
+                createActivity({
+                  type: 'status_change',
+                  notes: `${STATUS_EN[before?.contact_status] || before?.contact_status || '—'} → Disqualified (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`,
+                  contact_id: c.id,
+                  user_id: profile?.id || null,
+                  user_name_ar: profile?.full_name_ar || '',
+                  user_name_en: profile?.full_name_en || '',
+                  dept: 'sales',
+                  created_at: new Date().toISOString(),
+                }).catch(() => {});
                 toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
               } catch (err) {
                 setContacts(prev => prev.map(ct => ct.id === c.id ? before : ct));

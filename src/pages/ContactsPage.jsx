@@ -1,24 +1,26 @@
 import { useState, useMemo, useEffect, useRef as useReactRef, useCallback, useReducer } from 'react';
 import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
+import { usePageActions } from '../contexts/PageActionsContext';
+import { P } from '../config/roles';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock, Tag, RefreshCw, Archive } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact, restoreContact,
   createActivity, recordAssignment,
   checkDuplicate,
 } from '../services/contactsService';
+import { logInteraction } from '../services/interactionsService';
 import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchTeamAgents } from '../services/opportunitiesService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
-import { getDeptStages } from './crm/contacts/constants';
 import { notifyLeadAssigned, notifyImportDone, notifyLeadReassigned, notifyImportLeadsForAgent } from '../services/notificationsService';
 import { evaluateTriggers } from '../services/triggerService';
 import { reportError } from '../utils/errorReporter';
@@ -40,6 +42,7 @@ import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
 import ContactDrawer from './crm/contacts/ContactDrawer';
 import ContactsTable from './crm/contacts/ContactsTable';
+import { LEAD_CATEGORIES } from '../config/leadCategories';
 import ContactsCardList from './crm/contacts/ContactsCardList';
 import QuickActionPopover from './crm/contacts/QuickActionPopover';
 import BatchCallModal from './crm/contacts/BatchCallModal';
@@ -57,10 +60,10 @@ import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
 // (the older inline-in-component version was stable in practice but a
 // theoretical closure footgun for future edits).
 const STATUS_DEFS = [
-  { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
-  { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' },
-  { value: 'following', label: 'متابعة', labelEn: 'Following', color: '#10B981' },
-  { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
+  { value: 'new', label: 'جديد', labelEn: 'New', color: '#2F6BD3' },
+  { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#C9860A' },
+  { value: 'following', label: 'متابعة', labelEn: 'Following', color: '#158A57' },
+  { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#117049' },
   { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
 ];
 
@@ -76,7 +79,8 @@ function followupDayBounds() {
 
 export default function ContactsPage() {
   const { i18n } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const perms = useCrmPermissions();
@@ -123,13 +127,9 @@ export default function ContactsPage() {
   const [userMap, setUserMap] = useState(() => new Map());
   const [filterTemp, setFilterTemp] = useState(() => searchParams.get('temp') || 'all');
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || 'all');
-  // Stage sub-filter — only meaningful when filterStatus === 'has_opportunity'.
-  // Resets to 'all' whenever the parent status filter changes.
-  const [filterStage, setFilterStage] = useState(() => searchParams.get('stage') || 'all');
-  // contact_ids that have at least one opp in the selected stage (lazy-fetched)
-  const [stageContactIds, setStageContactIds] = useState(null);
-  // counts per stage for the chips below has_opportunity (lazy-fetched)
-  const [stageCounts, setStageCounts] = useState({});
+  // Lead-origin filter — declared up here (with the other URL-backed filters) so
+  // it can be round-tripped to the URL and deep-linked from the CRM dashboard.
+  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || 'all');
   const [filterActivity, setFilterActivity] = useState(() => searchParams.get('activity') || 'all'); // all, active_3d, moderate_7d, stale, never
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('from') || '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('to') || '');
@@ -149,9 +149,8 @@ export default function ContactsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [openWithAction, setOpenWithAction] = useState(false);
   const [quickActionTarget, setQuickActionTarget] = useState(null);
-  const [quickActionForm, setQuickActionForm] = useState({ type: 'call', result: '', description: '' });
+  const [quickActionForm, setQuickActionForm] = useState({ type: 'call', result: '', description: '', followupDate: '' });
   const [savingQuickAction, setSavingQuickAction] = useState(false);
   const [logCallTarget, setLogCallTarget] = useState(null);
   const [reminderTarget, setReminderTarget] = useState(null);
@@ -271,7 +270,6 @@ export default function ContactsPage() {
     || filterType !== 'all'
     || filterTemp !== 'all'
     || filterStatus !== 'all'
-    || filterStage !== 'all'
     || filterActivity !== 'all'
     || !!dateFrom || !!dateTo
     || showBlacklisted || showUnassigned
@@ -283,13 +281,13 @@ export default function ContactsPage() {
     setFilterType('all');
     setFilterTemp('all');
     setFilterStatus('all');
-    setFilterStage('all');
     setFilterActivity('all');
     setDateFrom('');
     setDateTo('');
     setShowBlacklisted(false);
     setShowUnassigned(false);
     setSmartFilters([]);
+    setCategoryFilter('all');
     setPage(1);
   }, [setSearchInput, setSearch, setFilterType, setShowBlacklisted, setSmartFilters, setPage]);
 
@@ -330,6 +328,67 @@ export default function ContactsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mount-only: a ?followup=overdue|today|upcoming param (deep-linked from the
+  // CRM dashboard's "Today's work" cards) applies the matching follow-up filter.
+  useEffect(() => {
+    const fb = searchParams.get('followup');
+    if (fb && ['overdue', 'today', 'upcoming'].includes(fb)) setFollowupFilter(fb);
+    // ?meeting=any|upcoming|happened (from the CRM dashboard meeting cards) →
+    // the server-side has-a-meeting filter.
+    const mt = searchParams.get('meeting');
+    if (mt && ['any', 'upcoming', 'happened'].includes(mt)) {
+      setSmartFilters(prev => prev.some(f => f.field === '_meeting')
+        ? prev
+        : [...prev, { field: '_meeting', operator: 'is', value: mt }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mount-only: a ?agent=<name> (one agent) or ?agents=name1|name2|… (a team,
+  // deep-linked from the CRM dashboard when scoped to a person/team) pre-filters
+  // the list to those agents.
+  useEffect(() => {
+    const ag = searchParams.get('agent');
+    const agentsMulti = searchParams.get('agents');
+    if (ag) {
+      setSmartFilters(prev => prev.some(f => f.field === 'assigned_to_name')
+        ? prev
+        : [...prev, { field: 'assigned_to_name', operator: 'is', value: ag }]);
+    } else if (agentsMulti) {
+      const names = agentsMulti.split('|').filter(Boolean);
+      if (names.length) {
+        setSmartFilters(prev => prev.some(f => f.field === 'assigned_to_name')
+          ? prev
+          : [...prev, { field: 'assigned_to_name', operator: 'in', value: names }]);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mount-only: ?action=add|import|export (from the CRM dashboard's header
+  // buttons) opens the matching action here — Add/Import open instantly, Export
+  // is deferred until the list has loaded (handled by the effect lower down).
+  const pendingExportRef = useReactRef(false);
+  useEffect(() => {
+    const act = searchParams.get('action');
+    if (act === 'add') setShowAddModal(true);
+    else if (act === 'import') setShowImportModal(true);
+    else if (act === 'export') pendingExportRef.current = true;
+    // Quick-log deep link (from the CRM dashboard Work Queue): open the same
+    // quick-action popover the list uses, for the given contact id — so a rep
+    // can log a call/WhatsApp in one click without opening the full drawer.
+    const quicklogId = searchParams.get('quicklog');
+    if (quicklogId) {
+      (async () => {
+        try {
+          const { data } = await supabase.from('contacts').select('*').eq('id', quicklogId).maybeSingle();
+          if (data) { setQuickActionForm({ type: 'call', result: '', description: '', followupDate: '' }); setQuickActionTarget(data); }
+        } catch { /* bad id — ignore */ }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Track whether highlight has been handled
   const highlightHandled = useReactRef(false);
 
@@ -345,17 +404,20 @@ export default function ContactsPage() {
     if (filterType !== 'all') params.set('type', filterType);
     if (filterTemp !== 'all') params.set('temp', filterTemp);
     if (filterStatus !== 'all') params.set('status', filterStatus);
-    if (filterStage !== 'all') params.set('stage', filterStage);
     if (filterActivity !== 'all') params.set('activity', filterActivity);
+    if (categoryFilter !== 'all') params.set('category', categoryFilter);
     if (dateFrom) params.set('from', dateFrom);
     if (dateTo) params.set('to', dateTo);
     if (showUnassigned) params.set('unassigned', 'true');
     if (sortBy !== 'created') params.set('sort', sortBy);
     if (page > 1) params.set('page', String(page));
     setSearchParams(params, { replace: true });
-  }, [search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showUnassigned, showBlacklisted, sortBy, page, setSearchParams, highlightId]);
+  }, [search, filterType, filterTemp, filterStatus, filterActivity, categoryFilter, dateFrom, dateTo, showUnassigned, showBlacklisted, sortBy, page, setSearchParams, highlightId]);
 
-  const { activityResults: configResults, contactsSettings } = useSystemConfig();
+  const { activityResults: configResults, contactsSettings, leadCategories: configLeadCategories, contactTypes: configContactTypes } = useSystemConfig();
+  // Editable lead-origin categories (admin can rename/recolor/add in System
+  // Config); fall back to the built-in defaults before the config loads.
+  const leadCategoryDefs = (configLeadCategories && configLeadCategories.length) ? configLeadCategories : LEAD_CATEGORIES;
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
   const INACTIVE_DAYS = contactsSettings?.inactiveDays || 5;
@@ -417,86 +479,91 @@ export default function ContactsPage() {
     if (configResults && Object.keys(configResults).length > 0) return configResults;
     return {
       call: [
-        { value: 'answered', label_ar: 'رد', label_en: 'Answered', color: '#10B981' },
-        { value: 'no_answer', label_ar: 'لم يرد', label_en: 'No Answer', color: '#F59E0B' },
-        { value: 'busy', label_ar: 'مشغول', label_en: 'Busy', color: '#EF4444' },
+        { value: 'answered', label_ar: 'رد', label_en: 'Answered', color: '#158A57' },
+        { value: 'no_answer', label_ar: 'لم يرد', label_en: 'No Answer', color: '#C9860A' },
+        { value: 'busy', label_ar: 'مشغول', label_en: 'Busy', color: '#D6403B' },
         { value: 'switched_off', label_ar: 'مغلق', label_en: 'Switched Off', color: '#6b7280' },
-        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#D6403B' },
       ],
       whatsapp: [
-        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
-        { value: 'seen', label_ar: 'شاف', label_en: 'Seen', color: '#3B82F6' },
-        { value: 'delivered', label_ar: 'وصلت', label_en: 'Delivered', color: '#F59E0B' },
-        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
+        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#158A57' },
+        { value: 'seen', label_ar: 'شاف', label_en: 'Seen', color: '#2F6BD3' },
+        { value: 'delivered', label_ar: 'وصلت', label_en: 'Delivered', color: '#C9860A' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#D6403B' },
       ],
       email: [
-        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
-        { value: 'sent', label_ar: 'تم الإرسال', label_en: 'Sent', color: '#F59E0B' },
-        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
+        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#158A57' },
+        { value: 'sent', label_ar: 'تم الإرسال', label_en: 'Sent', color: '#C9860A' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#D6403B' },
       ],
     };
   }, [configResults]);
 
   const handleQuickAction = async (contact) => {
     if (!quickActionForm.type) return;
+    const type = quickActionForm.type;
+    const result = quickActionForm.result;
+    const currentStatus = contact.contact_status || 'new';
+
+    // "Not interested" → defer to the disqualify modal (it captures the reason);
+    // don't log the interaction here.
+    if (result === 'not_interested' && currentStatus !== 'disqualified'
+        && currentStatus !== 'has_opportunity' && currentStatus !== 'following') {
+      setDisqualifyModal(contact);
+      setDqReason('not_interested');
+      setDqNote('');
+      setQuickActionTarget(null);
+      return;
+    }
+
     setSavingQuickAction(true);
-    const results = QUICK_RESULTS[quickActionForm.type] || [];
-    const resultObj = results.find(r => r.value === quickActionForm.result);
+    const results = QUICK_RESULTS[type] || [];
+    const resultObj = results.find(r => r.value === result);
     const resultLabel = resultObj ? (isRTL ? resultObj.label_ar : resultObj.label_en) : '';
     const desc = resultLabel ? `${resultLabel}${quickActionForm.description ? ' — ' + quickActionForm.description : ''}` : quickActionForm.description;
 
+    // Auto-derive status from the result (same rules as before).
+    let newStatus = null;
+    if (currentStatus !== 'disqualified') {
+      if (['no_answer', 'busy', 'switched_off'].includes(result)) newStatus = 'contacted';
+      else if (result === 'answered' || result === 'replied') newStatus = 'following';
+      else if (currentStatus === 'new' || !currentStatus) newStatus = 'following';
+    }
+
     try {
-      await createActivity({
-        type: quickActionForm.type,
+      // Unified path — same enforcement (mandatory follow-up), supersede, and
+      // status/timeline handling as the drawer + modals.
+      await logInteraction(contact.id, {
+        type,
+        result: result || null,
         description: desc || (isRTL ? 'إجراء سريع' : 'Quick action'),
-        contact_id: contact.id,
-        created_at: new Date().toISOString(),
-        user_id: profile?.id || null,
-        user_name_ar: profile?.full_name_ar || '',
-        user_name_en: profile?.full_name_en || '',
+        currentStatus,
+        statusChange: (newStatus && newStatus !== currentStatus) ? { from: currentStatus, to: newStatus } : null,
+        followUp: quickActionForm.followupDate
+          ? { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${contact.full_name}`, dueAt: quickActionForm.followupDate, contactName: contact.full_name, notes: quickActionForm.description || '' }
+          : null,
+        // "Not interested" is a closing outcome — no next step required (an
+        // engaged lead that didn't defer to the disqualify modal still shouldn't
+        // be forced into a follow-up here).
+        skipFollowUpEnforcement: result === 'not_interested',
+        actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
       });
-      // Auto-update contact_status based on action result (skip if disqualified)
-      const currentStatus = contact.contact_status || 'new';
-      const result = quickActionForm.result;
-      let newStatus = null;
-
-      if (currentStatus !== 'disqualified') {
-        if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'following') {
-          // Open disqualify modal instead of auto-setting
-          setDisqualifyModal(contact);
-          setDqReason('not_interested');
-          setDqNote('');
-        } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-          newStatus = 'contacted';
-        } else if (result === 'answered' || result === 'replied') {
-          newStatus = 'following';
-        } else if (currentStatus === 'new' || !currentStatus) {
-          newStatus = 'following';
-        }
-      }
-
-      if (newStatus && newStatus !== currentStatus) {
-        const updated = { ...contact, contact_status: newStatus };
-        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-        // Tell the user when this fails — silent failures here are how
-        // dozens of status changes were lost during the unhealthy DB period.
-        updateContact(updated.id, { contact_status: newStatus })
-          .catch(err => {
-            reportError('ContactsPage', 'optimistic status update', err);
-            toast.error(isRTL ? 'لم يتم حفظ تغيير الحالة — حاول تاني' : 'Status change not saved — please retry');
-            setContacts(prev => rollbackContact(prev, contact));
-          });
-      }
+      // Optimistic list patch for the status + last activity.
+      setContacts(prev => prev.map(c => c.id === contact.id
+        ? { ...c, last_activity_at: new Date().toISOString(), ...(newStatus && newStatus !== currentStatus ? { contact_status: newStatus } : {}) }
+        : c));
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+      setQuickActionTarget(null);
+      setQuickActionForm(f => ({ ...f, result: '', description: '', followupDate: '' }));
     } catch (err) {
-      // Old "saved locally" toast was a relic from offline-first; we don't
-      // actually persist locally after Phase 2, so the success toast lied
-      // when the DB write failed. Surface the real failure.
-      reportError('ContactsPage', 'handleQuickAction.saveActivity', err);
-      toast.error(translateErr(err));
+      if (err?.message === 'FOLLOWUP_REQUIRED') {
+        toast.warning(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else {
+        reportError('ContactsPage', 'handleQuickAction', err);
+        toast.error(translateErr(err));
+      }
     }
     setSavingQuickAction(false);
-    setQuickActionTarget(null);
   };
 
   useEffect(() => {
@@ -531,24 +598,24 @@ export default function ContactsPage() {
       return;
     }
     const contact = contacts.find(c => c.id === id);
-    // Check for linked data before confirming
-    let linkedOpps = 0, linkedTasks = 0, linkedActs = 0;
+    // Check for linked data before confirming (opportunities retired → deals).
+    let linkedDeals = 0, linkedTasks = 0, linkedActs = 0;
     try {
-      const [oppsRes, tasksRes, actsRes] = await Promise.all([
-        supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('contact_id', id),
+      const [dealsRes, tasksRes, actsRes] = await Promise.all([
+        supabase.from('deals').select('id', { count: 'exact', head: true }).eq('contact_id', id),
         supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('contact_id', id),
         supabase.from('activities').select('id', { count: 'exact', head: true }).eq('contact_id', id),
       ]);
-      linkedOpps = oppsRes.count || 0;
+      linkedDeals = dealsRes.count || 0;
       linkedTasks = tasksRes.count || 0;
       linkedActs = actsRes.count || 0;
     } catch (err) { if (import.meta.env.DEV) console.warn('count linked items:', err); }
 
-    const hasLinked = linkedOpps > 0 || linkedTasks > 0 || linkedActs > 0;
+    const hasLinked = linkedDeals > 0 || linkedTasks > 0 || linkedActs > 0;
     const warning = hasLinked
       ? (isRTL
-        ? `\n⚠️ تحذير: سيتم حذف ${linkedOpps} فرصة و ${linkedTasks} مهمة و ${linkedActs} نشاط مرتبطين — لا يمكن التراجع!`
-        : `\n⚠️ Warning: ${linkedOpps} opportunities, ${linkedTasks} tasks, and ${linkedActs} activities will also be deleted — this cannot be undone!`)
+        ? `\n⚠️ تحذير: سيتم حذف ${linkedDeals} صفقة و ${linkedTasks} مهمة و ${linkedActs} نشاط مرتبطين — لا يمكن التراجع!`
+        : `\n⚠️ Warning: ${linkedDeals} deals, ${linkedTasks} tasks, and ${linkedActs} activities will also be deleted — this cannot be undone!`)
       : '';
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
@@ -558,7 +625,7 @@ export default function ContactsPage() {
         try {
           await deleteContact(id);
           setContacts(prev => prev.filter(c => c.id !== id));
-          logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name} (${linkedOpps} opps, ${linkedTasks} tasks, ${linkedActs} activities)`, userName: profile?.full_name_ar });
+          logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name} (${linkedDeals} deals, ${linkedTasks} tasks, ${linkedActs} activities)`, userName: profile?.full_name_ar });
           // Undo toast — soft delete is reversible via restoreContact, so
           // give the user 8s to take it back. Same UX as bulk delete.
           toast.show({
@@ -659,7 +726,7 @@ export default function ContactsPage() {
         : `Could not resolve UUID for ${agentName} — please reopen the modal`);
       return;
     }
-    const assignedByName = profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—';
+    const assignedByName = profile?.full_name_en || profile?.full_name_ar || profile?.email || profile?.id || '—';
     const allSelected = await getAllSelectedContacts();
     const allSelectedById = new Map(allSelected.map(c => [c.id, c]));
     const names = allSelected.map(c => c.full_name).filter(Boolean).join(', ');
@@ -685,7 +752,7 @@ export default function ContactsPage() {
     if (reassignedContacts.length === 1) {
       notifyLeadReassigned({ contactName: reassignedContacts[0].full_name || reassignedContacts[0].phone || '—', contactId: reassignedContacts[0].id, newAgentId: agentId, newAgentName: agentName, assignedBy: assignedByName });
     } else if (reassignedContacts.length > 1) {
-      notifyLeadAssigned({ contactName: `${reassignedContacts.length} ليد جديد`, contactId: null, agentId, agentName, assignedBy: assignedByName });
+      notifyLeadAssigned({ contactName: isRTL ? `${reassignedContacts.length} ليد جديد` : `${reassignedContacts.length} new leads`, contactId: null, agentId, agentName, assignedBy: assignedByName });
     }
     // Opportunities reassignment is handled via Supabase in updateContact
     // Snapshot prior owners for the undo path so we can revert each row to
@@ -861,6 +928,31 @@ export default function ContactsPage() {
     if (succeeded.length > 0) {
       const succeededNames = succeeded.map(id => beforeSnapshot.get(id)?.full_name).filter(Boolean).join(', ');
       logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: succeeded.join(','), description: `Bulk changed ${field} to "${value}" for ${succeeded.length} contacts: ${succeededNames || names}`, newValue: value, userName: profile?.full_name_ar });
+      // Mirror status/temperature changes into each lead's timeline. The bulk
+      // audit action isn't surfaced there (not whitelisted, and non-admins can't
+      // read audits), so without this a bulk status/temp change was invisible on
+      // the lead — same gap as the single-lead disqualify path. Only the two
+      // "signal" fields; Type/Source/Dept/Campaign stay as edits (audit only).
+      if (field === 'contact_status' || field === 'temperature') {
+        const STATUS_EN = { new: 'New', contacted: 'Contacted', following: 'Following', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+        const TEMP_EN = { hot: 'Hot', warm: 'Warm', cool: 'Cool', cold: 'Cold' };
+        succeeded.forEach(id => {
+          const oldV = beforeSnapshot.get(id)?.[field];
+          const notes = field === 'contact_status'
+            ? `${STATUS_EN[oldV] || oldV || '—'} → ${STATUS_EN[value] || value}`
+            : `Temperature: ${TEMP_EN[oldV] || oldV || '—'} → ${TEMP_EN[value] || value}`;
+          createActivity({
+            type: field === 'contact_status' ? 'status_change' : 'temperature_change',
+            notes,
+            contact_id: id,
+            user_id: profile?.id || null,
+            user_name_ar: profile?.full_name_ar || '',
+            user_name_en: profile?.full_name_en || '',
+            dept: 'sales',
+            created_at: new Date().toISOString(),
+          }).catch(() => {});
+        });
+      }
       // No `for_user_id:'all'` broadcast here — a routine operator action
       // (changing Type/Source/Status on a batch) shouldn't ping every user in
       // the org. The audit trail above already records who did what.
@@ -939,6 +1031,7 @@ export default function ContactsPage() {
 
   // Bulk action dropdown options
   const BULK_TYPE_OPTIONS = Object.entries(TYPE).map(([k, v]) => ({ value: k, label: isRTL ? v.label : v.labelEn }));
+  const BULK_CATEGORY_OPTIONS = leadCategoryDefs.map(c => ({ value: c.key, label: isRTL ? c.label_ar : c.label_en, color: c.color }));
   const BULK_SOURCE_OPTIONS = Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: isRTL ? v : (SOURCE_EN[k] || v) }));
   const BULK_DEPT_OPTIONS = [
     { value: 'sales', label: isRTL ? 'المبيعات' : 'Sales' },
@@ -972,18 +1065,67 @@ export default function ContactsPage() {
   // __overdue_tasks / __today_followup filters, so each chip count equals the
   // list you get when you click it.
   const [followupCounts, setFollowupCounts] = useState({ overdue: 0, today: 0, upcoming: 0 });
+  // Lead ORIGIN category filter (fresh / rotation / distributed / cold_calls)
+  // and its per-category counts. Counts come from the get_lead_category_counts
+  // RPC (RLS-scoped, so the chip number matches what this user sees).
+  const [categoryCounts, setCategoryCounts] = useState({ fresh: 0, rotation: 0, distributed: 0, cold_calls: 0, total: 0 });
   const [showOverdueTasks, setShowOverdueTasks] = useState(false);
   const [overdueContactIds, setOverdueContactIds] = useState(null);
   const [showTodayFollowups, setShowTodayFollowups] = useState(false);
   const [todayFollowupIds, setTodayFollowupIds] = useState(null);
   const [showUpcomingFollowups, setShowUpcomingFollowups] = useState(false);
   const [upcomingContactIds, setUpcomingContactIds] = useState(null);
-  const [showNoOpps, setShowNoOpps] = useState(false);
-  const [noOppsIds, setNoOppsIds] = useState(null);
   const [showSingleAgent, setShowSingleAgent] = useState(false);
   const [singleAgentIds, setSingleAgentIds] = useState(null);
 
   const globalFilter = useGlobalFilter();
+
+  // The Leads list previously honoured only the Global Filter's department +
+  // agent — a selected TEAM or MANAGER did nothing. Resolve the selected
+  // team/manager into the set of member agent names so the list actually
+  // scopes to them. `['__none__']` = active-but-empty → shows nothing (never
+  // falls open to everyone).
+  const [gfScopeNames, setGfScopeNames] = useState(null); // member names → scopes the LIST (team/manager)
+  const [gfScopeIds, setGfScopeIds] = useState(null);     // member uuids → scopes the COUNT chips (agent/team/manager)
+  useEffect(() => {
+    let cancelled = false;
+    const NONE = '00000000-0000-0000-0000-000000000000';
+    (async () => {
+      const agentName = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
+      const teamId = globalFilter?.teamId && globalFilter.teamId !== 'all' ? globalFilter.teamId : null;
+      const managerId = globalFilter?.managerId && globalFilter.managerId !== 'all' ? globalFilter.managerId : null;
+      if (!agentName && !teamId && !managerId) { if (!cancelled) { setGfScopeNames(null); setGfScopeIds(null); } return; }
+      try {
+        // A specific agent: the list already filters by the name; the chips need the id.
+        if (agentName) {
+          const q = `"${agentName.replace(/"/g, '')}"`;
+          const { data } = await supabase.from('users').select('id').or(`full_name_en.eq.${q},full_name_ar.eq.${q}`).limit(1).maybeSingle();
+          if (!cancelled) { setGfScopeNames(null); setGfScopeIds([data?.id || NONE]); }
+          return;
+        }
+        // Team or manager → resolve the member set (ids for chips, names for the list).
+        let teamIds = [];
+        if (teamId) {
+          const { data: kids } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+          teamIds = [teamId, ...(kids || []).map(d => d.id)];
+        } else {
+          const { data: mgr } = await supabase.from('users').select('team_id').eq('id', managerId).maybeSingle();
+          if (mgr?.team_id) {
+            const { data: kids } = await supabase.from('departments').select('id').eq('parent_id', mgr.team_id);
+            const childIds = (kids || []).map(d => d.id);
+            const { data: gk } = childIds.length ? await supabase.from('departments').select('id').in('parent_id', childIds) : { data: [] };
+            teamIds = [mgr.team_id, ...childIds, ...(gk || []).map(d => d.id)];
+          }
+        }
+        if (!teamIds.length) { if (!cancelled) { setGfScopeNames(['__none__']); setGfScopeIds([NONE]); } return; }
+        const { data: members } = await supabase.from('users').select('id, full_name_en, full_name_ar').in('team_id', teamIds);
+        const names = (members || []).flatMap(u => [u.full_name_en, u.full_name_ar].filter(Boolean));
+        const ids = (members || []).map(u => u.id);
+        if (!cancelled) { setGfScopeNames(names.length ? names : ['__none__']); setGfScopeIds(ids.length ? ids : [NONE]); }
+      } catch { if (!cancelled) { setGfScopeNames(null); setGfScopeIds(null); } }
+    })();
+    return () => { cancelled = true; };
+  }, [globalFilter?.teamId, globalFilter?.managerId, globalFilter?.agentName]);
 
   // Fetch the contact IDs for a follow-up bucket via the same RPC the counts
   // use, so the filtered list always matches the chip number. Buckets are
@@ -1014,87 +1156,6 @@ export default function ContactsPage() {
     fetchFollowupBucket('upcoming').then(setUpcomingContactIds).catch(() => setUpcomingContactIds([]));
   }, [showUpcomingFollowups, fetchFollowupBucket]);
 
-  // Stage sub-filter: when the user filters by has_opportunity, fetch
-  // (1) per-stage counts to render numbers on the stage chips, and
-  // (2) the contact_ids that have an opp in the selected stage so the
-  //     query can narrow the visible list.
-  useEffect(() => {
-    if (filterStatus !== 'has_opportunity') {
-      // Outside has_opportunity, clear stage filter + counts.
-      if (filterStage !== 'all') setFilterStage('all');
-      setStageContactIds(null);
-      setStageCounts({});
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        // Counts per stage (group on the client).
-        // Scope to the same dept/agent/role the contacts query uses so
-        // chip counts and table totals always agree. Without these
-        // filters the "Proposal 12" chip could be 12 opps across every
-        // dept, while the table filtered to sales+Ahmed would show 8 —
-        // the user clicked a number that didn't match what they got.
-        const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
-        const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
-        // Page through ALL matching opportunities. A plain .select() silently
-        // caps at 1000 rows, so on tenants with >1000 opps the stage-chip
-        // counts were wrong and stage filtering missed contacts (C-5).
-        const rows = [];
-        const CHUNK = 1000;
-        for (let offset = 0; ; offset += CHUNK) {
-          let query = supabase
-            .from('opportunities')
-            .select('contact_id, stage')
-            .not('contact_id', 'is', null);
-          if (deptFilter) query = query.eq('department', deptFilter);
-          if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
-          if (profile?.role === 'sales_agent' && profile?.id) query = query.eq('assigned_to', profile.id);
-          const { data, error } = await query.range(offset, offset + CHUNK - 1);
-          if (error) throw error;
-          if (cancelled) return;
-          if (!data?.length) break;
-          rows.push(...data);
-          if (data.length < CHUNK) break;
-        }
-        const counts = {};
-        const idsByStage = {};
-        (rows || []).forEach(r => {
-          if (!r.stage) return;
-          counts[r.stage] = (counts[r.stage] || 0) + 1;
-          (idsByStage[r.stage] = idsByStage[r.stage] || new Set()).add(r.contact_id);
-        });
-        setStageCounts(counts);
-        if (filterStage === 'all') {
-          setStageContactIds(null);
-        } else {
-          const ids = idsByStage[filterStage] ? [...idsByStage[filterStage]] : [];
-          // Use a never-matching UUID as the empty sentinel — passing
-          // a non-UUID like 'none' to .in('id', ...) makes PostgREST
-          // return 400 (contacts.id is uuid-typed).
-          setStageContactIds(ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
-        }
-      } catch {
-        setStageContactIds(null);
-        setStageCounts({});
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [filterStatus, filterStage, globalFilter?.department, globalFilter?.agentName, profile?.role, profile?.id]);
-
-  // Fetch contact IDs that HAVE opportunities (to exclude them)
-  useEffect(() => {
-    if (!showNoOpps) { setNoOppsIds(null); return; }
-    (async () => {
-      try {
-        const { data: withOpps } = await supabase.from('opportunities').select('contact_id').not('contact_id', 'is', null);
-        const ids = [...new Set((withOpps || []).map(o => o.contact_id).filter(Boolean))];
-        // Store as EXCLUDE list (contacts WITH opps) - will be handled in service
-        setNoOppsIds(ids.length ? ids : ['none']);
-      } catch { setNoOppsIds([]); }
-    })();
-  }, [showNoOpps]);
-
   // "No activity by [agent or anyone]" filter — fetches contact IDs that
   // already have an activity (matching the agent if specified) so we can
   // exclude them from the visible list.
@@ -1102,21 +1163,37 @@ export default function ContactsPage() {
   const [noActivityExcludeIds, setNoActivityExcludeIds] = useState(null);
   useEffect(() => {
     if (!noActivityFilter?.value) { setNoActivityExcludeIds(null); return; }
+    // "No activity by ANYONE" is a clean server-side column filter
+    // (last_activity_at IS NULL, applied in fetchContacts) — no need to fetch
+    // and exclude every activity contact-id. The old exclude path also hit a
+    // 500-id cap in fetchContacts, so on a real dataset (>500 contacts have
+    // activity) it returned leads that DO have activity. Skip it entirely here.
+    if (noActivityFilter.value === '__anyone') { setNoActivityExcludeIds(null); return; }
     let cancelled = false;
     (async () => {
       try {
-        let q = supabase.from('activities').select('contact_id').not('contact_id', 'is', null);
-        if (noActivityFilter.value !== '__anyone') {
-          // Strip the PostgREST OR delimiters from the agent name before
-          // interpolating — a name containing a comma/paren would otherwise
-          // break the .or() tokenizer and widen the match unexpectedly.
-          const safe = String(noActivityFilter.value).replace(/[,()]/g, '');
-          q = q.or(`user_name_en.eq.${safe},user_name_ar.eq.${safe}`);
+        // Page through ALL matching activities (was capped at 10k via range(0,9999),
+        // so on the ~200k activity log the exclude list was wildly incomplete and
+        // the "no activity" filter surfaced leads that DO have activity).
+        const safe = noActivityFilter.value !== '__anyone'
+          ? String(noActivityFilter.value).replace(/[,()]/g, '')
+          : null;
+        const idSet = new Set();
+        const CHUNK = 1000;
+        for (let offset = 0; ; offset += CHUNK) {
+          let q = supabase.from('activities').select('contact_id').not('contact_id', 'is', null);
+          // Strip the PostgREST OR delimiters from the agent name so a name with
+          // a comma/paren can't break the .or() tokenizer and widen the match.
+          if (safe) q = q.or(`user_name_en.eq.${safe},user_name_ar.eq.${safe}`);
+          const { data, error } = await q.range(offset, offset + CHUNK - 1);
+          if (error) throw error;
+          if (cancelled) return;
+          if (!data?.length) break;
+          data.forEach(r => { if (r.contact_id) idSet.add(r.contact_id); });
+          if (data.length < CHUNK) break;
         }
-        const { data } = await q.range(0, 9999);
         if (cancelled) return;
-        const ids = [...new Set((data || []).map(r => r.contact_id).filter(Boolean))];
-        setNoActivityExcludeIds(ids.length ? ids : ['none']);
+        setNoActivityExcludeIds(idSet.size ? [...idSet] : ['none']);
       } catch {
         if (!cancelled) setNoActivityExcludeIds([]);
       }
@@ -1180,6 +1257,10 @@ export default function ContactsPage() {
       const { data, error } = await supabase.rpc('get_followup_counts', {
         p_today_start: todayStart,
         p_tomorrow_start: tomorrowStart,
+        // So picking a lead-origin chip narrows Overdue / Today / Upcoming too.
+        p_lead_category: categoryFilter !== 'all' ? categoryFilter : null,
+        // Scope to the Global Filter's agent/team/manager so the chips match the list.
+        p_agent_ids: gfScopeIds || undefined,
       });
       if (error) throw error;
       setFollowupCounts({
@@ -1188,31 +1269,64 @@ export default function ContactsPage() {
         upcoming: Number(data?.upcoming) || 0,
       });
     } catch (err) { if (import.meta.env.DEV) console.warn('followup counts:', err); }
-  }, [profile?.role, profile?.id]);
+  }, [profile?.role, profile?.id, categoryFilter, gfScopeIds]);
+
+  // Per-category counts for the lead-category chips. RLS-scoped (sales_agent =
+  // own, manager = team, admin = all) so each chip number matches the list the
+  // user gets when they click it. Refreshed on every list load.
+  const loadCategoryCounts = useCallback(async () => {
+    if (!profile) return;
+    try {
+      // Honour the Global Filter (department / agent) so the chip counts match
+      // the filtered list — exactly like loadStats does for the status chips.
+      // RLS already scopes a sales_agent to their own leads.
+      const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
+      const agentNameFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
+      const { data, error } = await supabase.rpc('get_lead_category_counts', {
+        p_dept: deptFilter,
+        p_agent_name: agentNameFilter,
+        // So picking a status/temperature chip narrows the category counts too.
+        p_status: filterStatus !== 'all' ? filterStatus : null,
+        p_temperature: filterTemp !== 'all' ? filterTemp : null,
+        // Scope to the Global Filter's team/manager (agent handled by p_agent_name).
+        p_agent_ids: gfScopeIds || undefined,
+      });
+      if (error) throw error;
+      // Store the raw object so ANY category key (incl. ones added in System
+      // Config) is available — the RPC groups dynamically, no fixed key list.
+      setCategoryCounts(data && typeof data === 'object' ? data : {});
+    } catch (err) { if (import.meta.env.DEV) console.warn('category counts:', err); }
+  }, [profile?.role, profile?.id, globalFilter?.department, globalFilter?.agentName, filterStatus, filterTemp, gfScopeIds]);
 
   // Load contacts with server-side pagination
   const hasLoadedOnce = useReactRef(false);
+  // Monotonic load id — guards against out-of-order responses. Rapid filter
+  // toggles fire several fetches; a slower earlier one can resolve AFTER the
+  // latest and overwrite the list with stale rows (e.g. click Fresh→Rotation
+  // fast and land on Fresh's data). We only apply the result of the newest call.
+  const loadSeqRef = useReactRef(0);
   const [searching, setSearching] = useState(false);
-  const loadContactsData = useCallback(async (pg) => {
-    // First load: full skeleton. Subsequent: subtle indicator only
-    if (!hasLoadedOnce.current) setLoading(true); else setSearching(true);
+  const loadContactsData = useCallback(async (pg, opts = {}) => {
+    // Export mode doesn't own the list — don't bump the load sequence (it would
+    // invalidate a concurrent normal load) and don't touch the loading UI.
+    const seq = opts.exportAll ? loadSeqRef.current : ++loadSeqRef.current;
+    // First load: full skeleton. Subsequent: subtle indicator only.
+    // Export mode reuses this to loop ALL pages — don't touch the list UI.
+    if (!opts.exportAll) { if (!hasLoadedOnce.current) setLoading(true); else setSearching(true); }
     try {
       const currentPage = pg || page || 1;
       // Handle special quick filter values
       const isTodayFollowup = smartFilters.some(f => f.value === '__today_followup');
       const isOverdueTasks = smartFilters.some(f => f.value === '__overdue_tasks');
       const isUpcomingFollowup = smartFilters.some(f => f.value === '__upcoming_followup');
-      const isNoOpps = smartFilters.some(f => f.value === '__no_opps');
       const isSingleAgent = smartFilters.some(f => f.value === '__single_agent');
       if (isTodayFollowup && !showTodayFollowups) setShowTodayFollowups(true);
       if (isOverdueTasks && !showOverdueTasks) setShowOverdueTasks(true);
       if (isUpcomingFollowup && !showUpcomingFollowups) setShowUpcomingFollowups(true);
-      if (isNoOpps && !showNoOpps) setShowNoOpps(true);
       if (isSingleAgent && !showSingleAgent) setShowSingleAgent(true);
       if (!isTodayFollowup && showTodayFollowups) { setShowTodayFollowups(false); setTodayFollowupIds(null); }
       if (!isOverdueTasks && showOverdueTasks) { setShowOverdueTasks(false); setOverdueContactIds(null); }
       if (!isUpcomingFollowup && showUpcomingFollowups) { setShowUpcomingFollowups(false); setUpcomingContactIds(null); }
-      if (!isNoOpps && showNoOpps) { setShowNoOpps(false); setNoOppsIds(null); }
       if (!isSingleAgent && showSingleAgent) { setShowSingleAgent(false); setSingleAgentIds(null); }
 
       // If a task-based follow-up filter is active but its contact-id list
@@ -1224,7 +1338,6 @@ export default function ContactsPage() {
         (isOverdueTasks && overdueContactIds == null) ||
         (isTodayFollowup && todayFollowupIds == null) ||
         (isUpcomingFollowup && upcomingContactIds == null) ||
-        (isNoOpps && noOppsIds == null) ||
         (isSingleAgent && singleAgentIds == null);
       if (followupIdsPending) { setLoading(false); setSearching(false); return; }
 
@@ -1251,13 +1364,31 @@ export default function ContactsPage() {
       const phoneFilter = smartFilters.find(f => f.field === 'phone' && f.value);
       const createdFilter = smartFilters.find(f => f.field === 'created_at' && f.value);
       const campaignFilter = smartFilters.find(f => f.field === 'campaign_name' && f.value);
-      const result = await fetchContacts({
-        role: profile?.role,
-        userId: profile?.id,
-        teamId: profile?.team_id,
-        filters: {
+      // Column-backed smart filters that used to be CLIENT-ONLY (so they only
+      // filtered the loaded page and the total count ignored them). Route them
+      // to the generic server applier in fetchContacts. contact_type is skipped
+      // here when the built-in Type dropdown is set (that already covers it).
+      const COLUMN_SMART = {
+        prefix:           { column: 'prefix',           kind: 'select' },
+        contact_type:     { column: 'contact_type',     kind: 'select' },
+        assigned_by_name: { column: 'assigned_by_name', kind: 'select' },
+        created_by_name:  { column: 'created_by_name',  kind: 'select' },
+        assigned_at:      { column: 'assigned_at',      kind: 'date'   },
+        last_activity_at: { column: 'last_activity_at', kind: 'date'   },
+        my_score:         { column: 'lead_score',       kind: 'number' },
+      };
+      const NO_VALUE_DATE_OPS = ['last_7', 'last_30', 'this_month', 'this_week'];
+      const columnFilters = smartFilters
+        .filter(f => COLUMN_SMART[f.field] && ((f.value != null && f.value !== '') || NO_VALUE_DATE_OPS.includes(f.operator)))
+        .filter(f => !(f.field === 'contact_type' && filterType !== 'all'))
+        .map(f => ({ ...COLUMN_SMART[f.field], operator: f.operator, value: f.value }));
+      const countrySmartFilter = smartFilters.find(f => f.field === '_country' && f.value);
+      const fetchFilters = {
+          columnFilters: columnFilters.length ? columnFilters : undefined,
+          country: countrySmartFilter?.value || undefined,
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
+          lead_category: categoryFilter !== 'all' ? categoryFilter : undefined,
           temperature: myTempFilter?.value || (filterTemp !== 'all' ? filterTemp : undefined),
           agentNameForTemp: myTempFilter
             ? myName  // my_temperature smart filter — always against current user's slot
@@ -1271,7 +1402,7 @@ export default function ContactsPage() {
           showBlacklisted: showBlacklisted || undefined,
           unassigned: showUnassigned || undefined,
           department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
-          assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+          assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : (gfScopeNames || undefined)),
           assigned_to_name_op: agentSmartFilter?.operator,
           assigned_to_name_not: (agentSmartFilter?.operator === 'is_not' || agentSmartFilter?.operator === 'not_in') ? true : undefined,
           source: sourceSmartFilter?.value || undefined,
@@ -1283,14 +1414,18 @@ export default function ContactsPage() {
           smartPhone: phoneFilter?.value || undefined,
           smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
           smartCampaign: campaignFilter?.value || undefined,
-          // When an overdue/today follow-up filter is active but resolved to an
-          // empty set, send a never-matching sentinel so the list shows NOTHING
-          // (not everything). fetchContacts treats an empty array as "no filter".
-          contactIds: stageContactIds
-            || (isOverdueTasks ? (overdueContactIds?.length ? overdueContactIds : ['00000000-0000-0000-0000-000000000000']) : null)
-            || (isTodayFollowup ? (todayFollowupIds?.length ? todayFollowupIds : ['00000000-0000-0000-0000-000000000000']) : null)
-            || (isUpcomingFollowup ? (upcomingContactIds?.length ? upcomingContactIds : ['00000000-0000-0000-0000-000000000000']) : null)
-            || undefined,
+          // Follow-up buckets are filtered SERVER-SIDE by the next_follow_up_at
+          // column (see followupBucket) — not by a fetched id list. The old
+          // id-list path capped at 300 in fetchContacts and silently undercounted
+          // large scopes (e.g. a team's dashboard showed 335 overdue but the
+          // list showed 175). The column range is uncapped and matches
+          // get_followup_counts exactly.
+          contactIds: undefined,
+          followupBucket: isOverdueTasks ? 'overdue' : isTodayFollowup ? 'today' : isUpcomingFollowup ? 'upcoming' : undefined,
+          followupBounds: (isOverdueTasks || isTodayFollowup || isUpcomingFollowup) ? followupDayBounds() : undefined,
+          // Has-a-meeting filter (server-side inner-join embed on activities).
+          meetingBucket: smartFilters.find(f => f.field === '_meeting')?.value || undefined,
+          // Admin opp-stage filter — server-side inner-join (no 300-id cap).
           // Union every active exclude source instead of falling through with
           // `||` — the old chain silently dropped every list past the first
           // non-null one, so toggling "no activity by X" + "no opps" applied
@@ -1299,13 +1434,20 @@ export default function ContactsPage() {
           excludeContactIds: (() => {
             const sources = [
               noActivityExcludeIds,
-              showNoOpps ? noOppsIds : null,
               showSingleAgent ? singleAgentIds : null,
             ].filter(arr => Array.isArray(arr) && arr.length > 0);
             if (sources.length === 0) return undefined;
             if (sources.length === 1) return sources[0];
             return Array.from(new Set(sources.flat()));
           })(),
+          // "No activity by anyone" → server-side last_activity_at IS NULL
+          // (uncapped, exact), instead of the capped exclude-id list.
+          noActivityAnyone: smartFilters.some(f => f.field === '_no_activity_by' && f.value === '__anyone') || undefined,
+          // Phase 0: the default "all" view is the ACTIVE pipeline — exclude
+          // disqualified. Only kicks in when no status filter is applied; picking
+          // a status (incl. "Archive" → disqualified) or a status smart-filter
+          // turns it off so those views work unchanged.
+          excludeDisqualified: (filterStatus === 'all' && !myStatusFilter && !statusFilter) ? true : undefined,
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
           contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
@@ -1325,12 +1467,33 @@ export default function ContactsPage() {
           teamMemberNames: (filterStatus !== 'all' || filterTemp !== 'all') && !globalFilter?.agentName
             ? allAgentNames || undefined
             : undefined,
-          dateFrom: dateFrom || undefined,
-          dateTo: dateTo || undefined,
+          // Combine the page's own date filter with the Global Filter's period
+          // (both narrow created_at) — take the most restrictive window: the
+          // latest start and the earliest end.
+          dateFrom: [dateFrom, globalFilter?.dateRange?.start?.slice(0, 10)].filter(Boolean).sort().pop() || undefined,
+          dateTo: [dateTo, globalFilter?.dateRange?.end?.slice(0, 10)].filter(Boolean).sort().shift() || undefined,
           activityFilter: filterActivity !== 'all' ? filterActivity : undefined,
           activityActiveDays: ACTIVITY_ACTIVE_DAYS,
           activityModerateDays: ACTIVITY_MODERATE_DAYS,
-        },
+      };
+      // Export mode: loop ALL matching pages with the same filters and return
+      // the full set (the normal path is server-paginated to a single page, so
+      // exporting `filtered` only ever produced the current ~25 rows).
+      if (opts.exportAll) {
+        const all = [];
+        for (let p = 1; p <= 400; p++) {
+          const res = await fetchContacts({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, filters: fetchFilters, page: p, pageSize: 500, sortBy });
+          const rows = Array.isArray(res?.data) ? res.data : [];
+          all.push(...rows);
+          if (rows.length < 500) break;
+        }
+        return all;
+      }
+      const result = await fetchContacts({
+        role: profile?.role,
+        userId: profile?.id,
+        teamId: profile?.team_id,
+        filters: fetchFilters,
         page: currentPage,
         pageSize,
         sortBy,
@@ -1353,12 +1516,16 @@ export default function ContactsPage() {
           });
         } catch (err) { if (import.meta.env.DEV) console.warn('resolve team display name:', err); }
       }
+      // Drop this response if a newer load has started — prevents a stale
+      // earlier request from overwriting the current filter's rows.
+      if (seq !== loadSeqRef.current) return;
       // Show contacts immediately, then load feedback in background
       setContacts(list);
       setTotalContacts(result?.count || list.length);
       // Keep the follow-up chip tallies in sync with the list (after edits,
       // reassigns, status changes, page/filter changes).
       loadFollowupCounts();
+      loadCategoryCounts();
 
       // Background: fetch feedback (non-blocking).
       // Auto-demote of stale `following` → `contacted` was REMOVED per
@@ -1405,15 +1572,6 @@ export default function ContactsPage() {
         // contacts have multiple opps, the response could balloon to
         // thousands of rows just to compute integers. The RPC does the
         // GROUP BY in Postgres and returns one row per contact.
-        supabase.rpc('get_contact_opp_counts', { p_contact_ids: ids })
-          .then(({ data: counts }) => {
-            if (counts?.length) {
-              const countByContact = {};
-              counts.forEach(c => { countByContact[c.contact_id] = Number(c.opp_count) || 0; });
-              setContacts(prev => prev.map(c => ({ ...c, _opp_count: countByContact[c.id] || 0 })));
-            }
-          }).catch(err => { if (import.meta.env.DEV) console.warn('fetch opp counts:', err); });
-
         // Fetch the next pending follow-up per contact via aggregating RPC
         // (non-blocking) so each row shows a Next Action badge (overdue /
         // today / upcoming). RLS scopes the tasks to what the caller can see.
@@ -1428,13 +1586,17 @@ export default function ContactsPage() {
       }
     } catch (err) {
       reportError('ContactsPage', 'loadContactsData', err);
-      setContacts([]);
+      if (seq === loadSeqRef.current) setContacts([]);
     } finally {
-      setLoading(false);
-      setSearching(false);
+      // Only the newest load controls the loading indicator — a stale response
+      // finishing early must not clear the spinner while the latest is pending.
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+        setSearching(false);
+      }
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, upcomingContactIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds, loadFollowupCounts]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, categoryFilter, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, globalFilter?.dateRange, gfScopeNames, smartFilters, sortBy, overdueContactIds, todayFollowupIds, upcomingContactIds, singleAgentIds, noActivityExcludeIds, loadFollowupCounts, loadCategoryCounts]);
 
   // Debounce filter/page-driven refetches by 250ms so rapid chip toggles
   // (status → temperature → activity → date in quick succession) collapse
@@ -1548,6 +1710,10 @@ export default function ContactsPage() {
         p_agent_id: agentIdFilter,
         p_status: filterStatus !== 'all' ? filterStatus : null,
         p_temperature: filterTemp !== 'all' ? filterTemp : null,
+        // So picking a lead-origin chip narrows the status / temp / type counts.
+        p_lead_category: categoryFilter !== 'all' ? categoryFilter : null,
+        // Scope to the Global Filter's team/manager (agent handled by p_agent_id).
+        p_agent_ids: (profile?.role === 'sales_agent') ? undefined : (gfScopeIds || undefined),
       });
       if (error) throw error;
 
@@ -1566,7 +1732,7 @@ export default function ContactsPage() {
 
       setStats(counts);
     } catch (err) { reportError('ContactsPage', 'loadStats', err); }
-  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName, filterStatus, filterTemp]);
+  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName, filterStatus, filterTemp, categoryFilter, gfScopeIds]);
 
   // Same 250ms debounce as loadContactsData — without this, rapid
   // toggles of globalFilter.agentName fire one users-table lookup per
@@ -1579,23 +1745,21 @@ export default function ContactsPage() {
   }, [profile, loadStats]);
 
   // Clear selection when filters change
-  useEffect(() => { setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
+  useEffect(() => { setSelectedIds([]); }, [filterType, categoryFilter, search, showBlacklisted, sortBy, smartFilters, pageSize]);
 
   const selectedIdx = selected ? filtered.findIndex(c => c.id === selected.id) : -1;
   const handlePrev = selectedIdx > 0 ? () => {
     setSelected(filtered[selectedIdx - 1]);
-    setOpenWithAction(false);
     setPage(Math.floor((selectedIdx - 1) / pageSize) + 1);
   } : null;
   const handleNext = selectedIdx >= 0 && selectedIdx < filtered.length - 1 ? () => {
     setSelected(filtered[selectedIdx + 1]);
-    setOpenWithAction(false);
     setPage(Math.floor((selectedIdx + 1) / pageSize) + 1);
   } : null;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const [allPagesSelected, setAllPagesSelected] = useState(false);
-  useEffect(() => { setAllPagesSelected(false); }, [filterType, smartFilters, showBlacklisted, search, sortBy]);
+  useEffect(() => { setAllPagesSelected(false); }, [filterType, categoryFilter, smartFilters, showBlacklisted, search, sortBy]);
   const toggleSelectAll = () => {
     const pageIds = paged.map(c => c.id);
     const allSelected = pageIds.every(id => selectedIdSet.has(id));
@@ -1621,12 +1785,13 @@ export default function ContactsPage() {
     // through and selects each page.
     const hasComplexFilter = (
       smartFilters.length > 0
-      || (stageContactIds && stageContactIds.length > 0)
       || (overdueContactIds && overdueContactIds.length > 0)
       || (todayFollowupIds && todayFollowupIds.length > 0)
-      || (noOppsIds && noOppsIds.length > 0)
       || (singleAgentIds && singleAgentIds.length > 0)
       || (noActivityExcludeIds && noActivityExcludeIds.length > 0)
+      // Activity filter is computed server-side and can't be replicated in the
+      // all-pages query below — refuse rather than select a superset.
+      || (filterActivity && filterActivity !== 'all')
     );
     if (hasComplexFilter) {
       toast.warning(isRTL
@@ -1650,6 +1815,12 @@ export default function ContactsPage() {
       if (filterType !== 'all') query = query.eq('contact_type', filterType);
       if (filterTemp !== 'all') query = query.eq('temperature', filterTemp);
       if (filterStatus !== 'all') query = query.eq('contact_status', filterStatus);
+      // Match the visible list: lead-category chip + created_at date range were
+      // previously ignored here, so Select-all-pages selected a SUPERSET that a
+      // bulk delete/DQ could nuke.
+      if (categoryFilter !== 'all') query = query.eq('lead_category', categoryFilter);
+      if (dateFrom) query = query.gte('created_at', dateFrom);
+      if (dateTo) query = query.lte('created_at', dateTo + 'T23:59:59');
       if (showBlacklisted) query = query.eq('is_blacklisted', true);
       else query = query.eq('is_blacklisted', false);
       // Always exclude deleted from bulk selection — can't operate on deleted records
@@ -1690,6 +1861,47 @@ export default function ContactsPage() {
     exportCSVList(list);
     logAction({ action: 'export', entity: 'contact', description: `Exported ${list.length} contacts`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
   };
+
+  // Export ALL matching contacts (every page), not just the current one. Loops
+  // the server query with the active filters. Falls back to the current page
+  // only if the full fetch returns nothing (network etc.).
+  const [exporting, setExporting] = useState(false);
+  const handleExportAll = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    toast.info(isRTL ? 'جاري تجهيز التصدير…' : 'Preparing export…');
+    try {
+      const all = await loadContactsData(1, { exportAll: true });
+      const rows = Array.isArray(all) && all.length ? all : filtered;
+      exportCSV(rows);
+      toast.success(isRTL ? `تم تصدير ${rows.length} عميل` : `Exported ${rows.length} leads`);
+    } catch (err) {
+      reportError('ContactsPage', 'handleExportAll', err);
+      exportCSV(filtered);
+    } finally {
+      setExporting(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exporting, isRTL, filtered]);
+
+  // Fire the deferred export (from a ?action=export deep-link) once the list
+  // has finished its first load — exports ALL matching contacts.
+  useEffect(() => {
+    if (pendingExportRef.current && !loading && hasLoadedOnce.current) {
+      pendingExportRef.current = false;
+      handleExportAll();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  // Surface this page's actions in the top Header (replaces the old filter bar).
+  usePageActions([
+    { id: 'add-lead', icon: Plus, labelAr: 'إضافة عميل', labelEn: 'Add Lead', primary: true, onClick: () => setShowAddModal(true) },
+    { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', hidden: !perms.canImportContacts, onClick: () => setShowImportModal(true) },
+    { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', hidden: !perms.canExportContacts, onClick: handleExportAll },
+    { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
+    { id: 'refresh', icon: RefreshCw, labelAr: 'تحديث', labelEn: 'Refresh', onClick: () => loadContactsData() },
+  ], [isRTL, perms.canImportContacts, perms.canExportContacts, filtered, handleExportAll]);
 
   const handleSave = async (form) => {
     const matchedCampaign = form.campaign_name ? campaignsList.find(c => c.name_en?.toLowerCase() === form.campaign_name.toLowerCase() || c.name_ar?.toLowerCase() === form.campaign_name.toLowerCase()) : null;
@@ -1737,7 +1949,7 @@ export default function ContactsPage() {
           contactId: saved.id,
           agentId: recipientId,
           agentName: recipientName,
-          assignedBy: profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—',
+          assignedBy: profile?.full_name_en || profile?.full_name_ar || profile?.email || profile?.id || '—',
         });
       }
     } catch (err) {
@@ -1778,7 +1990,7 @@ export default function ContactsPage() {
         )}
       </div>
     )}
-    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -1788,32 +2000,17 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {perms.canExportContacts && (
-            <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-              <Download size={14} /> <span className="hidden sm:inline">{isRTL ? 'تصدير' : 'Export'}</span>
-            </button>
-          )}
-          {perms.canImportContacts && (
-            <button onClick={() => setShowImportModal(true)} aria-label={isRTL ? 'استيراد' : 'Import'}
-              className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-              <Upload size={14} /> <span className="hidden sm:inline">{isRTL ? 'استيراد' : 'Import'}</span>
-            </button>
-          )}
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus size={14} /> {isRTL ? 'إضافة عميل' : 'Add Lead'}
-          </Button>
-        </div>
       </div>
 
       {/* Follow-up chips — top of the page. Overdue / Today / Upcoming with live,
           server-side distinct-contact counts; each its own colour. Toggle to
           filter the list (one bucket at a time). */}
       <div className="flex gap-2 mb-4 flex-wrap items-center">
+        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'المتابعة' : 'Follow-up'}</span>
         {[
-          { key: 'overdue',  label: isRTL ? 'متأخرة' : 'Overdue',  count: followupCounts.overdue,  color: '#EF4444' },
-          { key: 'today',    label: isRTL ? 'النهاردة' : 'Today',   count: followupCounts.today,    color: '#F59E0B' },
-          { key: 'upcoming', label: isRTL ? 'قادمة' : 'Upcoming',   count: followupCounts.upcoming, color: '#3B82F6' },
+          { key: 'overdue',  label: isRTL ? 'متأخرة' : 'Overdue',  count: followupCounts.overdue,  color: '#D6403B' },
+          { key: 'today',    label: isRTL ? 'النهاردة' : 'Today',   count: followupCounts.today,    color: '#C9860A' },
+          { key: 'upcoming', label: isRTL ? 'قادمة' : 'Upcoming',   count: followupCounts.upcoming, color: '#2F6BD3' },
         ].map(c => {
           const active = followupFilterValue === c.key;
           return (
@@ -1828,50 +2025,42 @@ export default function ContactsPage() {
         })}
       </div>
 
-      {/* Type Filter — dropdown style */}
-      {(() => {
-        const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
-        const types = deptView.contactTypes || LEAD_TYPES;
-        const activeType = types.find(k => k === filterType);
-        const activeLabel = activeType && TYPE[activeType] ? (isRTL ? TYPE[activeType].label : TYPE[activeType].labelEn) : (isRTL ? 'كل الأنواع' : 'All Types');
-        return (
-          <div className="flex gap-2 flex-wrap mb-3">
-            {/* Type dropdown */}
-            <div className="relative inline-block">
-              <select value={filterType} onChange={e => setFilterType(e.target.value)}
-                className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
-                style={activeType ? { borderColor: TYPE[activeType]?.color, color: TYPE[activeType]?.color } : undefined}>
-                <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-                {types.filter(k => TYPE[k]).map(k => (
-                  <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>
-                ))}
-              </select>
-              <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
-            </div>
-            {/* Activity dropdown */}
-            <div className="relative inline-block">
-              <select value={filterActivity} onChange={e => setFilterActivity(e.target.value)}
-                className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
-                style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280', color: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280' } : undefined}>
-                {/* Shape suffix (●▲■✕) doubles as a colorblind-safe cue —
-                    relying on color alone fails for ~8% of male users. */}
-                <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
-                <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
-                <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
-                <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
-                <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
-              </select>
-              <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
-            </div>
-          </div>
-        );
-      })()}
+      {/* Lead ORIGIN chips — Fresh / Rotation / Distributed / Cold Calls. Lets a
+          sales agent tell a real fresh lead apart from a rotated / distributed
+          one at a glance. Counts are RLS-scoped (own / team / all), so the
+          number matches the list you get on click. Categories with a 0 count
+          stay hidden until they exist (keeps the row uncluttered). */}
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
+        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'التصنيف' : 'Category'}</span>
+        {[
+          { key: 'all', label: isRTL ? 'كل الأنواع' : 'All', count: categoryCounts.total || 0, color: '#2F6BD3' },
+          // Show every CONFIGURED category (incl. newly-added ones with a 0
+          // count) so an admin sees what they just added and can filter by it.
+          ...leadCategoryDefs
+            .map(c => ({ key: c.key, label: isRTL ? c.label_ar : c.label_en, count: categoryCounts[c.key] || 0, color: c.color })),
+        ].map(c => {
+          const active = categoryFilter === c.key;
+          return (
+            <button key={c.key} onClick={() => { setCategoryFilter(c.key); setPage(1); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              style={active ? { border: `1px solid ${c.color}`, background: `${c.color}15`, color: c.color } : undefined}>
+              <Tag size={11} /> {c.label}
+              <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Status Chips */}
-      <div className="flex gap-2 mb-3 flex-wrap">
+      <div className="flex gap-2 mb-3 flex-wrap items-center">
+        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'الحالة' : 'Status'}</span>
         {[
-          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...STATUS_DEFS.map(s => ({
+          // Phase 0: the main row is the ACTIVE pipeline only. "All" sums the
+          // active statuses (disqualified excluded); disqualified moves to the
+          // separate Archive button below.
+          { label: isRTL ? 'الكل' : 'All', value: 'all', count: STATUS_DEFS.filter(s => s.value !== 'disqualified').reduce((acc, s) => acc + (stats[s.value] || 0), 0), color: '#2F6BD3' },
+          ...STATUS_DEFS.filter(s => s.value !== 'disqualified').map(s => ({
             ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0,
           })),
         ].map(s => {
@@ -1886,64 +2075,17 @@ export default function ContactsPage() {
           </button>
           );
         })}
+        {/* Archive — disqualified leads live here, out of the active pipeline. */}
+        <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1 shrink-0" aria-hidden="true" />
+        <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}
+          className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterStatus === 'disqualified' ? 'border border-gray-500 bg-gray-500/[0.12] text-gray-600 dark:text-gray-300 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+          <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${filterStatus === 'disqualified' ? 'bg-gray-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{(stats.disqualified || 0).toLocaleString()}</span>
+        </button>
         {profile?.role !== 'sales_agent' && (
         <button onClick={() => setShowUnassigned(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
         </button>
         )}
-      </div>
-
-      {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
-      {filterStatus === 'has_opportunity' && (() => {
-        const stages = getDeptStages(globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : 'sales');
-        const totalInStages = stages.reduce((s, st) => s + (stageCounts[st.id] || 0), 0);
-        return (
-          <div className="flex gap-1.5 mb-3 flex-wrap items-center ps-3 border-s-2 border-emerald-500/30 dark:border-emerald-500/40">
-            <span className="text-[10px] text-content-muted dark:text-content-muted-dark font-semibold me-1 uppercase tracking-wider">{isRTL ? 'المرحلة:' : 'Stage:'}</span>
-            <button onClick={() => setFilterStage('all')}
-              className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${filterStage === 'all'
-                ? 'bg-emerald-500 text-white border-emerald-500 font-bold'
-                : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40'}`}>
-              {isRTL ? 'الكل' : 'All'} <span className={`rounded-xl px-1.5 py-px text-[9px] ms-1 ${filterStage === 'all' ? 'bg-white/25 text-white' : 'bg-edge dark:bg-edge-dark'}`}>{totalInStages}</span>
-            </button>
-            {stages.map(s => {
-              const count = stageCounts[s.id] || 0;
-              const active = filterStage === s.id;
-              return (
-                <button key={s.id} onClick={() => setFilterStage(active ? 'all' : s.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${active ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                  style={active ? { borderColor: s.color, background: s.color + '15', color: s.color } : undefined}>
-                  {isRTL ? s.label_ar : s.label_en}
-                  <span className={`rounded-xl px-1.5 py-px text-[9px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                    style={active ? { background: s.color, color: '#fff' } : undefined}>{count}</span>
-                </button>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-      {/* Temperature Chips — only when department is selected */}
-      <div className="flex gap-2 mb-3.5 flex-wrap items-center">
-        <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'الحرارة:' : 'Temp:'}</span>
-        {[
-          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB', Icon: null },
-          ...Object.entries(TEMP).map(([k, v]) => ({
-            label: isRTL ? v.labelAr : v.label, value: k, count: stats['temp_' + k] || 0, color: v.color, Icon: v.Icon,
-          })),
-        ].map(s => {
-          const active = filterTemp === s.value;
-          return (
-          <button key={s.value} onClick={() => setFilterTemp(s.value)}
-            className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
-            {s.Icon && <s.Icon size={12} />}
-            {s.label} <span
-              className={`rounded-xl px-2 py-px text-[10px] ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
-          </button>
-          );
-        })}
       </div>
 
       {/* Smart Filter Bar */}
@@ -1959,11 +2101,52 @@ export default function ContactsPage() {
         sortBy={sortBy}
         onSortChange={setSortBy}
         resultsCount={totalContacts}
+        extraActions={(() => {
+          const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
+          const cfgTypeKeys = (configContactTypes || []).map(t => t.key);
+          const types = deptView.contactTypes || (cfgTypeKeys.length ? cfgTypeKeys : LEAD_TYPES);
+          const ddCls = 'px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
+          const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
+          return (
+            <>
+              {/* Type */}
+              <div className="relative inline-block">
+                <select value={filterType} onChange={e => setFilterType(e.target.value)} className={ddCls}
+                  style={TYPE[filterType] ? { borderColor: TYPE[filterType]?.color, color: TYPE[filterType]?.color } : undefined}>
+                  <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
+                  {types.filter(k => TYPE[k]).map(k => (
+                    <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>
+                  ))}
+                </select>{chev}
+              </div>
+              {/* Activity */}
+              <div className="relative inline-block">
+                <select value={filterActivity} onChange={e => setFilterActivity(e.target.value)} className={ddCls}
+                  style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280', color: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280' } : undefined}>
+                  <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
+                  <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
+                  <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
+                  <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
+                  <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
+                </select>{chev}
+              </div>
+              {/* Temperature */}
+              <div className="relative inline-block">
+                <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} className={ddCls}
+                  style={filterTemp !== 'all' ? { borderColor: TEMP[filterTemp]?.color, color: TEMP[filterTemp]?.color } : undefined}>
+                  <option value="all">{isRTL ? 'كل الحرارة' : 'All Temp'}</option>
+                  {Object.entries(TEMP).map(([k, v]) => (
+                    <option key={k} value={k}>{isRTL ? v.labelAr : v.label} ({stats['temp_' + k] || 0})</option>
+                  ))}
+                </select>{chev}
+              </div>
+            </>
+          );
+        })()}
         quickFilters={[
           // 'Today's Follow-ups' / 'Overdue Tasks' moved to the dedicated
           // "المتابعات" chip row above (with live counts) — removed here to
           // avoid showing the same two follow-up filters twice.
-          { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: 'contact_status', operator: 'is', value: '__no_opps' }] },
           ...(profile?.role !== 'sales_agent' ? [{ label: 'لم يتم نقله', labelEn: 'Never Reassigned', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
         ]}
       />
@@ -2078,7 +2261,7 @@ export default function ContactsPage() {
         setDqNote={setDqNote}
         handleDelete={handleDelete}
         setMergePreview={setMergePreview}
-        onEdit={(c) => { setSelected(c); setOpenWithAction(false); }}
+        onEdit={(c) => { setSelected(c); }}
         perms={perms}
         tdCls={tdCls}
         safePage={page}
@@ -2177,7 +2360,7 @@ export default function ContactsPage() {
             setContacts(prev => rollbackContact(prev, contact));
           });
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); }} onUpdate={async (updated) => {
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); }} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); }} onUpdate={async (updated) => {
         const old = contacts.find(c => c.id === updated.id);
         const { _skipDbUpdate, ...cleanUpdated } = updated;
         setContacts(prev => prev.map(c => c.id === cleanUpdated.id ? cleanUpdated : c));
@@ -2209,19 +2392,11 @@ export default function ContactsPage() {
             throw err;
           }
         }
-        const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : [];
-        const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`;
-        logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {});
-      }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
-      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason('not_interested'); setDqNote(''); setLogCallTarget(null); }} onUpdate={(updated) => {
-        const previous = contacts.find(c => c.id === updated.id);
-        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-        updateContact(updated.id, updated).catch(err => {
-          reportError('ContactsPage', 'LogCall optimistic update', err);
-          toast.error(isRTL ? 'لم يتم حفظ التحديث — حاول تاني' : 'Update not saved — please retry');
-          if (previous) setContacts(prev => rollbackContact(prev, previous));
-        });
-      }} />}
+        const changedFields = old ? Object.keys(cleanUpdated).filter(k => !k.startsWith('_') && JSON.stringify(old[k]) !== JSON.stringify(cleanUpdated[k]) && !['updated_at', 'last_activity_at'].includes(k)) : [];
+        const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${cleanUpdated[k] || ''}"`).join(', ') : `Updated contact: ${cleanUpdated.full_name}`;
+        logAction({ action: 'update', entity: 'contact', entityId: cleanUpdated.id, entityName: cleanUpdated.full_name, description: desc, oldValue: old || null, newValue: cleanUpdated, userName: profile?.full_name_ar || '' }).catch(() => {});
+      }} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => { setReminderTarget(null); loadContactsData(); }} />}
       {/* Save Filter Modal — replaces the native prompt() that was used before. */}
       {saveFilterModalOpen && (
@@ -2331,6 +2506,17 @@ export default function ContactsPage() {
             ? `لم يتم العثور على مستخدمين لـ: ${[...unresolvedAgentNames].join('، ')} — هتتورد بدون مالك`
             : `Could not match users for: ${[...unresolvedAgentNames].join(', ')} — rows imported unowned`);
         }
+        // Resolve campaign_name → campaign_id in ONE pass for the whole batch
+        // (auto-registers unknown campaigns) so imported leads carry the FK, not
+        // just text. Without this, bulk imports were the main source of
+        // name-only attribution → wrong campaign counts.
+        try {
+          const { resolveCampaignLinks } = await import('../services/contactsService');
+          const { createdCampaigns } = await resolveCampaignLinks(clean);
+          if (createdCampaigns && createdCampaigns.length) {
+            setCampaignsList(prev => [...createdCampaigns, ...prev]);
+          }
+        } catch (e) { if (import.meta.env.DEV) console.warn('[Import] campaign link resolve failed:', e); }
         try {
           console.log('[Import] Sending', clean.length, 'contacts. Sample:', JSON.stringify(clean[0]).slice(0, 200));
           const inserted = await batchInsert('contacts', clean, 20);
@@ -2447,6 +2633,8 @@ export default function ContactsPage() {
                 ? (isRTL ? 'السيلز عنده الرقم ده كـ ليد جديد' : 'agent already has this number as a new lead')
                 : s.reason === 'already_owned'
                 ? (isRTL ? 'موجود عند السيلز بالفعل' : 'already owned by the agent')
+                : s.reason === 'out_of_scope'
+                ? (isRTL ? 'الليد ده مش ضمن فريقك' : 'this lead is outside your team')
                 : (isRTL ? 'محظور بقاعدة في النظام' : 'blocked by a system rule');
               return (
                 <div key={s.contact_id} className="px-3 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark">
@@ -2516,6 +2704,7 @@ export default function ContactsPage() {
         bulkDropdownOpen={bulkDropdownOpen}
         setBulkDropdownOpen={setBulkDropdownOpen}
         BULK_TYPE_OPTIONS={BULK_TYPE_OPTIONS}
+        BULK_CATEGORY_OPTIONS={BULK_CATEGORY_OPTIONS}
         BULK_SOURCE_OPTIONS={BULK_SOURCE_OPTIONS}
         BULK_DEPT_OPTIONS={BULK_DEPT_OPTIONS}
         BULK_STATUS_OPTIONS={BULK_STATUS_OPTIONS}

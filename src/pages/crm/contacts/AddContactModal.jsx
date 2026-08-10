@@ -411,7 +411,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               {/* القسم والنوع */}
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
-                <Select value={form.department} onChange={e => { setDept(e.target.value); setErrors(p => ({ ...p, department: '' })); }} style={errors.department ? { border: '1.5px solid #ef4444' } : {}}>
+                <Select value={form.department} onChange={e => { setDept(e.target.value); setErrors(p => ({ ...p, department: '' })); }} style={errors.department ? { border: '1.5px solid #D6403B' } : {}}>
                   <option value="">{isRTL ? 'اختر القسم...' : 'Select department...'}</option>
                   <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
                   <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
@@ -419,15 +419,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                   <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                   <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
                 </Select>
-                {errors.department && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.department}</span>}
+                {errors.department && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.department}</span>}
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'النوع' : 'Type'} <span className="text-red-500">*</span></label>
-                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department} style={errors.contact_type ? { border: '1.5px solid #ef4444' } : {}}>
+                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department} style={errors.contact_type ? { border: '1.5px solid #D6403B' } : {}}>
                   {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
                   {availableTypes.map(t => { const ct = (contactTypes || []).find(c => c.key === t); return <option key={t} value={t}>{ct ? (isRTL ? ct.label_ar : ct.label_en) : t}</option>; })}
                 </Select>
-                {errors.contact_type && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact_type}</span>}
+                {errors.contact_type && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact_type}</span>}
               </div>
 
               <div>
@@ -481,7 +481,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     return <span className="shrink-0 text-xs font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/10 px-2 py-1 rounded-lg whitespace-nowrap">{det.flag} {isRTL ? (cc?.labelAr || det.country) : (cc?.label || det.country)}</span>;
                   })()}
                 </div>
-                {errors.phone && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.phone}</span>}
+                {errors.phone && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.phone}</span>}
                 {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
@@ -546,9 +546,9 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-                <Input type="email" inputMode="email" autoComplete="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} style={errors.email ? { border: '1.5px solid #ef4444' } : {}} />
+                <Input type="email" inputMode="email" autoComplete="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} style={errors.email ? { border: '1.5px solid #D6403B' } : {}} />
                 {(errors.email || (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))) && (
-                  <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.email || (isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format')}</span>
+                  <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.email || (isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format')}</span>
                 )}
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>

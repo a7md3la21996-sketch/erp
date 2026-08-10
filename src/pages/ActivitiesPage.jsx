@@ -27,17 +27,17 @@ const ICONS = {
 };
 
 const RESULT_LABELS = {
-  answered:     { ar: 'رد',          en: 'Answered',       color: '#10B981' },
-  no_answer:    { ar: 'لم يرد',      en: 'No Answer',      color: '#F59E0B' },
-  busy:         { ar: 'مشغول',       en: 'Busy',           color: '#EF4444' },
+  answered:     { ar: 'رد',          en: 'Answered',       color: '#158A57' },
+  no_answer:    { ar: 'لم يرد',      en: 'No Answer',      color: '#C9860A' },
+  busy:         { ar: 'مشغول',       en: 'Busy',           color: '#D6403B' },
   switched_off: { ar: 'مغلق',        en: 'Switched Off',   color: '#6b7280' },
-  wrong_number: { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#8B5CF6' },
-  interested:   { ar: 'مهتم',        en: 'Interested',     color: '#10B981' },
-  not_interested:{ ar: 'غير مهتم',   en: 'Not Interested', color: '#EF4444' },
-  sent:         { ar: 'تم الإرسال',   en: 'Sent',           color: '#4A7AAB' },
-  completed:    { ar: 'مكتمل',       en: 'Completed',      color: '#10B981' },
-  cancelled:    { ar: 'ملغي',        en: 'Cancelled',      color: '#EF4444' },
-  rescheduled:  { ar: 'تم التأجيل',  en: 'Rescheduled',    color: '#F59E0B' },
+  wrong_number: { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#5A63C4' },
+  interested:   { ar: 'مهتم',        en: 'Interested',     color: '#158A57' },
+  not_interested:{ ar: 'غير مهتم',   en: 'Not Interested', color: '#D6403B' },
+  sent:         { ar: 'تم الإرسال',   en: 'Sent',           color: '#2F6BD3' },
+  completed:    { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
+  cancelled:    { ar: 'ملغي',        en: 'Cancelled',      color: '#D6403B' },
+  rescheduled:  { ar: 'تم التأجيل',  en: 'Rescheduled',    color: '#C9860A' },
 };
 
 const DEPT_LABELS = {
@@ -418,7 +418,7 @@ export default function ActivitiesPage() {
   if (loading && !hasLoadedOnce) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
 
   return (
-    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -468,7 +468,7 @@ export default function ActivitiesPage() {
           icon={Activity}
           label={lang === 'ar' ? 'إجمالي الأنشطة' : 'Total Activities'}
           value={stats.total}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={Clock}
@@ -660,7 +660,7 @@ export default function ActivitiesPage() {
                       </span>
                     )}
                     {act._offline && (
-                      <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
+                      <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#D6403B', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
                         <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                       </Badge>
                     )}

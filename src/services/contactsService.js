@@ -7,6 +7,27 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 import { reportError } from '../utils/errorReporter';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
+
+// Phone prefixes per country for the server-side _country filter (PostgREST
+// .or() ilike patterns use `*` as the wildcard). Mirrors detectCountry() in
+// useContactsFilters — matches both the international (+CC / 00CC) and the
+// local mobile form so a filter catches numbers stored either way.
+const COUNTRY_PHONE_PATTERNS = {
+  EG: ['+20*', '0020*', '01*'],
+  SA: ['+966*', '00966*', '05*'],
+  AE: ['+971*', '00971*'],
+  KW: ['+965*', '00965*'],
+  QA: ['+974*', '00974*'],
+  OM: ['+968*', '00968*'],
+  BH: ['+973*', '00973*'],
+  JO: ['+962*', '00962*', '07*'],
+  IQ: ['+964*', '00964*', '09*'],
+  LB: ['+961*', '00961*'],
+  LY: ['+218*', '00218*'],
+  MA: ['+212*', '00212*'],
+  TN: ['+216*', '00216*'],
+  SD: ['+249*', '00249*'],
+};
 import { applyRoleFilter } from '../utils/roleFilter';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
 
@@ -72,7 +93,7 @@ export async function incrementLeadScore(contactId, increment) {
 export async function recordAssignment(contactId, {
   fromAgent, toAgent,
   fromAgentId = null, toAgentId = null,   // UUIDs — preferred over the text snapshot for display
-  assignedBy, notes = '',
+  assignedBy, byId = null, notes = '',    // byId = the actor (who performed the reassignment)
 }) {
   const entry = {
     from: fromAgent || null,
@@ -92,7 +113,7 @@ export async function recordAssignment(contactId, {
     entity_type: 'contact',
     contact_id: contactId,
     notes: `${fromAgent || '—'} → ${toAgent}${notes ? ': ' + notes : ''}`,
-    user_id: null,
+    user_id: byId,
     user_name_en: assignedBy || null,
     from_user_id: fromAgentId,
     to_user_id: toAgentId,
@@ -115,16 +136,29 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     // Map sortBy to Supabase column + direction
     const SORT_MAP = {
       created:       { column: 'created_at',       ascending: false },
+      created_asc:   { column: 'created_at',       ascending: true },
       assigned:      { column: 'assigned_at',      ascending: false },
       last_activity: { column: 'last_activity_at', ascending: false },
+      updated:       { column: 'updated_at',       ascending: false },
+      next_follow_up:{ column: 'next_follow_up_at', ascending: true },
+      next_follow_up_desc:{ column: 'next_follow_up_at', ascending: false },
       score:         { column: 'lead_score',        ascending: false },
       name:          { column: 'full_name',         ascending: true },
       stale:         { column: 'last_activity_at',  ascending: true },
     };
     const sort = SORT_MAP[sortBy] || SORT_MAP.created;
+    // Meeting filter uses a PostgREST inner-join embed on activities so the list
+    // is filtered SERVER-SIDE (no id list, no cap) to contacts that have a
+    // matching meeting activity. `!inner` keeps each contact once (nested array,
+    // not a flat join) and the exact count stays distinct-per-contact.
+    // activities has TWO FKs to contacts (activities_contact_id_fkey + a legacy
+    // fk_act_contact), so the embed MUST name the FK or PostgREST 500s with
+    // PGRST201 (ambiguous relationship). Filters below still address it as
+    // `activities`.
+    const meetingSelect = filters.meetingBucket ? '*, activities!activities_contact_id_fkey!inner(id)' : '*';
     let query = supabase
       .from('contacts')
-      .select('*', isServerPaginated ? { count: 'exact' } : {})
+      .select(meetingSelect, isServerPaginated ? { count: 'exact' } : {})
       .or('is_deleted.is.null,is_deleted.eq.false')
       // nullsLast keeps NULL rows at the bottom regardless of sort direction
       // — without it, server pagination flips NULLs between pages and rows
@@ -173,6 +207,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       }
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
+    if (filters.lead_category) query = query.eq('lead_category', filters.lead_category);
     if (filters.source) {
       const srcValues = Array.isArray(filters.source) ? filters.source.filter(Boolean) : [filters.source];
       if (srcValues.length > 0) {
@@ -211,9 +246,51 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
       }
     }
+    // Follow-up bucket — filter the next_follow_up_at column DIRECTLY (uncapped,
+    // server-side). Replaces the old "fetch overdue ids → .in(id, ids)" path,
+    // whose 300-id cap made large scopes undercount (dashboard 335 vs list 175).
+    // Uses the same column + bounds as get_followup_counts, so count == list.
+    if (filters.followupBucket && filters.followupBounds) {
+      const { todayStart, tomorrowStart } = filters.followupBounds;
+      query = query.not('next_follow_up_at', 'is', null);
+      // Disqualified leads are dead — never surface them in follow-up buckets,
+      // even if a stale next_follow_up_at lingered. Matches get_followup_counts.
+      query = query.neq('contact_status', 'disqualified');
+      if (filters.followupBucket === 'overdue') {
+        query = query.lt('next_follow_up_at', todayStart);
+      } else if (filters.followupBucket === 'today') {
+        query = query.gte('next_follow_up_at', todayStart).lt('next_follow_up_at', tomorrowStart);
+      } else if (filters.followupBucket === 'upcoming') {
+        query = query.gte('next_follow_up_at', tomorrowStart);
+      }
+    }
     if (filters.excludeContactIds?.length && filters.excludeContactIds[0] !== 'none') {
       const excludeBatch = filters.excludeContactIds.slice(0, 500);
       query = query.not('id', 'in', `(${excludeBatch.join(',')})`);
+    }
+    // "No activity by anyone" — filter the last_activity_at column directly
+    // (uncapped, exact). Replaces the old path that fetched every activity
+    // contact-id and excluded them via a 500-capped .not(id,in,...) list, which
+    // silently surfaced leads that DO have activity on any real dataset.
+    if (filters.noActivityAnyone) {
+      query = query.is('last_activity_at', null);
+    }
+    // Meeting bucket — filter the embedded activities to the wanted kind. Pairs
+    // with the `activities!inner(id)` embed added to the select above.
+    if (filters.meetingBucket) {
+      query = query.eq('activities.type', 'meeting');
+      if (filters.meetingBucket === 'upcoming') {
+        query = query.eq('activities.status', 'scheduled').gte('activities.scheduled_date', new Date().toISOString());
+      } else if (filters.meetingBucket === 'happened') {
+        query = query.eq('activities.status', 'completed');
+      }
+    }
+    // Active-pipeline default (Phase 0): hide disqualified (dead) leads from the
+    // main list. Keep leads whose status is unset — they're not disqualified.
+    // The Archive view passes an explicit disqualified status filter instead, so
+    // this flag is only set for the "all" (active) view.
+    if (filters.excludeDisqualified) {
+      query = query.or('contact_status.is.null,contact_status.neq.disqualified');
     }
     if (filters.contact_status) {
       // Supports is / is_not / in / not_in. Single value vs array shape is
@@ -321,6 +398,53 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       else if (operator === 'last_30') query = query.gte('created_at', new Date(now - 30 * 86400000).toISOString());
       else if (operator === 'this_month') query = query.gte('created_at', new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
     }
+    // Generic column-backed smart filters. These used to be CLIENT-ONLY, so on
+    // a server-paginated list they filtered just the current page and the total
+    // count ignored them entirely (wrong counts, missing rows). Applying them on
+    // the server here makes both the list and the count exact + uncapped.
+    // Shape: [{ column, kind: 'select'|'date'|'number', operator, value }]
+    const NO_VALUE_DATE_OPS = ['last_7', 'last_30', 'this_month', 'this_week'];
+    for (const cf of (filters.columnFilters || [])) {
+      const op = cf?.operator || 'is';
+      const isNoValueDate = cf?.kind === 'date' && NO_VALUE_DATE_OPS.includes(op);
+      if (cf == null || (!isNoValueDate && (cf.value == null || cf.value === ''))) continue;
+      if (cf.kind === 'select') {
+        const vals = Array.isArray(cf.value) ? cf.value.filter(v => v != null && v !== '') : [cf.value];
+        if (!vals.length) continue;
+        if (op === 'is_not' || op === 'not_in') {
+          if (vals.length === 1) query = query.neq(cf.column, vals[0]);
+          else query = query.not(cf.column, 'in', `(${vals.map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(',')})`);
+        } else if (vals.length === 1) {
+          query = query.eq(cf.column, vals[0]);
+        } else {
+          query = query.in(cf.column, vals);
+        }
+      } else if (cf.kind === 'number') {
+        const n = Number(cf.value);
+        if (Number.isNaN(n)) continue;
+        if (op === 'gt') query = query.gt(cf.column, n);
+        else if (op === 'lt') query = query.lt(cf.column, n);
+        else if (op === 'gte') query = query.gte(cf.column, n);
+        else if (op === 'lte') query = query.lte(cf.column, n);
+        else if (op === 'is_not') query = query.neq(cf.column, n);
+        else query = query.eq(cf.column, n);
+      } else if (cf.kind === 'date') {
+        const v = cf.value;
+        const nowD = Date.now();
+        if (op === 'before') query = query.lt(cf.column, v + 'T00:00:00');
+        else if (op === 'after') query = query.gt(cf.column, v + 'T23:59:59');
+        else if (op === 'last_7') query = query.gte(cf.column, new Date(nowD - 7 * 86400000).toISOString());
+        else if (op === 'last_30') query = query.gte(cf.column, new Date(nowD - 30 * 86400000).toISOString());
+        else if (op === 'this_month') { const d = new Date(); query = query.gte(cf.column, new Date(d.getFullYear(), d.getMonth(), 1).toISOString()); }
+        else if (op === 'this_week') { const d = new Date(); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay()); ws.setHours(0, 0, 0, 0); query = query.gte(cf.column, ws.toISOString()); }
+        else query = query.gte(cf.column, v + 'T00:00:00').lte(cf.column, v + 'T23:59:59'); // 'is'
+      }
+    }
+    // Country filter — derived from the phone prefix, so match on phone patterns.
+    if (filters.country && COUNTRY_PHONE_PATTERNS[filters.country]) {
+      const ors = COUNTRY_PHONE_PATTERNS[filters.country].map(p => `phone.ilike.${p}`).join(',');
+      query = query.or(ors);
+    }
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
@@ -350,6 +474,85 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     reportError('contactsService', 'fetchContacts', err);
     return isServerPaginated ? { data: [], count: 0 } : [];
   }
+}
+
+// Source → ad platform. Mirrors constants.SOURCE_PLATFORM but kept local so the
+// service layer doesn't import UI constants.
+const SOURCE_TO_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
+const normCampaignName = (x) => (x || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+
+// Stamp a campaign_interactions entry on any row that has a campaign_id but no
+// interactions yet, so the multi-campaign model + funnel stay populated.
+function stampCampaignInteractions(list) {
+  for (const r of list) {
+    if (!r || !r.campaign_id) continue;
+    const hasCI = Array.isArray(r.campaign_interactions) && r.campaign_interactions.length > 0;
+    if (!hasCI) {
+      r.campaign_interactions = [{
+        date: new Date().toISOString(),
+        source: r.source || null,
+        campaign: r.campaign_name || null,
+        platform: r.platform || SOURCE_TO_PLATFORM[r.source] || 'meta',
+        campaign_id: r.campaign_id,
+      }];
+    }
+  }
+}
+
+// ROOT-CAUSE GUARD for the "campaigns page shows wrong lead counts" problem.
+// A lead used to be attributed to a campaign by TEXT (campaign_name) only, with
+// no campaign_id FK — so per-campaign counts relied on fragile name matching and
+// any typo/variant went uncounted. This resolves each row's campaign_name to a
+// real campaign_id BEFORE insert/update: it matches an existing campaign
+// (case/space-insensitive on name_en/name_ar), and auto-registers a new campaign
+// when the name is unknown so the campaign always shows up in Marketing. Auto-
+// created campaigns are tagged created_by_name='Auto (lead import)' so typos can
+// be merged later. Mutates the row(s) in place; returns { rows, createdCampaigns }
+// so callers can refresh their in-memory campaign list. Best-effort: on any DB
+// error it leaves the row name-only rather than blocking the lead write.
+export async function resolveCampaignLinks(rows, { stamp = true } = {}) {
+  const list = Array.isArray(rows) ? rows : [rows];
+  const createdCampaigns = [];
+  const needing = list.filter(r => r && r.campaign_name && !r.campaign_id);
+  if (!needing.length) {
+    if (stamp) stampCampaignInteractions(list);
+    return { rows, createdCampaigns };
+  }
+  try {
+    // .range guards against the 1000-row PostgREST cap so the name→id map is
+    // complete even as the campaign count grows (else an unmapped name would
+    // wrongly spawn a duplicate campaign).
+    const { data: camps } = await supabase.from('campaigns').select('id, name_en, name_ar').range(0, 9999);
+    const map = new Map();
+    (camps || []).forEach(c => {
+      if (c.name_en) map.set(normCampaignName(c.name_en), c.id);
+      if (c.name_ar) map.set(normCampaignName(c.name_ar), c.id);
+    });
+    // Distinct names with no existing campaign → register them once.
+    const unmatched = [...new Set(needing.map(r => normCampaignName(r.campaign_name)).filter(k => k && !map.has(k)))];
+    for (const key of unmatched) {
+      const sample = needing.find(r => normCampaignName(r.campaign_name) === key);
+      const nm = (sample.campaign_name || '').trim();
+      const platform = SOURCE_TO_PLATFORM[sample.source] || 'other';
+      try {
+        const { data: created, error } = await supabase.from('campaigns')
+          .insert({ name_en: nm, platform, status: 'active', type: 'other', budget: 0, spent: 0, created_by_name: 'Auto (lead import)' })
+          .select('id, name_en, name_ar, platform, status')
+          .single();
+        if (!error && created) { map.set(key, created.id); createdCampaigns.push(created); }
+      } catch (e) { if (import.meta.env.DEV) console.warn('[resolveCampaignLinks] create failed:', nm, e); }
+    }
+    for (const r of list) {
+      if (r && r.campaign_name && !r.campaign_id) {
+        const id = map.get(normCampaignName(r.campaign_name));
+        if (id) r.campaign_id = id;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn('[resolveCampaignLinks] resolve failed:', e);
+  }
+  if (stamp) stampCampaignInteractions(list);
+  return { rows, createdCampaigns };
 }
 
 export async function createContact(contactData) {
@@ -394,6 +597,12 @@ export async function createContact(contactData) {
     delete sanitized.id;
   }
 
+  // Default ORIGIN category for brand-new leads: a freshly-added/imported lead
+  // is 'fresh'. distribute -> 'distributed' and reassign -> 'rotation' override
+  // this on their own paths; the add/import form may pass an explicit category
+  // (e.g. 'cold_calls'), which we keep.
+  if (!sanitized.lead_category) sanitized.lead_category = 'fresh';
+
   // Stamp assigned_at on initial creation if the contact is already assigned to someone.
   // This keeps "Sort: Assignment Date" meaningful for brand-new contacts too.
   if (!sanitized.assigned_at) {
@@ -412,7 +621,7 @@ export async function createContact(contactData) {
         const { data: u } = await supabase
           .from('users')
           .select('id')
-          .or(`full_name_en.eq.${newName},full_name_ar.eq.${newName}`)
+          .or(`full_name_en.eq."${newName.replace(/"/g, '')}",full_name_ar.eq."${newName.replace(/"/g, '')}"`)
           .limit(1)
           .maybeSingle();
         if (u?.id) sanitized.assigned_to = u.id;
@@ -451,6 +660,13 @@ export async function createContact(contactData) {
         throw new Error(`Cannot assign lead to a user outside your team`);
       }
     }
+  }
+
+  // Resolve campaign_name → campaign_id (auto-register unknown campaigns) so the
+  // lead is attributed to a campaign by FK, not fragile text. See
+  // resolveCampaignLinks. Best-effort — never blocks the lead insert.
+  if (sanitized.campaign_name) {
+    try { await resolveCampaignLinks(sanitized); } catch { /* non-fatal */ }
   }
 
   try {
@@ -505,15 +721,11 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     const stripped = stripInternalFields({ ...cleanUpdates });
     console.log('[updateContact] id:', id, 'fields:', Object.keys(stripped));
   }
-  // Mirror the DB CHECK constraint at the service layer so callers get a
-  // clear "Invalid phone" error instead of an opaque PostgREST 400. Only
-  // validate fields the caller is actually updating — partial updates that
-  // don't touch phone/phone2/extra_phones must still work.
-  if ('phone' in cleanUpdates) assertPhoneE164(cleanUpdates.phone, 'phone');
-  if ('phone2' in cleanUpdates) assertPhoneE164(cleanUpdates.phone2, 'phone2');
-  if (Array.isArray(cleanUpdates.extra_phones)) {
-    cleanUpdates.extra_phones.forEach((p, i) => assertPhoneE164(p, `extra_phones[${i}]`));
-  }
+  // Phone-format validation moved below (after we read oldData) so it runs
+  // ONLY when a phone value actually changes. Re-validating an unchanged phone
+  // wrongly blocked status/other edits that echo the full contact back: the
+  // service's libphonenumber check is stricter than the DB's is_valid_phone_intl,
+  // so a stored (DB-valid) number could fail here even though nobody touched it.
   // Phone-edit permission is enforced below after we read oldData so we
   // can compare new vs current value. Bulk operations (merge, etc.) pass
   // the whole record back with phone fields unchanged — those callers
@@ -531,6 +743,16 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       console.error(err);
       throw err;
     }
+    // A dead lead has no next step — clear any pending follow-up so it stops
+    // showing up in the overdue/today chips, filters and CRM lenses.
+    cleanUpdates.next_follow_up_at = null;
+  }
+  // If the edit sets/changes the campaign by NAME without a campaign_id, resolve
+  // the FK — but DON'T stamp campaign_interactions here: an edit is a partial
+  // update, and stamping would overwrite the contact's existing interaction
+  // history with a single fresh entry.
+  if (cleanUpdates.campaign_name && !cleanUpdates.campaign_id) {
+    try { await resolveCampaignLinks(cleanUpdates, { stamp: false }); } catch { /* non-fatal */ }
   }
   try {
     // Check for conflicts before saving (optimistic locking)
@@ -561,6 +783,14 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       ('phone' in cleanUpdates && cleanUpdates.phone !== oldData?.phone) ||
       ('phone2' in cleanUpdates && cleanUpdates.phone2 !== oldData?.phone2) ||
       extraPhonesShrunk;
+    // Validate format only for phone values that are actually changing (a clear
+    // service-side error before the DB write). Unchanged numbers are skipped —
+    // they already passed the DB constraint when first stored.
+    if ('phone' in cleanUpdates && cleanUpdates.phone !== oldData?.phone) assertPhoneE164(cleanUpdates.phone, 'phone');
+    if ('phone2' in cleanUpdates && cleanUpdates.phone2 !== oldData?.phone2) assertPhoneE164(cleanUpdates.phone2, 'phone2');
+    if (Array.isArray(cleanUpdates.extra_phones)) {
+      cleanUpdates.extra_phones.filter(Boolean).forEach((p, i) => { if (!oldExtras.has(String(p))) assertPhoneE164(p, `extra_phones[${i}]`); });
+    }
     if (phoneChanged) {
       requirePerm(P.CONTACTS_EDIT_PHONE, 'تعديل أو حذف رقم تليفون مسجَّل مسموح للمشرف أو الـ operations فقط / Only admin or operations can change or remove existing phone numbers');
     }
@@ -601,7 +831,7 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
           const { data: u } = await supabase
             .from('users')
             .select('id')
-            .or(`full_name_en.eq.${newName},full_name_ar.eq.${newName}`)
+            .or(`full_name_en.eq."${newName.replace(/"/g, '')}",full_name_ar.eq."${newName.replace(/"/g, '')}"`)
             .limit(1)
             .maybeSingle();
           if (u?.id) sanitized.assigned_to = u.id;
@@ -628,6 +858,13 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       const newNames = JSON.stringify(((sanitized.assigned_to_names ?? oldData?.assigned_to_names) || []).slice().sort());
       if (oldName !== newName || oldNames !== newNames) {
         sanitized.assigned_at = new Date().toISOString();
+        // Genuine owner-to-owner reassignment => the lead is 'rotation' for its
+        // new owner (matches the backfill). A first assignment (null -> X) or an
+        // unassign (X -> null) is NOT a rotation. Caller can override by passing
+        // lead_category explicitly.
+        if (oldName && newName && oldName !== newName && !('lead_category' in sanitized)) {
+          sanitized.lead_category = 'rotation';
+        }
       }
     }
     const { data, error } = await rq(() => supabase
@@ -840,6 +1077,10 @@ export async function handOffLead(contactId, toUserId, options = {}) {
     assigned_to_names: [targetName],
     assigned_at: new Date().toISOString(),
     assigned_by_name: options.assignedByName || null,
+    // Handed-off leads become 'rotation' for the receiving agent — they didn't
+    // come to them fresh from marketing. Matches the backfill (any reassignment
+    // => rotation).
+    lead_category: 'rotation',
   };
 
   const { data, error } = await rq(() =>
@@ -871,6 +1112,7 @@ export async function handOffLead(contactId, toUserId, options = {}) {
     fromAgentId: before.assigned_to,   // ← UUID (may be NULL if contact had no prior owner)
     toAgentId: toUserId,                // ← UUID of the new owner
     assignedBy: options.assignedByName || '',
+    byId: options.assignedById || null,   // actor who performed the hand-off
   });
 
   return data;
@@ -937,6 +1179,9 @@ export async function distributeLeadToAgents(originContactId, targetUserIds) {
       contact_status: 'new',
       temperature: 'cold',
       lead_score: 0,
+      // A distributed clone's ORIGIN is 'distributed' regardless of the
+      // origin lead's category — that's what makes it tell-apart-able.
+      lead_category: 'distributed',
       assigned_to_name: name,
       assigned_to: userId,
       assigned_to_names: [name],
@@ -1079,7 +1324,7 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
       .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
-      .limit(50), 'fetchContactActivities');
+      .limit(200), 'fetchContactActivities');
     if (error) throw error;
     if (!activities?.length) return [];
 

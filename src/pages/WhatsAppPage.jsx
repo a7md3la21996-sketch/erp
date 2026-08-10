@@ -236,8 +236,8 @@ export default function WhatsAppPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
             { label: isRTL ? 'إجمالي الرسائل' : 'Total', value: stats.total_messages, color: '#25D366' },
-            { label: isRTL ? 'اليوم' : 'Today', value: stats.today_count, color: '#4A7AAB' },
-            { label: isRTL ? 'القوالب' : 'Templates', value: stats.templates_count, color: '#8B5CF6' },
+            { label: isRTL ? 'اليوم' : 'Today', value: stats.today_count, color: '#2F6BD3' },
+            { label: isRTL ? 'القوالب' : 'Templates', value: stats.templates_count, color: '#5A63C4' },
           ].map((s, i) => (
             <div key={i} style={{
               padding: '6px 14px', borderRadius: 10,
@@ -256,7 +256,7 @@ export default function WhatsAppPage() {
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
             background: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
-            color: '#8B5CF6', fontSize: 12, fontWeight: 600,
+            color: '#5A63C4', fontSize: 12, fontWeight: 600,
           }}>
             <FileText size={14} /> {isRTL ? 'القوالب' : 'Templates'}
           </button>
@@ -529,7 +529,7 @@ export default function WhatsAppPage() {
                 borderTop: `1px solid ${border}`,
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#4A7AAB', flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#2F6BD3', flexShrink: 0 }}>
                   {isRTL ? 'رسالة واردة:' : 'Incoming:'}
                 </span>
                 <input
@@ -545,7 +545,7 @@ export default function WhatsAppPage() {
                 />
                 <button onClick={handleLogIncoming} style={{
                   padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: '#4A7AAB', color: '#fff', fontSize: 11, fontWeight: 600,
+                  background: '#2F6BD3', color: '#fff', fontSize: 11, fontWeight: 600,
                 }}>
                   {isRTL ? 'حفظ' : 'Save'}
                 </button>
@@ -571,7 +571,7 @@ export default function WhatsAppPage() {
                     width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer',
                     background: showTemplatePicker ? 'rgba(139,92,246,0.15)' : inputBg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: showTemplatePicker ? '#8B5CF6' : (isDark ? '#94a3b8' : '#64748b'),
+                    color: showTemplatePicker ? '#5A63C4' : (isDark ? '#94a3b8' : '#64748b'),
                   }}
                   title={isRTL ? 'اختر قالب' : 'Pick template'}
                 >
@@ -882,7 +882,7 @@ function TemplatesManager({ isDark, isRTL, onClose }) {
           borderBottom: `1px solid ${border}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileText size={18} style={{ color: '#8B5CF6' }} />
+            <FileText size={18} style={{ color: '#5A63C4' }} />
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
               {isRTL ? 'إدارة القوالب' : 'Templates Manager'}
             </h3>
@@ -977,7 +977,7 @@ function TemplatesManager({ isDark, isRTL, onClose }) {
                       width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
                       background: inputBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Trash2 size={13} style={{ color: '#EF4444' }} />
+                      <Trash2 size={13} style={{ color: '#D6403B' }} />
                     </button>
                   </div>
                 </div>

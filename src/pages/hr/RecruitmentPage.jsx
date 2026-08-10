@@ -9,7 +9,7 @@ import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination, SmartFilter, app
 
 const TABLE = 'recruitment';
 
-const statusColor = s => s==='open'?'#4A7AAB':s==='interviewing'?'#6B8DB5':'#8BA8C8';
+const statusColor = s => s==='open'?'#2F6BD3':s==='interviewing'?'#6B8DB5':'#8BA8C8';
 const statusLabel = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', interviewing:lang==='ar'?'مقابلات':'Interviewing', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
 
 export default function RecruitmentPage() {
@@ -162,7 +162,7 @@ export default function RecruitmentPage() {
   const totalApplicants = jobs.reduce((s,j)=>s+(j.applicants||0),0);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -195,7 +195,7 @@ export default function RecruitmentPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Briefcase} label={lang==='ar'?'إجمالي الوظائف':'Total Jobs'} value={jobs.length} color="#1B3347" />
-        <KpiCard icon={Clock} label={lang==='ar'?'مفتوحة':'Open'} value={open} color="#4A7AAB" />
+        <KpiCard icon={Clock} label={lang==='ar'?'مفتوحة':'Open'} value={open} color="#2F6BD3" />
         <KpiCard icon={Users} label={lang==='ar'?'المتقدمون':'Applicants'} value={totalApplicants} color="#6B8DB5" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'ماتمت المقابلة':'Interviewing'} value={interviewing} color="#2B4C6F" />
       </div>
@@ -228,7 +228,7 @@ export default function RecruitmentPage() {
                 <td colSpan={6}>
                   <div className="text-center py-16 px-5">
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Briefcase size={24} color='#4A7AAB' />
+                      <Briefcase size={24} color='#2F6BD3' />
                     </div>
                     <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات توظيف':'No Recruitment Requests'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي طلبات توظيف بعد':'No recruitment requests added yet'}</p>

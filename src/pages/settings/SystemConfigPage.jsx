@@ -12,13 +12,13 @@ import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
   ChevronDown, ChevronUp, ThumbsDown, Zap, SlidersHorizontal, XCircle,
-  Bell, Target, UserCog,
+  Bell, Target, UserCog, Tag,
 } from 'lucide-react';
 
 // ─── Tab: Contact Types ───────────────────────────────────────────────
 function ContactTypesTab({ config, updateSection, isRTL, toast }) {
   const [types, setTypes] = useState(() => [...(config.contactTypes || [])]);
-  const [newType, setNewType] = useState({ label_ar: '', label_en: '', color: '#6366f1', departments: [] });
+  const [newType, setNewType] = useState({ label_ar: '', label_en: '', color: '#5A63C4', departments: [] });
 
   const handleChange = (idx, field, value) => {
     setTypes(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
@@ -48,7 +48,7 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
     if (!newType.label_en.trim()) return;
     const key = newType.label_en.toLowerCase().replace(/\s+/g, '_');
     setTypes(prev => [...prev, { key, ...newType, bg: hexToRgbaBg(newType.color) }]);
-    setNewType({ label_ar: '', label_en: '', color: '#6366f1', departments: [] });
+    setNewType({ label_ar: '', label_en: '', color: '#5A63C4', departments: [] });
   };
 
   const handleDelete = (idx) => {
@@ -78,7 +78,7 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
             <div className="flex items-center gap-2.5">
               <input
                 type="color"
-                value={type.color || '#6366f1'}
+                value={type.color || '#5A63C4'}
                 onChange={e => handleColorChange(idx, e.target.value)}
                 className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
               />
@@ -88,7 +88,7 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
               </div>
               <span
                 className="text-[11px] px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"
-                style={{ color: type.color, backgroundColor: type.bg || hexToRgbaBg(type.color || '#6366f1') }}
+                style={{ color: type.color, backgroundColor: type.bg || hexToRgbaBg(type.color || '#5A63C4') }}
               >
                 {isRTL ? type.label_ar || 'معاينة' : type.label_en || 'Preview'}
               </span>
@@ -140,6 +140,103 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
               </button>
             );
           })}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Tab: Lead Categories ─────────────────────────────────────────────
+// Lead ORIGIN categories (Fresh / Rotation / Distributed / Cold Calls). The
+// KEY is stable and assigned automatically (add=fresh, distribute=distributed,
+// reassign=rotation); this tab only renames / recolors / adds / removes them.
+function LeadCategoriesTab({ config, updateSection, isRTL, toast }) {
+  const [cats, setCats] = useState(() => [...(config.leadCategories || [])]);
+  const [newCat, setNewCat] = useState({ label_ar: '', label_en: '', color: '#5A63C4' });
+
+  const handleChange = (idx, field, value) => {
+    setCats(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
+  };
+
+  const handleAdd = () => {
+    if (!newCat.label_en.trim()) return;
+    const key = newCat.label_en.toLowerCase().replace(/\s+/g, '_');
+    if (cats.some(c => c.key === key)) { toast.error(isRTL ? 'النوع ده موجود' : 'That key already exists'); return; }
+    setCats(prev => [...prev, { key, label_ar: newCat.label_ar, label_en: newCat.label_en, color: newCat.color }]);
+    setNewCat({ label_ar: '', label_en: '', color: '#5A63C4' });
+  };
+
+  const handleDelete = (idx) => {
+    if (!window.confirm(isRTL ? 'حذف هذا التصنيف؟ الليدز اللي عليه هيفضلوا بنفس المفتاح.' : 'Delete this category? Existing leads keep the raw key.')) return;
+    setCats(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSave = () => {
+    updateSection('leadCategories', cats);
+    toast.success(isRTL ? 'تم الحفظ' : 'Saved');
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-1">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+          {isRTL ? 'تصنيفات الليدز' : 'Lead Categories'}
+        </h3>
+        <Button variant="primary" size="sm" onClick={handleSave}>
+          <Save size={13} /> {isRTL ? 'حفظ' : 'Save'}
+        </Button>
+      </div>
+      <p className="m-0 mb-4 text-[11px] text-content-muted dark:text-content-muted-dark leading-relaxed">
+        {isRTL
+          ? 'النوع بيتحدد تلقائيًا (إضافة = فريش · توزيع = موزّع · نقل = روتيشن). هنا بتغيّر الاسم واللون بس — المفتاح ثابت.'
+          : 'Categories are assigned automatically (add = Fresh · distribute = Distributed · reassign = Rotation). Here you only rename / recolor them — the key stays stable.'}
+      </p>
+
+      <div className="mb-4 space-y-2">
+        {cats.map((cat, idx) => (
+          <div key={cat.key || idx} className="p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="color"
+                value={cat.color || '#5A63C4'}
+                onChange={e => handleChange(idx, 'color', e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+              />
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Input value={cat.label_en} onChange={e => handleChange(idx, 'label_en', e.target.value)} placeholder="English" size="sm" />
+                <Input value={cat.label_ar} onChange={e => handleChange(idx, 'label_ar', e.target.value)} placeholder="عربي" dir="rtl" size="sm" />
+              </div>
+              <span
+                className="text-[11px] px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"
+                style={{ color: cat.color, backgroundColor: hexToRgbaBg(cat.color || '#5A63C4') }}
+              >
+                {isRTL ? cat.label_ar || 'معاينة' : cat.label_en || 'Preview'}
+              </span>
+              <span className="text-[9px] font-mono text-content-muted dark:text-content-muted-dark hidden sm:inline">{cat.key}</span>
+              <Button variant="danger" size="sm" onClick={() => handleDelete(idx)} className="!p-1.5">
+                <X size={14} />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-3 bg-surface-input dark:bg-surface-input-dark border border-dashed border-edge dark:border-edge-dark rounded-lg">
+        <p className="m-0 mb-2.5 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+          {isRTL ? '+ إضافة تصنيف جديد' : '+ Add New Category'}
+        </p>
+        <div className="grid grid-cols-[32px_1fr_1fr_auto] gap-2 items-center">
+          <input
+            type="color"
+            value={newCat.color}
+            onChange={e => setNewCat(p => ({ ...p, color: e.target.value }))}
+            className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+          />
+          <Input value={newCat.label_en} onChange={e => setNewCat(p => ({ ...p, label_en: e.target.value }))} placeholder="English" size="sm" />
+          <Input value={newCat.label_ar} onChange={e => setNewCat(p => ({ ...p, label_ar: e.target.value }))} placeholder="عربي" dir="rtl" size="sm" />
+          <Button variant="primary" size="sm" onClick={handleAdd} disabled={!newCat.label_en.trim()} className="whitespace-nowrap">
+            <Plus size={13} /> {isRTL ? 'إضافة' : 'Add'}
+          </Button>
         </div>
       </div>
     </Card>
@@ -234,7 +331,7 @@ function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
   const [selectedDept, setSelectedDept] = useState(depts[0]?.key || '');
   const [stages, setStages] = useState(() => [...(allStages[selectedDept] || [])]);
   const [dragIdx, setDragIdx] = useState(null);
-  const [newStage, setNewStage] = useState({ label_ar: '', label_en: '', color: '#6366f1' });
+  const [newStage, setNewStage] = useState({ label_ar: '', label_en: '', color: '#5A63C4' });
 
   const switchDept = (key) => {
     setSelectedDept(key);
@@ -253,7 +350,7 @@ function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
     if (!newStage.label_en.trim()) return;
     const key = newStage.label_en.toLowerCase().replace(/\s+/g, '_');
     setStages(prev => [...prev, { key, ...newStage, bg: hexToRgbaBg(newStage.color) }]);
-    setNewStage({ label_ar: '', label_en: '', color: '#6366f1' });
+    setNewStage({ label_ar: '', label_en: '', color: '#5A63C4' });
   };
 
   const handleDelete = (idx) => {
@@ -321,7 +418,7 @@ function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
                 <GripVertical size={16} className="text-content-muted dark:text-content-muted-dark flex-shrink-0" />
                 <input
                   type="color"
-                  value={stage.color || '#6366f1'}
+                  value={stage.color || '#5A63C4'}
                   onChange={e => handleColorChange(idx, e.target.value)}
                   className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
                 />
@@ -363,7 +460,7 @@ function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
 // ─── Tab: Departments ─────────────────────────────────────────────────
 function DepartmentsTab({ config, updateSection, isRTL, toast }) {
   const [depts, setDepts] = useState(() => [...(config.departments || [])]);
-  const [newDept, setNewDept] = useState({ label_ar: '', label_en: '', color: '#6366f1' });
+  const [newDept, setNewDept] = useState({ label_ar: '', label_en: '', color: '#5A63C4' });
 
   const handleChange = (idx, field, value) => {
     setDepts(prev => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d));
@@ -373,7 +470,7 @@ function DepartmentsTab({ config, updateSection, isRTL, toast }) {
     if (!newDept.label_en.trim()) return;
     const key = newDept.label_en.toLowerCase().replace(/\s+/g, '_');
     setDepts(prev => [...prev, { key, ...newDept }]);
-    setNewDept({ label_ar: '', label_en: '', color: '#6366f1' });
+    setNewDept({ label_ar: '', label_en: '', color: '#5A63C4' });
   };
 
   const handleDelete = (idx) => {
@@ -402,7 +499,7 @@ function DepartmentsTab({ config, updateSection, isRTL, toast }) {
           <div key={dept.key || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg">
             <input
               type="color"
-              value={dept.color || '#6366f1'}
+              value={dept.color || '#5A63C4'}
               onChange={e => handleChange(idx, 'color', e.target.value)}
               className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
             />
@@ -829,7 +926,7 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
 
       <div className="mb-4 space-y-2">
         {(lostReasons || []).map((r, idx) => (
-          <div key={r.key || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg" style={{ borderInlineStartWidth: 3, borderInlineStartColor: '#EF4444' }}>
+          <div key={r.key || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg" style={{ borderInlineStartWidth: 3, borderInlineStartColor: '#D6403B' }}>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Input value={r.label_en} onChange={e => changeLost(idx, 'label_en', e.target.value)} placeholder="English" size="sm" />
               <Input value={r.label_ar} onChange={e => changeLost(idx, 'label_ar', e.target.value)} placeholder="عربي" dir="rtl" size="sm" />
@@ -911,7 +1008,7 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
   const [results, setResults] = useState(() => JSON.parse(JSON.stringify(config.activityResults || {})));
   const [selectedType, setSelectedType] = useState(types[0]?.key || '');
   const [newType, setNewType] = useState({ label_ar: '', label_en: '' });
-  const [newResult, setNewResult] = useState({ label_ar: '', label_en: '', color: '#4A7AAB' });
+  const [newResult, setNewResult] = useState({ label_ar: '', label_en: '', color: '#2F6BD3' });
 
   const handleSave = () => {
     updateSection('activityTypes', types);
@@ -945,7 +1042,7 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
     if (!newResult.label_en.trim() || !selectedType) return;
     const value = newResult.label_en.toLowerCase().replace(/\s+/g, '_');
     setResults(prev => ({ ...prev, [selectedType]: [...(prev[selectedType] || []), { value, ...newResult }] }));
-    setNewResult({ label_ar: '', label_en: '', color: '#4A7AAB' });
+    setNewResult({ label_ar: '', label_en: '', color: '#2F6BD3' });
   };
 
   const deleteResult = (idx) => {
@@ -1011,8 +1108,8 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
           <>
             <div className="mb-4 space-y-2">
               {currentResults.map((r, idx) => (
-                <div key={r.value || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg" style={{ borderInlineStartWidth: 3, borderInlineStartColor: r.color || '#4A7AAB' }}>
-                  <input type="color" value={r.color || '#4A7AAB'} onChange={e => changeResult(idx, 'color', e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
+                <div key={r.value || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg" style={{ borderInlineStartWidth: 3, borderInlineStartColor: r.color || '#2F6BD3' }}>
+                  <input type="color" value={r.color || '#2F6BD3'} onChange={e => changeResult(idx, 'color', e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" />
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Input value={r.label_en} onChange={e => changeResult(idx, 'label_en', e.target.value)} placeholder="English" size="sm" />
                     <Input value={r.label_ar} onChange={e => changeResult(idx, 'label_ar', e.target.value)} placeholder="عربي" dir="rtl" size="sm" />
@@ -1113,7 +1210,7 @@ function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
               onClick={() => setHideHistory(h => !h)}
               style={{
                 width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-                background: hideHistory ? '#4A7AAB' : '#e2e8f0',
+                background: hideHistory ? '#2F6BD3' : '#e2e8f0',
                 position: 'relative', transition: 'background 0.2s',
               }}
             >
@@ -1272,8 +1369,8 @@ function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                 borderRadius: 10, cursor: 'pointer',
-                border: '1px solid', borderColor: fields[f.key] ? '#4A7AAB40' : 'var(--edge, #e2e8f0)',
-                background: fields[f.key] ? '#4A7AAB08' : 'transparent',
+                border: '1px solid', borderColor: fields[f.key] ? '#2F6BD340' : 'var(--edge, #e2e8f0)',
+                background: fields[f.key] ? '#2F6BD308' : 'transparent',
                 transition: 'all 0.15s',
               }}
             >
@@ -1281,7 +1378,7 @@ function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
                 type="checkbox"
                 checked={fields[f.key]}
                 onChange={() => handleToggle(f.key)}
-                style={{ accentColor: '#4A7AAB', width: 16, height: 16, cursor: 'pointer' }}
+                style={{ accentColor: '#2F6BD3', width: 16, height: 16, cursor: 'pointer' }}
               />
               <span style={{ fontSize: 13, fontWeight: fields[f.key] ? 600 : 400 }}>
                 {isRTL ? f.ar : f.en}
@@ -1525,6 +1622,7 @@ function UserManagementTab({ isRTL, toast }) {
 // ─── Main Page ────────────────────────────────────────────────────────
 const TABS = [
   { key: 'contactTypes', icon: Users, ar: 'أنواع جهات الاتصال', en: 'Contact Types' },
+  { key: 'leadCategories', icon: Tag, ar: 'تصنيفات الليدز', en: 'Lead Categories' },
   { key: 'sources', icon: GitBranch, ar: 'المصادر', en: 'Sources' },
   { key: 'pipeline', icon: GitBranch, ar: 'مراحل البيع', en: 'Pipeline Stages' },
   { key: 'departments', icon: Building2, ar: 'الأقسام', en: 'Departments' },
@@ -1593,6 +1691,8 @@ export default function SystemConfigPage() {
     switch (activeTab) {
       case 'contactTypes':
         return <ContactTypesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'leadCategories':
+        return <LeadCategoriesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'sources':
         return <SourcesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'pipeline':
@@ -1627,7 +1727,7 @@ export default function SystemConfigPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">

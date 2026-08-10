@@ -185,7 +185,7 @@ export default function PayrollRunWizard() {
   const monthName = lang === 'ar' ? MONTHS_AR[month - 1] : MONTHS_EN[month - 1];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -323,10 +323,10 @@ function Stepper({ step, isRTL, lang }) {
 /* ─── Step 1: Pre-flight Checks ─── */
 function Step1Preflight({ preflight, hasErrors, hasWarnings, employees, isRTL, lang, onNext }) {
   const sevConfig = {
-    ok: { color: '#10B981', icon: CheckCircle2 },
-    warn: { color: '#F59E0B', icon: AlertTriangle },
-    error: { color: '#EF4444', icon: XCircle },
-    info: { color: '#4A7AAB', icon: AlertCircle },
+    ok: { color: '#158A57', icon: CheckCircle2 },
+    warn: { color: '#C9860A', icon: AlertTriangle },
+    error: { color: '#D6403B', icon: XCircle },
+    info: { color: '#2F6BD3', icon: AlertCircle },
   };
 
   return (
@@ -410,10 +410,10 @@ function Step2Review({ previousRun, recentSalaryChanges, newLoans, adjustments, 
   return (
     <div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
-        <KpiCard icon={TrendingUp} label={isRTL ? 'تغيير راتب' : 'Salary Changes'} value={summary.salaryChanges} color="#4A7AAB" />
-        <KpiCard icon={CreditCard} label={isRTL ? 'قروض جديدة' : 'New Loans'} value={summary.newLoans} sub={summary.totalLoanDeduction > 0 ? `${summary.totalLoanDeduction.toLocaleString()} ج.م` : ''} color="#F59E0B" />
-        <KpiCard icon={Plus} label={isRTL ? 'بونص' : 'Bonuses'} value={summary.bonuses} color="#10B981" />
-        <KpiCard icon={Minus} label={isRTL ? 'خصومات' : 'Penalties'} value={summary.penalties} color="#EF4444" />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'تغيير راتب' : 'Salary Changes'} value={summary.salaryChanges} color="#2F6BD3" />
+        <KpiCard icon={CreditCard} label={isRTL ? 'قروض جديدة' : 'New Loans'} value={summary.newLoans} sub={summary.totalLoanDeduction > 0 ? `${summary.totalLoanDeduction.toLocaleString()} ج.م` : ''} color="#C9860A" />
+        <KpiCard icon={Plus} label={isRTL ? 'بونص' : 'Bonuses'} value={summary.bonuses} color="#158A57" />
+        <KpiCard icon={Minus} label={isRTL ? 'خصومات' : 'Penalties'} value={summary.penalties} color="#D6403B" />
       </div>
 
       {previousRun && (

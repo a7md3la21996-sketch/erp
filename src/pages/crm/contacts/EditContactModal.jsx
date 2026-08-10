@@ -36,6 +36,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
     phone2: initPhone(contact.phone2),
     email: contact.email || '',
     contact_type: contact.contact_type || 'lead',
+    lead_category: contact.lead_category || 'fresh',
     source: contact.source || 'facebook',
     campaign_name: contact.campaign_name || '',
     budget_min: contact.budget_min || '',
@@ -73,7 +74,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
     onClose();
   };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const { contactTypes } = useSystemConfig();
+  const { contactTypes, leadCategories } = useSystemConfig();
   // Build allowed types per department from system config (same pattern as AddContactModal)
   const DEPT_TYPES = (() => {
     const map = { sales: [], hr: [], marketing: [], finance: [], operations: [] };
@@ -162,6 +163,10 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
         full_name: formData.full_name,
         email: formData.email,
         contact_type: formData.contact_type,
+        // Only send lead_category when the user actually changed it — otherwise
+        // updateContact's auto-rotation (owner-to-owner reassign => 'rotation')
+        // stays in effect. An explicit change here is a manual override.
+        ...(formData.lead_category !== (contact.lead_category || 'fresh') ? { lead_category: formData.lead_category } : {}),
         source: formData.source,
         campaign_name: formData.campaign_name,
         preferred_location: formData.preferred_location,
@@ -244,6 +249,15 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
                 <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
                 <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                 <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'تصنيف الليد' : 'Lead Category'}</label>
+              <Select value={form.lead_category} onChange={e => set('lead_category', e.target.value)}>
+                {(leadCategories || []).map(c => <option key={c.key} value={c.key}>{isRTL ? c.label_ar : c.label_en}</option>)}
+                {form.lead_category && !(leadCategories || []).some(c => c.key === form.lead_category) && (
+                  <option value={form.lead_category}>{form.lead_category}</option>
+                )}
               </Select>
             </div>
           </div>

@@ -20,10 +20,10 @@ const ENTITY_LABELS = {
 };
 
 const FORMAT_COLORS = {
-  xlsx: '#22c55e',
-  csv:  '#3b82f6',
-  json: '#a855f7',
-  pdf:  '#ef4444',
+  xlsx: '#158A57',
+  csv:  '#2F6BD3',
+  json: '#5A63C4',
+  pdf:  '#D6403B',
 };
 
 const PAGE_SIZE = 20;
@@ -94,9 +94,9 @@ export default function ExportImportHistoryPage() {
   const headerBg = isDark ? '#161625' : '#f1f5f9';
 
   const statusConfig = {
-    success: { color: '#22c55e', bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)', icon: CheckCircle, ar: 'نجاح', en: 'Success' },
-    failed:  { color: '#ef4444', bg: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', icon: XCircle, ar: 'فشل', en: 'Failed' },
-    partial: { color: '#eab308', bg: isDark ? 'rgba(234,179,8,0.15)' : 'rgba(234,179,8,0.1)', icon: AlertTriangle, ar: 'جزئي', en: 'Partial' },
+    success: { color: '#158A57', bg: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)', icon: CheckCircle, ar: 'نجاح', en: 'Success' },
+    failed:  { color: '#D6403B', bg: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', icon: XCircle, ar: 'فشل', en: 'Failed' },
+    partial: { color: '#C9860A', bg: isDark ? 'rgba(234,179,8,0.15)' : 'rgba(234,179,8,0.1)', icon: AlertTriangle, ar: 'جزئي', en: 'Partial' },
   };
 
   return (
@@ -109,7 +109,7 @@ export default function ExportImportHistoryPage() {
             background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <FileText size={20} color="#6366f1" />
+            <FileText size={20} color="#5A63C4" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textPrimary }}>
@@ -130,7 +130,7 @@ export default function ExportImportHistoryPage() {
           <button onClick={() => setShowConfirm(true)} style={{
             padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)',
             background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)',
-            color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+            color: '#D6403B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
           }}>
             <Trash2 size={14} /> {isRTL ? 'مسح السجل' : 'Clear History'}
           </button>
@@ -140,10 +140,10 @@ export default function ExportImportHistoryPage() {
       {/* ── Stats Cards ────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: isRTL ? 'إجمالي التصديرات' : 'Total Exports', value: stats.totalExports, icon: Download, color: '#3b82f6' },
-          { label: isRTL ? 'إجمالي الاستيرادات' : 'Total Imports', value: stats.totalImports, icon: Upload, color: '#8b5cf6' },
-          { label: isRTL ? 'نسبة النجاح' : 'Success Rate', value: `${stats.successRate}%`, icon: CheckCircle, color: '#22c55e' },
-          { label: isRTL ? 'الأكثر نشاطاً' : 'Most Active', value: stats.mostActiveEntity ? getEntityLabel(stats.mostActiveEntity) : '-', icon: FileText, color: '#f59e0b' },
+          { label: isRTL ? 'إجمالي التصديرات' : 'Total Exports', value: stats.totalExports, icon: Download, color: '#2F6BD3' },
+          { label: isRTL ? 'إجمالي الاستيرادات' : 'Total Imports', value: stats.totalImports, icon: Upload, color: '#5A63C4' },
+          { label: isRTL ? 'نسبة النجاح' : 'Success Rate', value: `${stats.successRate}%`, icon: CheckCircle, color: '#158A57' },
+          { label: isRTL ? 'الأكثر نشاطاً' : 'Most Active', value: stats.mostActiveEntity ? getEntityLabel(stats.mostActiveEntity) : '-', icon: FileText, color: '#C9860A' },
         ].map((card, i) => (
           <div key={i} style={{
             background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 12, padding: 20,
@@ -261,7 +261,7 @@ export default function ExportImportHistoryPage() {
                     const sc = statusConfig[row.status] || statusConfig.success;
                     const StatusIcon = sc.icon;
                     const TypeIcon = row.type === 'export' ? Download : Upload;
-                    const typeColor = row.type === 'export' ? '#3b82f6' : '#8b5cf6';
+                    const typeColor = row.type === 'export' ? '#2F6BD3' : '#5A63C4';
                     const fmtColor = FORMAT_COLORS[row.format] || textSecondary;
 
                     return (
@@ -342,18 +342,18 @@ export default function ExportImportHistoryPage() {
                       <>
                         <div>
                           <span style={{ color: textSecondary }}>{isRTL ? 'ناجح: ' : 'Success: '}</span>
-                          <span style={{ color: '#22c55e', fontWeight: 500 }}>{row.successCount || 0}</span>
+                          <span style={{ color: '#158A57', fontWeight: 500 }}>{row.successCount || 0}</span>
                         </div>
                         <div>
                           <span style={{ color: textSecondary }}>{isRTL ? 'فاشل: ' : 'Failed: '}</span>
-                          <span style={{ color: '#ef4444', fontWeight: 500 }}>{row.failedCount || 0}</span>
+                          <span style={{ color: '#D6403B', fontWeight: 500 }}>{row.failedCount || 0}</span>
                         </div>
                       </>
                     )}
                   </div>
                   {row.errors && row.errors.length > 0 && (
                     <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#D6403B', marginBottom: 6 }}>
                         {isRTL ? 'الأخطاء:' : 'Errors:'}
                       </div>
                       <div style={{
@@ -362,7 +362,7 @@ export default function ExportImportHistoryPage() {
                         maxHeight: 160, overflowY: 'auto',
                       }}>
                         {row.errors.map((err, i) => (
-                          <div key={i} style={{ fontSize: 12, color: '#ef4444', padding: '2px 0' }}>
+                          <div key={i} style={{ fontSize: 12, color: '#D6403B', padding: '2px 0' }}>
                             {typeof err === 'string' ? err : JSON.stringify(err)}
                           </div>
                         ))}
@@ -433,7 +433,7 @@ export default function ExportImportHistoryPage() {
                 width: 40, height: 40, borderRadius: '50%',
                 background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Trash2 size={18} color="#ef4444" />
+                <Trash2 size={18} color="#D6403B" />
               </div>
               <h3 style={{ margin: 0, fontSize: 16, color: textPrimary }}>
                 {isRTL ? 'مسح السجل' : 'Clear History'}
@@ -453,7 +453,7 @@ export default function ExportImportHistoryPage() {
               </button>
               <button onClick={handleClear} style={{
                 padding: '8px 20px', borderRadius: 8, border: 'none',
-                background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                background: '#D6403B', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
               }}>
                 {isRTL ? 'مسح' : 'Clear'}
               </button>

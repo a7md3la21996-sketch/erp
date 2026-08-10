@@ -14,14 +14,14 @@ export const DEPT_VIEWS = {
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', 'assigned_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
-      'assigned_to_name', 'assigned_by_name', '_campaign_count', '_opp_count',
+      'assigned_to_name', 'assigned_by_name', '_campaign_count', '_no_activity_by', '_meeting',
     ],
     // Contact types available in this department
     contactTypes: ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'],
     // Status options for filtering
     statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     // Sort options
-    sortIds: ['created', 'last_activity', 'score', 'name', 'stale'],
+    sortIds: ['created', 'created_asc', 'next_follow_up', 'next_follow_up_desc', 'assigned', 'last_activity', 'updated', 'score', 'name', 'stale'],
     // Actions in the row menu
     menuActions: ['edit', 'logCall', 'reminder', 'export', 'delete', 'disqualify', 'blacklist'],
     // Quick action buttons visible in the row
@@ -69,11 +69,11 @@ export const DEPT_VIEWS = {
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
-      '_campaign_count',
+      '_campaign_count', '_meeting',
     ],
     contactTypes: ['lead', 'cold'],
     statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
-    sortIds: ['created', 'last_activity', 'score', 'name'],
+    sortIds: ['created', 'created_asc', 'next_follow_up', 'next_follow_up_desc', 'last_activity', 'updated', 'score', 'name'],
     menuActions: ['edit', 'logCall', 'reminder', 'export'],
     rowActions: ['call', 'whatsapp', 'quickAction', 'pin'],
     defaultSort: 'last_activity',

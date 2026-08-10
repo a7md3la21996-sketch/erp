@@ -5,17 +5,16 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
-import { createActivity } from '../../../services/contactsService';
-import { createTask } from '../../../services/tasksService';
+import { logInteraction } from '../../../services/interactionsService';
 import { useEscClose, contactPropType } from './constants';
 import { useFocusTrap } from '../../../utils/hooks';
 
 const CALL_RESULTS = [
-  { key: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
-  { key: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#F59E0B' },
-  { key: 'busy', ar: 'مشغول', en: 'Busy', color: '#EF4444' },
+  { key: 'answered', ar: 'رد', en: 'Answered', color: '#158A57' },
+  { key: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#C9860A' },
+  { key: 'busy', ar: 'مشغول', en: 'Busy', color: '#D6403B' },
   { key: 'switched_off', ar: 'مغلق', en: 'Switched Off', color: '#6b7280' },
-  { key: 'wrong_number', ar: 'رقم خاطئ', en: 'Wrong Number', color: '#8B5CF6' },
+  { key: 'wrong_number', ar: 'رقم خاطئ', en: 'Wrong Number', color: '#5A63C4' },
 ];
 const FOLLOWUP_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
@@ -30,7 +29,14 @@ const FOLLOWUP_TYPES = [
   { value: 'email', ar: 'إيميل', en: 'Email' },
 ];
 
-export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisqualify }) {
+// datetime-local wants a LOCAL wall-clock string. Using toISOString().slice()
+// would show/seed the UTC time (off by the Cairo offset).
+const toLocalInput = (d) => {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+export default function LogCallModal({ contact, onClose }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -42,11 +48,21 @@ export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisq
   const [callResult, setCallResult] = useState('');
   const [callNotes, setCallNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [addFollowup, setAddFollowup] = useState(false);
-  const [followupPreset, setFollowupPreset] = useState('');
+  // Follow-up is now MANDATORY for a logged call (unified enforcement) — always
+  // on, defaulted to tomorrow 10:00, and the rep can adjust it.
+  const [addFollowup] = useState(true);
+  const [followupPreset, setFollowupPreset] = useState('tomorrow');
   const [followupDate, setFollowupDate] = useState('');
   const [followupType, setFollowupType] = useState('call');
   const [followupPriority, setFollowupPriority] = useState('medium');
+
+  // Seed a default follow-up date on mount so the mandatory field is pre-filled.
+  useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    setFollowupDate(toLocalInput(d));
+  }, []);
 
   const handlePreset = (preset) => {
     setFollowupPreset(preset.key);
@@ -54,107 +70,69 @@ export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisq
       const d = new Date();
       d.setDate(d.getDate() + preset.days);
       d.setHours(10, 0, 0, 0);
-      setFollowupDate(d.toISOString().slice(0, 16));
+      setFollowupDate(toLocalInput(d));
     } else {
       setFollowupDate('');
     }
   };
 
+  // For unreachable outcomes, default the follow-up to soon (tomorrow) unless
+  // the rep already picked a preset. Follow-up itself is always on now.
   useEffect(() => {
-    if (['no_answer', 'busy', 'switched_off'].includes(callResult)) {
-      setAddFollowup(true);
-      if (!followupPreset) {
-        const p = FOLLOWUP_PRESETS[0];
-        setFollowupPreset(p.key);
-        const d = new Date();
-        d.setDate(d.getDate() + p.days);
-        d.setHours(10, 0, 0, 0);
-        setFollowupDate(d.toISOString().slice(0, 16));
-      }
+    if (['no_answer', 'busy', 'switched_off'].includes(callResult) && !followupPreset) {
+      const p = FOLLOWUP_PRESETS[0];
+      setFollowupPreset(p.key);
+      const d = new Date();
+      d.setDate(d.getDate() + p.days);
+      d.setHours(10, 0, 0, 0);
+      setFollowupDate(toLocalInput(d));
     }
   }, [callResult, followupPreset]);
 
   const handleSave = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
-    if (addFollowup && !followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
+    if (!followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
     setSaving(true);
 
     const resultLabel = CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult;
-    const activity = {
-      type: 'call',
-      description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${callNotes ? ' — ' + callNotes : ''}`,
-      next_action: addFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '',
-      next_action_date: addFollowup ? followupDate : '',
-      contact_id: contact.id,
-      user_id: profile?.id || null,
-      user_name_ar: profile?.full_name_ar || '',
-      user_name_en: profile?.full_name_en || '',
-      created_at: new Date().toISOString(),
-    };
-    let activitySaveError = null;
-    try { await createActivity(activity); } catch (err) {
-      activitySaveError = err;
-      console.error('Activity save error:', err?.message);
-    }
-    if (activitySaveError) {
-      toast.error(isRTL
-        ? `فشل حفظ المكالمة: ${activitySaveError.message || 'خطأ غير معروف'}`
-        : `Failed to save call: ${activitySaveError.message || 'Unknown error'}`);
+    const followupTypeLabel = FOLLOWUP_TYPES.find(t => t.value === followupType)?.[isRTL ? 'ar' : 'en'] || followupType;
+    try {
+      // One unified path: writes the call activity + the mandatory follow-up
+      // task (which supersedes older pending tasks) in the guaranteed order.
+      await logInteraction(contact.id, {
+        type: 'call',
+        result: callResult,
+        description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${callNotes ? ' — ' + callNotes : ''}`,
+        followUp: {
+          type: followupType,
+          title: `${followupTypeLabel} - ${contact.full_name}`,
+          notes: callNotes ? `${isRTL ? 'من مكالمة سابقة' : 'From previous call'}: ${callNotes}` : '',
+          priority: followupPriority,
+          dueAt: followupDate,
+          contactName: contact.full_name,
+        },
+        currentStatus: contact.contact_status,
+        actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
+      });
+    } catch (err) {
+      if (err?.message === 'FOLLOWUP_REQUIRED') {
+        toast.warning(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else {
+        toast.error(isRTL ? `فشل حفظ المكالمة: ${err.message || 'خطأ غير معروف'}` : `Failed to save call: ${err.message || 'Unknown error'}`);
+      }
       setSaving(false);
       return;
     }
 
-    // Auto-status-from-call REMOVED per policy (May 2026): reps complained
-    // the system was moving their leads' status off the back of every call
-    // result. The call activity is still saved (above); the status stays
-    // wherever the rep last set it. The "not interested" → disqualify
-    // prompt is kept because it's a UI confirmation, not a silent write.
-    if (callResult === 'not_interested'
-        && contact.contact_status !== 'disqualified'
-        && contact.contact_status !== 'has_opportunity'
-        && onRequestDisqualify) {
-      onRequestDisqualify(contact);
-    }
-
-    if (addFollowup && followupDate) {
-      const followupTypeLabel = FOLLOWUP_TYPES.find(t => t.value === followupType)?.[isRTL ? 'ar' : 'en'] || followupType;
-      const task = {
-        title: isRTL ? `${followupTypeLabel} - ${contact.full_name}` : `${followupTypeLabel} - ${contact.full_name}`,
-        type: followupType,
-        priority: followupPriority,
-        status: 'pending',
-        contact_id: contact.id,
-        contact_name: contact.full_name,
-        due_date: followupDate,
-        dept: 'sales',
-        notes: callNotes ? `${isRTL ? 'من مكالمة سابقة' : 'From previous call'}: ${callNotes}` : '',
-        assigned_to: profile?.id || null,
-        assigned_to_name_ar: profile?.full_name_ar || '',
-        assigned_to_name_en: profile?.full_name_en || '',
-      };
-      try {
-        await createTask(task);
-      } catch (err) {
-        // Don't lie about "saved optimistically" — surface the failure so the
-        // user knows the follow-up wasn't actually scheduled.
-        toast.warning(isRTL
-          ? `تم حفظ المكالمة، لكن فشل إنشاء مهمة المتابعة: ${err.message || ''}`
-          : `Call saved, but follow-up task failed: ${err.message || ''}`);
-      }
-    }
-
-    toast.success(isRTL
-      ? `تم حفظ المكالمة${addFollowup ? ' + مهمة المتابعة' : ''}`
-      : `Call saved${addFollowup ? ' + follow-up task' : ''}`
-    );
+    toast.success(isRTL ? 'تم حفظ المكالمة + متابعة' : 'Call saved + follow-up');
     setSaving(false);
     onClose();
   };
 
   const priorities = [
-    { value: 'high', ar: 'عالية', en: 'High', color: '#EF4444' },
-    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#F59E0B' },
-    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#10B981' },
+    { value: 'high', ar: 'عالية', en: 'High', color: '#D6403B' },
+    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#C9860A' },
+    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#158A57' },
   ];
 
   return (
@@ -184,19 +162,18 @@ export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisq
 
           {/* Follow-up Section */}
           <div className={`bg-brand-500/[0.06] dark:bg-brand-500/[0.06] rounded-xl p-3.5 transition-colors ${addFollowup ? 'border border-brand-500/25' : 'border border-edge dark:border-edge-dark'}`}>
-            <label className={`flex items-center gap-2 cursor-pointer text-xs font-semibold ${addFollowup ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
-              <input type="checkbox" checked={addFollowup} onChange={e => setAddFollowup(e.target.checked)} className="accent-brand-500 cursor-pointer" />
-              <Clock size={14} /> {isRTL ? 'إنشاء مهمة متابعة' : 'Create follow-up task'}
-            </label>
+            <div className="flex items-center gap-2 text-xs font-semibold text-brand-500">
+              <Clock size={14} /> {isRTL ? 'مهمة المتابعة' : 'Follow-up task'} <span className="text-red-500">*</span>
+            </div>
             {addFollowup && (
               <div className="mt-3">
                 <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'متى؟' : 'When?'}</div>
                 <div className="flex gap-[5px] flex-wrap mb-2.5">
                   {FOLLOWUP_PRESETS.map(p => (
                     <button key={p.key} onClick={() => handlePreset(p)} className="px-3 py-1 rounded-2xl text-xs cursor-pointer font-inherit transition-colors" style={{
-                      border: `1.5px solid ${followupPreset === p.key ? '#4A7AAB' : 'var(--border-edge, #E2E8F0)'}`,
+                      border: `1.5px solid ${followupPreset === p.key ? '#2F6BD3' : 'var(--border-edge, #E2E8F0)'}`,
                       background: followupPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
-                      color: followupPreset === p.key ? '#4A7AAB' : undefined,
+                      color: followupPreset === p.key ? '#2F6BD3' : undefined,
                       fontWeight: followupPreset === p.key ? 700 : 400,
                     }}>{isRTL ? p.ar : p.en}</button>
                   ))}
@@ -244,6 +221,4 @@ export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisq
 LogCallModal.propTypes = {
   contact: contactPropType.isRequired,
   onClose: PropTypes.func.isRequired,
-  onUpdate: PropTypes.func,
-  onRequestDisqualify: PropTypes.func,
 };

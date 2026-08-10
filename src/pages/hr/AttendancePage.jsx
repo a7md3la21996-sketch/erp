@@ -296,13 +296,13 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
           </div>
         </Td>
         <Td className="text-content-muted dark:text-content-muted-dark">{emp.department_ar || emp.department}</Td>
-        <Td className="font-bold text-[#4A7AAB]">{p}</Td>
+        <Td className="font-bold text-[#2F6BD3]">{p}</Td>
         <Td className="font-bold text-red-500">{a}</Td>
         <Td className="font-bold text-[#6B8DB5]">{l}</Td>
         <Td>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 rounded-sm bg-slate-200 dark:bg-white/[0.08]">
-              <div className="h-full rounded-sm transition-[width] duration-400" style={{ width: rate + '%', background: rate >= 80 ? '#4A7AAB' : rate >= 60 ? '#6B8DB5' : '#EF4444' }} />
+              <div className="h-full rounded-sm transition-[width] duration-400" style={{ width: rate + '%', background: rate >= 80 ? '#2F6BD3' : rate >= 60 ? '#6B8DB5' : '#D6403B' }} />
             </div>
             <span className="text-xs font-bold text-content dark:text-content-dark min-w-[32px]">{rate}%</span>
           </div>
@@ -700,7 +700,7 @@ export default function AttendancePage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
       {/* Header */}
       <div className={`flex flex-wrap justify-between items-center mb-5 gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -871,12 +871,12 @@ export default function AttendancePage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5 mb-5">
-        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'حاضر' : 'Present'} value={stats.present} color="#4A7AAB" />
-        <KpiCard icon={XCircle} label={lang === 'ar' ? 'غائب' : 'Absent'} value={stats.absent} color="#EF4444" />
+        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'حاضر' : 'Present'} value={stats.present} color="#2F6BD3" />
+        <KpiCard icon={XCircle} label={lang === 'ar' ? 'غائب' : 'Absent'} value={stats.absent} color="#D6403B" />
         <KpiCard icon={AlertCircle} label={lang === 'ar' ? 'متأخر' : 'Late'} value={stats.late} color="#6B8DB5" />
         <KpiCard icon={Calendar} label={lang === 'ar' ? 'إجازة' : 'Leave'} value={stats.leave} color="#8BA8C8" />
-        <KpiCard icon={Users} label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={employees.length} color="#6366F1" />
-        <KpiCard icon={Users} label={lang === 'ar' ? 'عن بعد' : 'Remote'} value={employees.filter(e => e.work_mode === 'remote').length} color="#14B8A6" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={employees.length} color="#5A63C4" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'عن بعد' : 'Remote'} value={employees.filter(e => e.work_mode === 'remote').length} color="#12897E" />
         <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'متوسط الحضور' : 'Avg Rate'} value={(() => {
           if (!employees.length) return '0%';
           const rates = employees.map(emp => {
@@ -885,7 +885,7 @@ export default function AttendancePage() {
             return recs.length ? (present / recs.length) * 100 : 0;
           });
           return Math.round(rates.reduce((a, b) => a + b, 0) / employees.length) + '%';
-        })()} color="#F59E0B" />
+        })()} color="#C9860A" />
       </div>
 
       {/* Mini Daily Attendance Chart */}
@@ -1006,7 +1006,7 @@ export default function AttendancePage() {
               <tr>
                 <td colSpan={9} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                    <Clock size={24} color="#4A7AAB" />
+                    <Clock size={24} color="#2F6BD3" />
                   </div>
                   <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد بيانات حضور' : 'No Attendance Data'}</p>
                   <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لم يتم تسجيل أي بيانات حضور بعد' : 'No attendance records yet'}</p>

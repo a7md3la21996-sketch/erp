@@ -178,7 +178,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         <div className={`h-[72px] flex items-center ${collapsed ? 'md:justify-center' : 'justify-between'} border-b border-edge dark:border-edge-dark ${collapsed ? 'md:p-2 p-2' : 'py-2 px-4'} overflow-hidden gap-2`}>
           {/* Mobile: always show full header with close button */}
           <div className="flex items-center justify-between w-full md:hidden">
-            <Link to="/dashboard" onClick={handleNavClick} className="flex-1 flex items-center justify-center px-1 min-w-0">
+            <Link to="/home" onClick={handleNavClick} className="flex-1 flex items-center justify-center px-1 min-w-0">
               <img src={isDark ? "/logo-white.webp" : "/logo.webp"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} className="w-full h-auto max-h-14 object-contain" />
             </Link>
             <button onClick={onMobileClose} className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border-none cursor-pointer bg-brand-500/[0.06] dark:bg-brand-500/10 text-content-muted dark:text-brand-400 transition-colors">
@@ -196,7 +196,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               </div>
             ) : (
               <div className="flex items-center justify-between w-full">
-                <Link to="/dashboard" className="flex-1 flex items-center justify-center px-1 min-w-0">
+                <Link to="/home" className="flex-1 flex items-center justify-center px-1 min-w-0">
                   <img src={isDark ? "/logo-white.webp" : "/logo.webp"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} className="w-full h-auto max-h-14 object-contain" />
                 </Link>
                 <button onClick={onToggle} className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border-none cursor-pointer bg-brand-500/[0.06] dark:bg-brand-500/10 text-content-muted dark:text-brand-400 transition-colors">
@@ -217,7 +217,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 gap: 6,
                 padding: '4px 12px 6px',
               }}>
-                <Star size={11} style={{ color: '#F59E0B' }} fill="#F59E0B" />
+                <Star size={11} style={{ color: '#C9860A' }} fill="#C9860A" />
                 <span style={{
                   fontSize: 10,
                   fontWeight: 700,
@@ -235,7 +235,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   onClick={handleNavClick}
                   className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2 px-3 rounded-lg no-underline text-[12px] font-medium transition-colors ${isActive(fav.path) ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}
                 >
-                  <Star size={14} className="shrink-0" style={{ color: '#F59E0B' }} fill="#F59E0B" />
+                  <Star size={14} className="shrink-0" style={{ color: '#C9860A' }} fill="#C9860A" />
                   <span className="flex-1 text-start truncate">{isRTL ? (fav.nameAr || fav.name) : fav.name}</span>
                 </Link>
               ))}
@@ -262,12 +262,12 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
-                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#D6403B', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
                       ) : null; })()}
                     </span>
                     {showLabels && <span className={`flex-1 text-start`}>{item.label[lang]}</span>}
                     {(() => { const bc = getBadgeCount(item); return showLabels && bc > 0 ? (
-                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#D6403B', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
                     ) : null; })()}
                     {showLabels && (
                       <span
@@ -276,7 +276,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         style={{ flexShrink: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 2, borderRadius: 4 }}
                         title={checkFavorite(`page_${item.id}`) ? (isRTL ? 'إزالة من المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
                       >
-                        <Star size={13} style={{ color: checkFavorite(`page_${item.id}`) ? '#F59E0B' : (isDark ? '#475569' : '#94a3b8') }} fill={checkFavorite(`page_${item.id}`) ? '#F59E0B' : 'none'} />
+                        <Star size={13} style={{ color: checkFavorite(`page_${item.id}`) ? '#C9860A' : (isDark ? '#475569' : '#94a3b8') }} fill={checkFavorite(`page_${item.id}`) ? '#C9860A' : 'none'} />
                       </span>
                     )}
                   </Link>
@@ -286,12 +286,12 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
-                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#D6403B', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
                       ) : null; })()}
                     </span>
                     {showLabels && <span className="flex-1">{item.label[lang]}</span>}
                     {(() => { const bc = getBadgeCount(item); return showLabels && bc > 0 ? (
-                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#D6403B', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
                     ) : null; })()}
                     {showLabels && <ChevronDown size={16} className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
                   </button>
@@ -379,9 +379,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               transition: 'background 0.15s',
             }}
           >
-            <Settings size={18} style={{ color: location.pathname.startsWith('/settings') ? '#4A7AAB' : (isDark ? '#64748b' : '#94a3b8'), flexShrink: 0 }} />
+            <Settings size={18} style={{ color: location.pathname.startsWith('/settings') ? '#2F6BD3' : (isDark ? '#64748b' : '#94a3b8'), flexShrink: 0 }} />
             {!collapsed && (
-              <span style={{ fontSize: 13, fontWeight: 500, color: location.pathname.startsWith('/settings') ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b') }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: location.pathname.startsWith('/settings') ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b') }}>
                 {isRTL ? 'الإعدادات' : 'Settings'}
               </span>
             )}
@@ -409,7 +409,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               width: 32,
               height: 32,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2B4C6F, #4A7AAB)',
+              background: 'linear-gradient(135deg, #2B4C6F, #2F6BD3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

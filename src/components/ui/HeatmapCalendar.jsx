@@ -17,7 +17,7 @@ function getLevel(count) {
 }
 
 function getLevelColor(level, isDark, colorScheme) {
-  const base = colorScheme || '#4A7AAB';
+  const base = colorScheme || '#2F6BD3';
   if (level === 0) return isDark ? '#1a2332' : '#ebedf0';
   if (level === 1) return isDark ? base + '40' : base + '30';
   if (level === 2) return isDark ? base + '70' : base + '60';
@@ -30,7 +30,7 @@ function getLevelColor(level, isDark, colorScheme) {
  *
  * @param {Array} data - [{date: 'YYYY-MM-DD', count: number}]
  * @param {string} title - optional title
- * @param {string} colorScheme - optional base hex color (default #4A7AAB)
+ * @param {string} colorScheme - optional base hex color (default #2F6BD3)
  * @param {number} months - how many months to show (default 6)
  * @param {boolean} compact - smaller version for dashboard
  * @param {function} onDayClick - callback when a day is clicked

@@ -47,7 +47,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 16px',
       }}>
-        <CalendarClock size={28} color="#4A7AAB" />
+        <CalendarClock size={28} color="#2F6BD3" />
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
         {isRTL ? 'لا توجد تقارير مجدولة' : 'No Scheduled Reports'}
@@ -58,7 +58,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
       <button onClick={onAdd} style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+        background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
       }}>
         <Plus size={15} />
         {isRTL ? 'إضافة جدول' : 'New Schedule'}
@@ -131,7 +131,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           padding: '16px 20px', borderBottom: `1px solid ${isDark ? '#1e3a5f' : '#e2e8f0'}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CalendarClock size={18} color="#4A7AAB" />
+            <CalendarClock size={18} color="#2F6BD3" />
             <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
               {isEdit ? (isRTL ? 'تعديل الجدول' : 'Edit Schedule') : (isRTL ? 'جدول تقرير جديد' : 'New Report Schedule')}
             </span>
@@ -213,7 +213,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <button onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
               {form.enabled
-                ? <ToggleRight size={28} color="#4A7AAB" />
+                ? <ToggleRight size={28} color="#2F6BD3" />
                 : <ToggleLeft size={28} color={isDark ? '#475569' : '#94a3b8'} />
               }
             </button>
@@ -223,7 +223,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           </div>
 
           {/* Filters: date range */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB', marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#2F6BD3', marginBottom: 8 }}>
             {isRTL ? 'الفلاتر' : 'Filters'}
           </div>
           <div style={{ marginBottom: 16 }}>
@@ -238,7 +238,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           </div>
 
           {/* Recipients */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB', marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#2F6BD3', marginBottom: 8 }}>
             {isRTL ? 'المستلمين' : 'Recipients'}
           </div>
           {form.recipients.map((r, i) => (
@@ -252,7 +252,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
               <span style={{ flex: 1, fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b' }}>
                 {r.name} ({r.email})
               </span>
-              <button onClick={() => removeRecipient(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}>
+              <button onClick={() => removeRecipient(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 2 }}>
                 <X size={14} />
               </button>
             </div>
@@ -288,7 +288,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           </button>
           <button onClick={() => onSave(form)} disabled={!canSave} style={{
             padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: canSave ? '#4A7AAB' : (isDark ? '#1e3a5f' : '#e2e8f0'),
+            background: canSave ? '#2F6BD3' : (isDark ? '#1e3a5f' : '#e2e8f0'),
             color: canSave ? '#fff' : (isDark ? '#475569' : '#94a3b8'),
             border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
           }}>
@@ -333,7 +333,7 @@ function DeleteModal({ schedule, onClose, onConfirm, isRTL, isDark }) {
           </button>
           <button onClick={onConfirm} style={{
             padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            background: '#ef4444', color: '#fff', border: 'none',
+            background: '#D6403B', color: '#fff', border: 'none',
           }}>
             {isRTL ? 'حذف' : 'Delete'}
           </button>
@@ -354,8 +354,8 @@ function HistoryRow({ entry, isRTL, isDark, onDownload }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {entry.status === 'success'
-          ? <CheckCircle size={14} color="#10B981" />
-          : <AlertCircle size={14} color="#ef4444" />
+          ? <CheckCircle size={14} color="#158A57" />
+          : <AlertCircle size={14} color="#D6403B" />
         }
         <span style={{ fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b' }}>
           {fmtDate(entry.generatedAt, isRTL)}
@@ -363,7 +363,7 @@ function HistoryRow({ entry, isRTL, isDark, onDownload }) {
         <span style={{
           fontSize: 10, padding: '2px 6px', borderRadius: 4,
           background: entry.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-          color: entry.status === 'success' ? '#10B981' : '#ef4444',
+          color: entry.status === 'success' ? '#158A57' : '#D6403B',
           fontWeight: 600,
         }}>
           {entry.status === 'success' ? (isRTL ? 'ناجح' : 'Success') : (isRTL ? 'خطأ' : 'Error')}
@@ -586,7 +586,7 @@ export default function ScheduledReportsPage() {
         <button onClick={() => { setEditSchedule(null); setModalOpen(true); }} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+          background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           <Plus size={16} />
           {isRTL ? 'جدول جديد' : 'New Schedule'}
@@ -595,19 +595,19 @@ export default function ScheduledReportsPage() {
 
       {/* KPI Cards */}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-        <div style={kpiCardStyle('#4A7AAB')}>
+        <div style={kpiCardStyle('#2F6BD3')}>
           <div style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 }}>
             {isRTL ? 'إجمالي الجداول' : 'Total Schedules'}
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: isDark ? '#e2e8f0' : '#1e293b' }}>{stats.total}</div>
         </div>
-        <div style={kpiCardStyle('#10B981')}>
+        <div style={kpiCardStyle('#158A57')}>
           <div style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 }}>
             {isRTL ? 'نشط' : 'Active'}
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#10B981' }}>{stats.active}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#158A57' }}>{stats.active}</div>
         </div>
-        <div style={kpiCardStyle('#F59E0B')}>
+        <div style={kpiCardStyle('#C9860A')}>
           <div style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 }}>
             {isRTL ? 'آخر إنشاء' : 'Last Generated'}
           </div>
@@ -615,7 +615,7 @@ export default function ScheduledReportsPage() {
             {stats.lastGen ? timeAgo(stats.lastGen.lastRun, isRTL) : (isRTL ? 'لا يوجد' : 'None')}
           </div>
         </div>
-        <div style={kpiCardStyle('#8B5CF6')}>
+        <div style={kpiCardStyle('#5A63C4')}>
           <div style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 }}>
             {isRTL ? 'التالي' : 'Next Due'}
           </div>
@@ -695,8 +695,8 @@ export default function ScheduledReportsPage() {
                     <span style={{
                       display: 'inline-block', fontSize: 11, fontWeight: 600,
                       padding: '3px 8px', borderRadius: 6,
-                      background: `${rt.color || '#4A7AAB'}18`,
-                      color: rt.color || '#4A7AAB',
+                      background: `${rt.color || '#2F6BD3'}18`,
+                      color: rt.color || '#2F6BD3',
                     }}>
                       {isRTL ? rt.ar : rt.en}
                     </span>
@@ -707,8 +707,8 @@ export default function ScheduledReportsPage() {
                     <span style={{
                       display: 'inline-block', fontSize: 11, fontWeight: 600,
                       padding: '3px 8px', borderRadius: 6,
-                      background: `${freq.color || '#3B82F6'}18`,
-                      color: freq.color || '#3B82F6',
+                      background: `${freq.color || '#2F6BD3'}18`,
+                      color: freq.color || '#2F6BD3',
                     }}>
                       {isRTL ? freq.ar : freq.en}
                     </span>
@@ -728,7 +728,7 @@ export default function ScheduledReportsPage() {
                   <div>
                     <button onClick={() => handleToggle(schedule.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
                       {schedule.enabled
-                        ? <ToggleRight size={24} color="#10B981" />
+                        ? <ToggleRight size={24} color="#158A57" />
                         : <ToggleLeft size={24} color={isDark ? '#475569' : '#94a3b8'} />
                       }
                     </button>
@@ -742,7 +742,7 @@ export default function ScheduledReportsPage() {
                       title={isRTL ? 'تشغيل الآن' : 'Run Now'}
                       style={{
                         background: 'none', border: 'none', cursor: isRunning ? 'wait' : 'pointer',
-                        padding: 4, color: '#10B981', opacity: isRunning ? 0.5 : 1,
+                        padding: 4, color: '#158A57', opacity: isRunning ? 0.5 : 1,
                       }}
                     >
                       <Play size={15} />
@@ -750,14 +750,14 @@ export default function ScheduledReportsPage() {
                     <button
                       onClick={() => { setEditSchedule(schedule); setModalOpen(true); }}
                       title={isRTL ? 'تعديل' : 'Edit'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#4A7AAB' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#2F6BD3' }}
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => setDeleteTarget(schedule)}
                       title={isRTL ? 'حذف' : 'Delete'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#ef4444' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#D6403B' }}
                     >
                       <Trash2 size={15} />
                     </button>

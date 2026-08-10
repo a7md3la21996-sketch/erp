@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft, AlertTriangle, X, MoreVertical } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
+import GlobalFilterBar from './GlobalFilterBar';
+import { useHeaderActions } from '../../contexts/PageActionsContext';
 import NotificationsDropdown from './NotificationsDropdown';
 import FavoritesDropdown from '../ui/FavoritesDropdown';
 import RecentItemsDropdown from '../ui/RecentItemsDropdown';
@@ -42,6 +44,9 @@ export default function Header({ onMenuClick }) {
   const recentRef = useRef(null);
   const ref = useRef(null);
   const isRTL = i18n.language === 'ar';
+  const pageActions = useHeaderActions();
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const actionsRef = useRef(null);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [suggestionsCount, setSuggestionsCount] = useState(0);
@@ -98,6 +103,14 @@ export default function Header({ onMenuClick }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [openDropdown]);
 
+  // Close the mobile page-actions menu on outside click.
+  useEffect(() => {
+    if (!showActionsMenu) return;
+    const h = (e) => { if (!actionsRef.current?.contains(e.target)) setShowActionsMenu(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [showActionsMenu]);
+
   // Cmd+K / Ctrl+K to open search
   useEffect(() => {
     const handler = (e) => {
@@ -146,6 +159,61 @@ export default function Header({ onMenuClick }) {
         </button>
       </div>
       <div className="flex items-center gap-1">
+        {/* Global filter (view by person / team / manager / period) */}
+        <GlobalFilterBar />
+        {/* Page-specific actions: inline icons on desktop, one "•••" menu on mobile */}
+        {pageActions.length > 0 && (
+          <>
+            <div className="hidden sm:flex items-center gap-1">
+              {pageActions.map(a => {
+                const Icon = a.icon;
+                const label = isRTL ? a.labelAr : a.labelEn;
+                return (
+                  <button
+                    key={a.id}
+                    onClick={a.onClick}
+                    title={label}
+                    aria-label={label}
+                    className={`flex items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer transition-colors ${
+                      a.primary
+                        ? 'bg-brand-500 text-white hover:bg-brand-600'
+                        : 'bg-transparent text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-surface-bg-dark'
+                    }`}
+                  >
+                    {Icon && <Icon size={18} className="shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="sm:hidden relative" ref={actionsRef}>
+              <button
+                onClick={() => setShowActionsMenu(v => !v)}
+                aria-label={isRTL ? 'إجراءات الصفحة' : 'Page actions'}
+                aria-haspopup="menu" aria-expanded={showActionsMenu}
+                className="flex items-center justify-center w-9 h-9 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-surface-bg-dark"
+              >
+                <MoreVertical size={18} />
+              </button>
+              {showActionsMenu && (
+                <div role="menu" dir={isRTL ? 'rtl' : 'ltr'}
+                  className="absolute top-full mt-1 end-0 min-w-[190px] max-w-[calc(100vw-1rem)] z-[100] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg dark:shadow-2xl py-1.5">
+                  {pageActions.map(a => {
+                    const Icon = a.icon;
+                    const label = isRTL ? a.labelAr : a.labelEn;
+                    return (
+                      <button key={a.id} role="menuitem"
+                        onClick={() => { setShowActionsMenu(false); a.onClick?.(); }}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none cursor-pointer bg-transparent text-[13px] text-start hover:bg-surface-bg dark:hover:bg-surface-bg-dark ${a.primary ? 'text-brand-600 dark:text-brand-400 font-semibold' : 'text-content dark:text-content-dark'}`}>
+                        {Icon && <Icon size={16} className={`shrink-0 ${a.primary ? '' : 'text-content-muted dark:text-content-muted-dark'}`} />}{label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        <div className="w-px h-6 mx-0.5 bg-edge dark:bg-edge-dark hidden sm:block" />
         <div ref={favRef} className="relative">
           <button
             data-tour="favorites"

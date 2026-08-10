@@ -69,7 +69,7 @@ export default function TalentHubOverview({ isRTL, lang }) {
         title: isRTL ? (j.title_ar || j.title || '—') : (j.title || j.title_ar || '—'),
         sub: isRTL ? 'وظيفة جديدة' : 'New job posting',
         Icon: Briefcase,
-        color: '#4A7AAB',
+        color: '#2F6BD3',
       });
     });
     applicants.slice(0, 5).forEach(a => {
@@ -80,7 +80,7 @@ export default function TalentHubOverview({ isRTL, lang }) {
         title: a.name || (isRTL ? 'متقدم جديد' : 'New applicant'),
         sub: isRTL ? 'تقدّم جديد' : 'New application',
         Icon: Users,
-        color: '#10B981',
+        color: '#158A57',
       });
     });
     onboarding.slice(0, 5).forEach(o => {
@@ -96,7 +96,7 @@ export default function TalentHubOverview({ isRTL, lang }) {
           ? (isRTL ? 'استقبال مكتمل' : 'Onboarding complete')
           : (isRTL ? 'قيد الاستقبال' : 'Onboarding in progress'),
         Icon: o.status === 'completed' ? CheckCircle2 : UserPlus,
-        color: o.status === 'completed' ? '#10B981' : '#F59E0B',
+        color: o.status === 'completed' ? '#158A57' : '#C9860A',
       });
     });
     return stream
@@ -111,8 +111,8 @@ export default function TalentHubOverview({ isRTL, lang }) {
   const pipelineState = openJobs.length === 0
     ? { label_ar: 'لا توجد وظائف مفتوحة', label_en: 'No open positions', color: '#94A3B8', icon: AlertTriangle }
     : applicants.length === 0
-      ? { label_ar: 'في انتظار المتقدمين', label_en: 'Awaiting applicants', color: '#F59E0B', icon: AlertTriangle }
-      : { label_ar: 'نشط', label_en: 'Active Pipeline', color: '#10B981', icon: TrendingUp };
+      ? { label_ar: 'في انتظار المتقدمين', label_en: 'Awaiting applicants', color: '#C9860A', icon: AlertTriangle }
+      : { label_ar: 'نشط', label_en: 'Active Pipeline', color: '#158A57', icon: TrendingUp };
   const StatusIcon = pipelineState.icon;
 
   const monthName = now.toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' });
@@ -158,19 +158,19 @@ export default function TalentHubOverview({ isRTL, lang }) {
           label={isRTL ? 'وظائف مفتوحة' : 'Open Jobs'}
           value={openJobs.length}
           sub={jobs.length > openJobs.length ? `${jobs.length} ${isRTL ? 'إجمالي' : 'total'}` : ''}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={Users}
           label={isRTL ? 'متقدمون هذا الشهر' : 'Applicants (Month)'}
           value={applicants.length}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           icon={UserPlus}
           label={isRTL ? 'استقبال جارٍ' : 'In-Progress Onboarding'}
           value={inProgressOnboarding.length}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <KpiCard
           icon={CheckCircle2}

@@ -111,7 +111,7 @@ export default function ShiftsPage() {
   }
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -153,7 +153,7 @@ export default function ShiftsPage() {
               <tr>
                 <td colSpan={8} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                    <Clock size={24} color="#4A7AAB" />
+                    <Clock size={24} color="#2F6BD3" />
                   </div>
                   <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
                     {lang === 'ar' ? 'لا توجد فترات مسجلة' : 'No Shifts Found'}

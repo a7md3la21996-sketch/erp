@@ -16,6 +16,7 @@ import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TAS
 import supabase from '../lib/supabase';
 import ContactSearch from './crm/opportunities/ContactSearch';
 import { createActivity } from '../services/contactsService';
+import { localDateStr } from '../utils/dateTime';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
@@ -209,9 +210,9 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
                   return (
                     <button key={k} onClick={() => toggleDay(day)} style={{
                       padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      border: selected ? '2px solid #4A7AAB' : `1px solid ${isDark ? '#2a3a4a' : '#e2e8f0'}`,
-                      background: selected ? (isDark ? '#4A7AAB22' : '#4A7AAB14') : 'transparent',
-                      color: selected ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                      border: selected ? '2px solid #2F6BD3' : `1px solid ${isDark ? '#2a3a4a' : '#e2e8f0'}`,
+                      background: selected ? (isDark ? '#2F6BD322' : '#2F6BD314') : 'transparent',
+                      color: selected ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                     }}>
                       {lang === 'ar' ? v.ar : v.en}
                     </button>
@@ -287,7 +288,7 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
           </button>
           <button onClick={handleSave} disabled={saving || !form.title.trim()} style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            border: 'none', background: '#4A7AAB', color: '#fff',
+            border: 'none', background: '#2F6BD3', color: '#fff',
             opacity: (!form.title.trim() || saving) ? 0.5 : 1,
           }}>
             {saving ? '...' : (lang === 'ar' ? 'حفظ' : 'Save')}
@@ -362,11 +363,11 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
 
   const freqBadgeColor = (freq) => {
     switch (freq) {
-      case 'daily': return '#10B981';
-      case 'weekly': return '#4A7AAB';
-      case 'monthly': return '#8B5CF6';
-      case 'quarterly': return '#F59E0B';
-      case 'yearly': return '#EF4444';
+      case 'daily': return '#158A57';
+      case 'weekly': return '#2F6BD3';
+      case 'monthly': return '#5A63C4';
+      case 'quarterly': return '#C9860A';
+      case 'yearly': return '#D6403B';
       default: return '#6B7280';
     }
   };
@@ -400,9 +401,9 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <div style={{
               width: 56, height: 56, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#4A7AAB18', margin: '0 auto 14px',
+              background: '#2F6BD318', margin: '0 auto 14px',
             }}>
-              <Repeat size={24} color="#4A7AAB" />
+              <Repeat size={24} color="#2F6BD3" />
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', marginBottom: 6 }}>
               {lang === 'ar' ? 'لا توجد مهام متكررة' : 'No Recurring Tasks'}
@@ -426,7 +427,7 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
               </thead>
               <tbody>
                 {recTasks.map(task => {
-                  const priColor = PRIORITY_OPTIONS[task.priority]?.color || '#4A7AAB';
+                  const priColor = PRIORITY_OPTIONS[task.priority]?.color || '#2F6BD3';
                   const fColor = freqBadgeColor(task.frequency);
                   return (
                     <tr key={task.id} style={{ opacity: task.enabled ? 1 : 0.5 }}>
@@ -474,7 +475,7 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
                         <button onClick={() => handleToggle(task.id)} style={{
                           display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
                           cursor: 'pointer', padding: 0,
-                          color: task.enabled ? '#10B981' : (isDark ? '#94a3b8' : '#64748b'),
+                          color: task.enabled ? '#158A57' : (isDark ? '#94a3b8' : '#64748b'),
                         }}>
                           {task.enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                           <span style={{ fontSize: 11, fontWeight: 600 }}>
@@ -607,7 +608,7 @@ function CalendarView({ tasks, lang, isRTL, isDark, onTaskClick }) {
                     className={`w-full text-start px-1.5 py-1 rounded-md text-[10px] border-none cursor-pointer truncate font-medium transition-colors ${
                       overdue ? 'bg-red-500/10 text-red-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content dark:text-content-dark hover:bg-brand-500/10'
                     }`}
-                    style={{ borderInlineStart: `2px solid ${pri?.color || '#4A7AAB'}` }}
+                    style={{ borderInlineStart: `2px solid ${pri?.color || '#2F6BD3'}` }}
                     title={`${t.title}${t.contact_name ? ' · ' + t.contact_name : ''}`}
                   >
                     {t.title}
@@ -651,19 +652,19 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
 
   const RESULTS = {
     call: [
-      { value: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
-      { value: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#F59E0B' },
-      { value: 'busy', ar: 'مشغول', en: 'Busy', color: '#EF4444' },
+      { value: 'answered', ar: 'رد', en: 'Answered', color: '#158A57' },
+      { value: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#C9860A' },
+      { value: 'busy', ar: 'مشغول', en: 'Busy', color: '#D6403B' },
       { value: 'switched_off', ar: 'مغلق', en: 'Switched Off', color: '#6b7280' },
     ],
     whatsapp: [
-      { value: 'replied', ar: 'رد', en: 'Replied', color: '#10B981' },
-      { value: 'seen', ar: 'شاف', en: 'Seen', color: '#3B82F6' },
-      { value: 'delivered', ar: 'وصلت', en: 'Delivered', color: '#F59E0B' },
+      { value: 'replied', ar: 'رد', en: 'Replied', color: '#158A57' },
+      { value: 'seen', ar: 'شاف', en: 'Seen', color: '#2F6BD3' },
+      { value: 'delivered', ar: 'وصلت', en: 'Delivered', color: '#C9860A' },
     ],
     email: [
-      { value: 'replied', ar: 'رد', en: 'Replied', color: '#10B981' },
-      { value: 'sent', ar: 'تم الإرسال', en: 'Sent', color: '#4A7AAB' },
+      { value: 'replied', ar: 'رد', en: 'Replied', color: '#158A57' },
+      { value: 'sent', ar: 'تم الإرسال', en: 'Sent', color: '#2F6BD3' },
     ],
   };
   const currentResults = RESULTS[actType] || [];
@@ -813,11 +814,11 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
             {changeContactStatus && (
               <div className="mt-2.5 flex gap-1.5 flex-wrap">
                 {[
-                  { value: 'new', ar: 'جديد', en: 'New', color: '#4A7AAB' },
-                  { value: 'following', ar: 'متابعة', en: 'Following', color: '#10B981' },
-                  { value: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#F59E0B' },
-                  { value: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opp', color: '#059669' },
-                  { value: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#EF4444' },
+                  { value: 'new', ar: 'جديد', en: 'New', color: '#2F6BD3' },
+                  { value: 'following', ar: 'متابعة', en: 'Following', color: '#158A57' },
+                  { value: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#C9860A' },
+                  { value: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opp', color: '#117049' },
+                  { value: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#D6403B' },
                 ].map(s => (
                   <button key={s.value} onClick={() => setNewContactStatus(newContactStatus === s.value ? '' : s.value)}
                     className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
@@ -1172,14 +1173,14 @@ export default function TasksPage() {
     padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
     borderRadius: '10px 10px 0 0', border: 'none',
     background: active ? (isDark ? '#1a2332' : '#ffffff') : 'transparent',
-    color: active ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
-    borderBottom: active ? '2px solid #4A7AAB' : '2px solid transparent',
+    color: active ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
+    borderBottom: active ? '2px solid #2F6BD3' : '2px solid transparent',
     display: 'flex', alignItems: 'center', gap: 6,
     transition: 'all 0.15s',
   });
 
   return (
-    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {bulkBusy && (
         // Floating progress pill — anchored top-center so it stays visible
@@ -1274,11 +1275,11 @@ export default function TasksPage() {
           {/* Stats */}
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
             {[
-              { label: lang==='ar'?'الكل':'Total',          value: stats.total,     color: '#4A7AAB' },
-              { label: lang==='ar'?'معلقة':'Pending',       value: stats.pending,   color: '#F97316' },
-              { label: lang==='ar'?'متأخرة':'Overdue',      value: stats.overdue,   color: '#EF4444' },
+              { label: lang==='ar'?'الكل':'Total',          value: stats.total,     color: '#2F6BD3' },
+              { label: lang==='ar'?'معلقة':'Pending',       value: stats.pending,   color: '#DD6327' },
+              { label: lang==='ar'?'متأخرة':'Overdue',      value: stats.overdue,   color: '#D6403B' },
               { label: lang==='ar'?'اليوم':'Today',         value: stats.today,     color: '#2B4C6F' },
-              { label: lang==='ar'?'مكتملة اليوم':'Done Today', value: stats.doneToday, color: '#10B981' },
+              { label: lang==='ar'?'مكتملة اليوم':'Done Today', value: stats.doneToday, color: '#158A57' },
               { label: lang==='ar'?'مكتملة':'Done',         value: stats.done,      color: '#6B8DB5' },
             ].map((s,i) => (
               <Card key={i} className="px-3 py-2.5 text-center">
@@ -1349,9 +1350,9 @@ export default function TasksPage() {
               // click "Done" then wonder why nothing changed.
               const statusOverridden = !!serverFilters.status;
               return [
-                { value: 'pending', label: lang==='ar'?'معلقة':'Pending', color: '#F97316' },
-                { value: 'in_progress', label: lang==='ar'?'جارية':'In Progress', color: '#4A7AAB' },
-                { value: 'done', label: lang==='ar'?'مكتملة':'Done', color: '#10B981' },
+                { value: 'pending', label: lang==='ar'?'معلقة':'Pending', color: '#DD6327' },
+                { value: 'in_progress', label: lang==='ar'?'جارية':'In Progress', color: '#2F6BD3' },
+                { value: 'done', label: lang==='ar'?'مكتملة':'Done', color: '#158A57' },
                 { value: 'all', label: lang==='ar'?'الكل':'All', color: '#6B8DB5' },
               ].map(s => {
                 const active = !statusOverridden && statusFilter === s.value;
@@ -1371,8 +1372,8 @@ export default function TasksPage() {
             <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
             {[
               { value: 'all', label: lang==='ar'?'كل الأولويات':'All Priorities', color: '#6B8DB5' },
-              { value: 'high', label: lang==='ar'?'عالية':'High', color: '#EF4444' },
-              { value: 'medium', label: lang==='ar'?'متوسطة':'Medium', color: '#F97316' },
+              { value: 'high', label: lang==='ar'?'عالية':'High', color: '#D6403B' },
+              { value: 'medium', label: lang==='ar'?'متوسطة':'Medium', color: '#DD6327' },
               { value: 'low', label: lang==='ar'?'منخفضة':'Low', color: '#6B8DB5' },
             ].map(p => {
               const active = priorityFilter === p.value;
@@ -1388,8 +1389,8 @@ export default function TasksPage() {
             {[
               { value: 'all', label: lang==='ar'?'كل المواعيد':'All Dates', color: '#6B8DB5' },
               { value: 'today', label: lang==='ar'?'اليوم':'Today', color: '#2B4C6F' },
-              { value: 'week', label: lang==='ar'?'هذا الأسبوع':'This Week', color: '#4A7AAB' },
-              { value: 'overdue', label: lang==='ar'?'متأخرة':'Overdue', color: '#EF4444' },
+              { value: 'week', label: lang==='ar'?'هذا الأسبوع':'This Week', color: '#2F6BD3' },
+              { value: 'overdue', label: lang==='ar'?'متأخرة':'Overdue', color: '#D6403B' },
             ].map(d => {
               const active = dateFilter === d.value;
               return (
@@ -1403,7 +1404,7 @@ export default function TasksPage() {
             <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
             <select value={agentFilter} onChange={e => { setAgentFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 rounded-full text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer"
-              style={agentFilter !== 'all' ? { borderColor: '#4A7AAB', color: '#4A7AAB', background: '#4A7AAB15' } : {}}>
+              style={agentFilter !== 'all' ? { borderColor: '#2F6BD3', color: '#2F6BD3', background: '#2F6BD315' } : {}}>
               <option value="all">{lang==='ar'?'كل الموظفين':'All Agents'}</option>
               {assignedToOptions.map(a => <option key={a.value} value={a.value}>{lang==='ar' ? a.label : a.labelEn}</option>)}
             </select>
@@ -1505,22 +1506,22 @@ export default function TasksPage() {
 
                   {/* Type icon */}
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: (priDef?.color||'#4A7AAB')+'18' }}>
-                    <Ic size={14} color={priDef?.color||'#4A7AAB'} />
+                    style={{ background: (priDef?.color||'#2F6BD3')+'18' }}>
+                    <Ic size={14} color={priDef?.color||'#2F6BD3'} />
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className={`flex items-center gap-[7px] flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className={`text-sm font-semibold text-content dark:text-content-dark ${isDone ? 'line-through' : ''}`}>{task.title}</span>
-                      <Badge size="sm" style={{ background: (priDef?.color||'#4A7AAB')+'18', color: priDef?.color||'#4A7AAB' }}>
+                      <Badge size="sm" style={{ background: (priDef?.color||'#2F6BD3')+'18', color: priDef?.color||'#2F6BD3' }}>
                         {lang==='ar'?priDef?.ar:priDef?.en}
                       </Badge>
-                      <Badge size="sm" style={{ background: (stDef?.color||'#4A7AAB')+'18', color: stDef?.color||'#4A7AAB' }}>
+                      <Badge size="sm" style={{ background: (stDef?.color||'#2F6BD3')+'18', color: stDef?.color||'#2F6BD3' }}>
                         {lang==='ar'?stDef?.ar:stDef?.en}
                       </Badge>
                       {task._offline && (
-                        <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
+                        <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#D6403B', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
                           <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                         </Badge>
                       )}

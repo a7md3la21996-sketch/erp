@@ -141,6 +141,11 @@ export function AuthProvider({ children }) {
     if (USE_SUPABASE_AUTH) {
       // Production: ONLY use Supabase auth — never restore mock sessions
       let isMounted = true;
+      // Set true once auth init genuinely finishes (success or a handled
+      // early-exit). The safety timeout below only warns when this is still
+      // false at 8s — previously the timeout was never cleared on success, so
+      // it fired its warning on EVERY load even when auth had already completed.
+      let settled = false;
 
       const initSession = async () => {
         try {
@@ -157,7 +162,7 @@ export function AuthProvider({ children }) {
                 setProfile(null);
                 setPermissions([]);
                 try { localStorage.removeItem('platform_mock_user'); } catch { /* ignore */ }
-                if (isMounted) setLoading(false);
+                if (isMounted) { settled = true; setLoading(false); }
                 return;
               }
               setUser({ id: session.user.id, email: session.user.email });
@@ -177,7 +182,7 @@ export function AuthProvider({ children }) {
         } catch (err) {
           console.error('[Auth] Session check failed:', err.message);
         }
-        if (isMounted) setLoading(false);
+        if (isMounted) { settled = true; setLoading(false); }
       };
 
       initSession();
@@ -185,7 +190,8 @@ export function AuthProvider({ children }) {
       // Safety timeout: if auth takes more than 8 seconds, stop loading
       // This prevents infinite loading when token refresh fails silently
       const safetyTimeout = setTimeout(() => {
-        if (isMounted) {
+        if (isMounted && !settled) {
+          settled = true;
           setLoading(false);
           console.warn('[Auth] Safety timeout — forcing loading to false');
         }
@@ -285,7 +291,7 @@ export function AuthProvider({ children }) {
         // Check if user is deactivated
         if (isDeactivated(profileData)) {
           await supabase.auth.signOut();
-          throw new Error('تم تعطيل حسابك. تواصل مع المدير.');
+          throw new Error('Your account has been disabled — please contact your administrator. / تم تعطيل حسابك، تواصل مع المدير.');
         }
 
         setUser({ id: data.user.id, email: data.user.email });

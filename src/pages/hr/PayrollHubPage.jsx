@@ -65,7 +65,7 @@ export default function PayrollHubPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* Header */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -180,8 +180,8 @@ function PayrollOverview({ profile, isRTL, lang }) {
   const status = currentRun?.locked_at
     ? { label_ar: 'مُغلق', label_en: 'Locked', color: '#1B3347', icon: Lock }
     : currentRun
-      ? { label_ar: 'مُشغّل', label_en: 'Run', color: '#10B981', icon: CheckCircle2 }
-      : { label_ar: 'لم يُشغّل بعد', label_en: 'Not Run Yet', color: '#F59E0B', icon: AlertTriangle };
+      ? { label_ar: 'مُشغّل', label_en: 'Run', color: '#158A57', icon: CheckCircle2 }
+      : { label_ar: 'لم يُشغّل بعد', label_en: 'Not Run Yet', color: '#C9860A', icon: AlertTriangle };
   const StatusIcon = status.icon;
 
   return (
@@ -228,21 +228,21 @@ function PayrollOverview({ profile, isRTL, lang }) {
           label={isRTL ? 'الإجمالي' : 'Gross'}
           value={currentRun ? `${Math.round((Number(currentRun.total_gross) || 0) / 1000)}k` : '—'}
           sub={currentRun ? (isRTL ? 'ج.م' : 'EGP') : ''}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={DollarSign}
           label={isRTL ? 'الصافي' : 'Net'}
           value={currentRun ? `${Math.round((Number(currentRun.total_net) || 0) / 1000)}k` : '—'}
           sub={currentRun ? (isRTL ? 'ج.م' : 'EGP') : ''}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           icon={CreditCard}
           label={isRTL ? 'قروض نشطة' : 'Active Loans'}
           value={loanStats.count}
           sub={loanStats.monthlyTotal > 0 ? `${loanStats.monthlyTotal.toLocaleString()} ج.م/${isRTL ? 'شهر' : 'mo'}` : ''}
-          color="#F59E0B"
+          color="#C9860A"
         />
       </div>
 

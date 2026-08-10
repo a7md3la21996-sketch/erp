@@ -65,7 +65,7 @@ export default function SecurityPage() {
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
   const inputBg = isDark ? '#0a1929' : '#f8fafc';
   const inputBorder = isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)';
-  const accent = '#4A7AAB';
+  const accent = '#2F6BD3';
 
   const inputStyle = {
     background: inputBg,
@@ -96,7 +96,7 @@ export default function SecurityPage() {
 
   const btnDanger = {
     background: 'transparent',
-    color: '#ef4444',
+    color: '#D6403B',
     border: 'none',
     borderRadius: 6,
     padding: '6px 8px',
@@ -136,7 +136,7 @@ export default function SecurityPage() {
     padding: 0,
     display: 'flex',
     alignItems: 'center',
-    color: enabled ? '#22c55e' : textSecondary,
+    color: enabled ? '#158A57' : textSecondary,
   });
 
   // ── Handlers ──
@@ -244,7 +244,7 @@ export default function SecurityPage() {
         </p>
 
         {ipEnabled && (
-          <div style={{ padding: '12px 16px', background: isDark ? 'rgba(234,179,8,0.08)' : 'rgba(234,179,8,0.06)', border: `1px solid rgba(234,179,8,0.2)`, borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#eab308' }}>
+          <div style={{ padding: '12px 16px', background: isDark ? 'rgba(234,179,8,0.08)' : 'rgba(234,179,8,0.06)', border: `1px solid rgba(234,179,8,0.2)`, borderRadius: 8, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#C9860A' }}>
             <AlertTriangle size={16} />
             {isRTL ? 'تحذير: فقط عناوين IP المدرجة يمكنها الوصول للنظام' : 'Warning: Only listed IPs can access the system'}
           </div>
@@ -436,14 +436,14 @@ export default function SecurityPage() {
           {pwdResult && (
             <div style={{ marginTop: 10 }}>
               {pwdResult.valid ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#158A57', fontSize: 13 }}>
                   <Check size={16} />
                   {isRTL ? 'كلمة المرور مطابقة للسياسة' : 'Password meets policy requirements'}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {pwdResult.errors.map((err, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444', fontSize: 13 }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#D6403B', fontSize: 13 }}>
                       <X size={14} />
                       {isRTL ? err.ar : err.en}
                     </div>
@@ -559,7 +559,7 @@ export default function SecurityPage() {
           bottom: 24,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: toast.type === 'error' ? '#ef4444' : '#22c55e',
+          background: toast.type === 'error' ? '#D6403B' : '#158A57',
           color: '#fff',
           padding: '10px 20px',
           borderRadius: 8,

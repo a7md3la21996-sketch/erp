@@ -71,13 +71,13 @@ const DEPT_LABELS = {
 
 // ── Stage Colors ───────────────────────────────────────────────────
 const STAGE_COLORS = {
-  qualification: '#4A7AAB', site_visit_scheduled: '#4A7AAB', site_visited: '#2B4C6F',
-  proposal: '#3B82F6', negotiation: '#F59E0B', reserved: '#8B5CF6',
-  contracted: '#10B981', closed_won: '#22C55E', closed_lost: '#EF4444',
-  new: '#94A3B8', initial: '#94A3B8', qualified: '#3B82F6', contacted: '#4A7AAB',
-  closing: '#F97316', nurturing: '#8B5CF6', converted: '#10B981',
-  request: '#4A7AAB', evaluation: '#2B4C6F', agreement: '#F59E0B',
-  execution: '#8B5CF6', pending: '#94A3B8', under_review: '#F59E0B', approved: '#10B981',
+  qualification: '#2F6BD3', site_visit_scheduled: '#2F6BD3', site_visited: '#2B4C6F',
+  proposal: '#2F6BD3', negotiation: '#C9860A', reserved: '#5A63C4',
+  contracted: '#158A57', closed_won: '#158A57', closed_lost: '#D6403B',
+  new: '#94A3B8', initial: '#94A3B8', qualified: '#2F6BD3', contacted: '#2F6BD3',
+  closing: '#DD6327', nurturing: '#5A63C4', converted: '#158A57',
+  request: '#2F6BD3', evaluation: '#2B4C6F', agreement: '#C9860A',
+  execution: '#5A63C4', pending: '#94A3B8', under_review: '#C9860A', approved: '#158A57',
 };
 
 // ── Smart Filter Fields ────────────────────────────────────────────
@@ -215,7 +215,7 @@ export default function SalesForecastPage() {
             background: 'rgba(74,122,171,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <TrendingUp size={20} color="#4A7AAB" />
+            <TrendingUp size={20} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary }}>
@@ -299,31 +299,31 @@ export default function SalesForecastPage() {
           label={isRTL ? 'إجمالي خط الأنابيب' : 'Total Pipeline'}
           value={fmtMoney(kpis.totalPipeline)}
           icon={DollarSign}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           label={isRTL ? 'التوقع المرجح' : 'Weighted Forecast'}
           value={fmtMoney(kpis.weightedRevenue)}
           icon={TrendingUp}
-          color="#3B82F6"
+          color="#2F6BD3"
         />
         <KpiCard
           label={isRTL ? 'الإيراد الفعلي' : 'Actual Revenue'}
           value={fmtMoney(kpis.actualRevenue)}
           icon={Target}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           label={isRTL ? 'نسبة الفوز' : 'Win Rate'}
           value={`${kpis.winRate}%`}
           icon={Percent}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <KpiCard
           label={isRTL ? 'متوسط الصفقة' : 'Avg Deal Size'}
           value={fmtMoney(kpis.avgDealSize)}
           icon={BarChart3}
-          color="#8B5CF6"
+          color="#5A63C4"
         />
       </div>
 
@@ -385,14 +385,14 @@ export default function SalesForecastPage() {
                 <Bar
                   dataKey="weighted"
                   name={isRTL ? 'التوقع المرجح' : 'Weighted'}
-                  fill="#4A7AAB"
+                  fill="#2F6BD3"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
                 <Bar
                   dataKey="actual"
                   name={isRTL ? 'الفعلي' : 'Actual'}
-                  fill="#10B981"
+                  fill="#158A57"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
@@ -400,9 +400,9 @@ export default function SalesForecastPage() {
                   type="monotone"
                   dataKey="cumulative"
                   name={isRTL ? 'التراكمي' : 'Cumulative'}
-                  stroke="#F59E0B"
+                  stroke="#C9860A"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#F59E0B' }}
+                  dot={{ r: 3, fill: '#C9860A' }}
                   strokeDasharray="5 5"
                 />
               </ComposedChart>
@@ -426,7 +426,7 @@ export default function SalesForecastPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {funnel.map(item => {
                 const barWidth = Math.max((item.value / maxFunnelValue) * 100, 8);
-                const color = STAGE_COLORS[item.stage] || '#4A7AAB';
+                const color = STAGE_COLORS[item.stage] || '#2F6BD3';
                 return (
                   <div key={item.stage}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -526,10 +526,10 @@ export default function SalesForecastPage() {
                     <td style={{ padding: '12px 16px', fontSize: 13, color: textPrimary, fontFamily: 'monospace' }}>
                       {fmtFull(Math.round(row.pipeline))}
                     </td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#4A7AAB', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#2F6BD3', fontWeight: 600, fontFamily: 'monospace' }}>
                       {fmtFull(Math.round(row.weighted))}
                     </td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#10B981', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#158A57', fontWeight: 600, fontFamily: 'monospace' }}>
                       {fmtFull(Math.round(row.actual))}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: 13 }}>
@@ -543,10 +543,10 @@ export default function SalesForecastPage() {
                               ? 'rgba(245,158,11,0.12)'
                               : 'rgba(239,68,68,0.12)',
                           color: row.accuracy >= 80
-                            ? '#10B981'
+                            ? '#158A57'
                             : row.accuracy >= 50
-                              ? '#F59E0B'
-                              : '#EF4444',
+                              ? '#C9860A'
+                              : '#D6403B',
                         }}>
                           {row.accuracy}%
                         </span>
@@ -590,7 +590,7 @@ export default function SalesForecastPage() {
             : `${kpis.totalDeals} opportunities in selected period • ${kpis.closedWon} won • ${kpis.closedLost} lost`
           }
         </span>
-        <span style={{ fontSize: 12, color: '#4A7AAB', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: '#2F6BD3', fontWeight: 600 }}>
           {isRTL ? `التوقع المرجح: ${fmtMoney(kpis.weightedRevenue)}` : `Weighted Forecast: ${fmtMoney(kpis.weightedRevenue)}`}
         </span>
       </div>

@@ -101,7 +101,7 @@ export default function UserTrackingPage() {
   }
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
@@ -136,10 +136,10 @@ export default function UserTrackingPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          <KpiCard icon={Monitor} label={isRTL ? 'إجمالي الجلسات' : 'Total Sessions'} value={sessionStats.total} color="#4A7AAB" />
-          <KpiCard icon={Clock} label={isRTL ? 'جلسات اليوم' : 'Today'} value={sessionStats.today} color="#22C55E" />
+          <KpiCard icon={Monitor} label={isRTL ? 'إجمالي الجلسات' : 'Total Sessions'} value={sessionStats.total} color="#2F6BD3" />
+          <KpiCard icon={Clock} label={isRTL ? 'جلسات اليوم' : 'Today'} value={sessionStats.today} color="#158A57" />
           <KpiCard icon={Users} label={isRTL ? 'مستخدمين نشطين' : 'Active Users'} value={sessionStats.uniqueUsersToday} color="#6B21A8" />
-          <KpiCard icon={Shield} label={isRTL ? 'جلسات نشطة' : 'Active Sessions'} value={sessionStats.active} color="#F59E0B" />
+          <KpiCard icon={Shield} label={isRTL ? 'جلسات نشطة' : 'Active Sessions'} value={sessionStats.active} color="#C9860A" />
         </div>
 
         {/* Device/Browser/OS breakdown */}
@@ -317,10 +317,10 @@ export default function UserTrackingPage() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          <KpiCard icon={Eye} label={isRTL ? 'إجمالي المشاهدات' : 'Total Views'} value={viewStats.total} color="#4A7AAB" />
-          <KpiCard icon={Clock} label={isRTL ? 'مشاهدات اليوم' : 'Today'} value={viewStats.today} color="#22C55E" />
+          <KpiCard icon={Eye} label={isRTL ? 'إجمالي المشاهدات' : 'Total Views'} value={viewStats.total} color="#2F6BD3" />
+          <KpiCard icon={Clock} label={isRTL ? 'مشاهدات اليوم' : 'Today'} value={viewStats.today} color="#158A57" />
           <KpiCard icon={Users} label={isRTL ? 'مستخدمين' : 'Users'} value={viewStats.uniqueUsers} color="#6B21A8" />
-          <KpiCard icon={Activity} label={isRTL ? 'نشطين اليوم' : 'Active Today'} value={viewStats.uniqueUsersToday} color="#F59E0B" />
+          <KpiCard icon={Activity} label={isRTL ? 'نشطين اليوم' : 'Active Today'} value={viewStats.uniqueUsersToday} color="#C9860A" />
         </div>
 
         {/* View breakdown by entity */}

@@ -66,9 +66,9 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
 
   // Status card (overall dev pipeline health)
   const status = reviewStats.activeCount > 0
-    ? { label_ar: `${reviewStats.activeCount} تقييم قيد التنفيذ`, label_en: `${reviewStats.activeCount} reviews in progress`, color: '#F59E0B', icon: ListChecks }
+    ? { label_ar: `${reviewStats.activeCount} تقييم قيد التنفيذ`, label_en: `${reviewStats.activeCount} reviews in progress`, color: '#C9860A', icon: ListChecks }
     : reviewStats.completedCount > 0
-      ? { label_ar: `${reviewStats.completedCount} تقييم مكتمل لهذا العام`, label_en: `${reviewStats.completedCount} reviews completed this year`, color: '#10B981', icon: Award }
+      ? { label_ar: `${reviewStats.completedCount} تقييم مكتمل لهذا العام`, label_en: `${reviewStats.completedCount} reviews completed this year`, color: '#158A57', icon: Award }
       : { label_ar: 'لا توجد تقييمات بعد', label_en: 'No reviews yet', color: '#6B7280', icon: Award };
   const StatusIcon = status.icon;
 
@@ -109,14 +109,14 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
           label={isRTL ? 'تقييمات نشطة' : 'Active Reviews'}
           value={reviewStats.activeCount}
           sub={isRTL ? 'قيد التنفيذ' : 'In progress'}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <KpiCard
           icon={Star}
           label={isRTL ? 'متوسط التقييم' : 'Avg. Rating'}
           value={reviewStats.avgRating ?? '—'}
           sub={reviewStats.avgRating ? `${reviewStats.completedCount} ${isRTL ? 'مكتمل' : 'completed'}` : (isRTL ? 'لا بيانات' : 'No data')}
-          color="#10B981"
+          color="#158A57"
         />
         <KpiCard
           icon={Target}
@@ -130,7 +130,7 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
           label={isRTL ? 'برامج تدريب' : 'Training Programs'}
           value={trainingStats.activeCount}
           sub={trainingStats.upcomingCount > 0 ? `+${trainingStats.upcomingCount} ${isRTL ? 'قادم' : 'upcoming'}` : (isRTL ? 'نشطة' : 'Active')}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
       </div>
 
@@ -159,7 +159,7 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
                 {isRTL ? 'قادمة' : 'Upcoming'}
               </p>
-              <p className="m-0 text-lg font-bold" style={{ color: '#F59E0B' }}>{trainingStats.upcomingCount}</p>
+              <p className="m-0 text-lg font-bold" style={{ color: '#C9860A' }}>{trainingStats.upcomingCount}</p>
             </div>
             <div>
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
@@ -193,7 +193,7 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
                 {isRTL ? 'إجمالي تقييمات' : 'Total Reviews'}
               </p>
-              <p className="m-0 text-lg font-bold" style={{ color: '#4A7AAB' }}>{reviewStats.total}</p>
+              <p className="m-0 text-lg font-bold" style={{ color: '#2F6BD3' }}>{reviewStats.total}</p>
             </div>
           </div>
         </Card>
@@ -234,8 +234,8 @@ export default function DevelopmentHubOverview({ isRTL, lang }) {
                 </div>
               </div>
               {r.overall_rating != null && (
-                <span className={`inline-flex items-center gap-1 text-sm font-bold tabular-nums ${isRTL ? 'flex-row-reverse' : ''}`} style={{ color: '#F59E0B' }}>
-                  <Star size={12} fill="#F59E0B" />
+                <span className={`inline-flex items-center gap-1 text-sm font-bold tabular-nums ${isRTL ? 'flex-row-reverse' : ''}`} style={{ color: '#C9860A' }}>
+                  <Star size={12} fill="#C9860A" />
                   {Number(r.overall_rating).toFixed(1)}
                 </span>
               )}

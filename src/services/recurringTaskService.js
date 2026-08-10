@@ -15,8 +15,8 @@ export const FREQUENCIES = {
 };
 
 export const PRIORITY_OPTIONS = {
-  high:   { ar: 'عالية',   en: 'High',   color: '#EF4444' },
-  medium: { ar: 'متوسطة',  en: 'Medium', color: '#F97316' },
+  high:   { ar: 'عالية',   en: 'High',   color: '#D6403B' },
+  medium: { ar: 'متوسطة',  en: 'Medium', color: '#DD6327' },
   low:    { ar: 'منخفضة',  en: 'Low',    color: '#6B8DB5' },
 };
 

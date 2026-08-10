@@ -17,8 +17,8 @@ const STATUS_LABELS_EN = {
   has_opportunity: 'Has Opp', disqualified: 'DQ',
 };
 const STATUS_COLORS = {
-  new: '#4A7AAB', following: '#10B981', contacted: '#F59E0B',
-  has_opportunity: '#059669', disqualified: '#6b7280',
+  new: '#2F6BD3', following: '#158A57', contacted: '#C9860A',
+  has_opportunity: '#117049', disqualified: '#6b7280',
 };
 
 function timeAgo(dateStr, isRTL) {
@@ -50,10 +50,10 @@ const SOURCE_ICON = {
   instagram:  { Icon: Instagram, color: '#E4405F' },
   google_ads: { Icon: Globe,     color: '#4285F4' },
   website:    { Icon: Globe,     color: '#6B8DB5' },
-  call:       { Icon: Phone,     color: '#10B981' },
-  walk_in:    { Icon: MapPin,    color: '#92400E' },
+  call:       { Icon: Phone,     color: '#158A57' },
+  walk_in:    { Icon: MapPin,    color: '#6D4805' },
   referral:   { Icon: UserPlus,  color: '#6B21A8' },
-  developer:  { Icon: Sparkles,  color: '#0F766E' },
+  developer:  { Icon: Sparkles,  color: '#0B5A53' },
   cold_call:  { Icon: Phone,     color: '#94a3b8' },
   other:      { Icon: Globe,     color: '#94a3b8' },
 };

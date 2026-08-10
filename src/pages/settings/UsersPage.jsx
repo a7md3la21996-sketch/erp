@@ -80,7 +80,7 @@ const MOCK_USERS = import.meta.env.DEV ? [
 /* ─── Status Badge ─── */
 function StatusBadge({ status, lang }) {
   const isActive = status === 'active';
-  const color = isActive ? '#22c55e' : '#94a3b8';
+  const color = isActive ? '#158A57' : '#94a3b8';
   const label = isActive
     ? (lang === 'ar' ? 'نشط' : 'Active')
     : (lang === 'ar' ? 'غير نشط' : 'Inactive');
@@ -97,10 +97,10 @@ function StatusBadge({ status, lang }) {
 /* ─── Role Badge ─── */
 function RoleBadge({ role, lang }) {
   const colors = {
-    admin: '#EF4444', sales_director: '#8B5CF6', sales_manager: '#4A7AAB',
-    team_leader: '#F59E0B', sales_agent: '#6B8DB5', marketing: '#EC4899',
-    hr: '#14B8A6', finance: '#F97316', operations: '#6366F1',
-    manager: '#4A7AAB', user: '#6B8DB5',
+    admin: '#D6403B', sales_director: '#5A63C4', sales_manager: '#2F6BD3',
+    team_leader: '#C9860A', sales_agent: '#6B8DB5', marketing: '#C14D7E',
+    hr: '#12897E', finance: '#DD6327', operations: '#5A63C4',
+    manager: '#2F6BD3', user: '#6B8DB5',
   };
   const entry = ROLE_OPTIONS.find(r => r.value === role);
   const label = entry ? (lang === 'ar' ? entry.ar : entry.en) : role;
@@ -289,7 +289,7 @@ export default function UsersPage() {
     // Confirm prompt — protects against misclicking next to the (now-removed)
     // delete button. Deactivation blocks login but preserves history; we still
     // want an explicit yes from the admin.
-    const userLabel = user.full_name_ar || user.full_name_en || user.email;
+    const userLabel = (lang === 'ar' ? (user.full_name_ar || user.full_name_en) : (user.full_name_en || user.full_name_ar)) || user.email;
     const confirmMsg = newStatus === 'inactive'
       ? (lang === 'ar' ? `تعطيل ${userLabel}؟ لن يستطيع تسجيل الدخول.` : `Deactivate ${userLabel}? They will not be able to log in.`)
       : (lang === 'ar' ? `تفعيل ${userLabel}؟` : `Activate ${userLabel}?`);
@@ -537,7 +537,7 @@ export default function UsersPage() {
   const isEdit = !!editingUser;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
 
       {/* ── Page Header ── */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -562,9 +562,9 @@ export default function UsersPage() {
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي المستخدمين' : 'Total Users'}  value={users.length}   color="#1B3347" />
-        <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'               : 'Active'}        value={activeCount}    color="#22c55e" />
+        <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'               : 'Active'}        value={activeCount}    color="#158A57" />
         <KpiCard icon={UserX}     label={lang === 'ar' ? 'غير نشط'           : 'Inactive'}      value={inactiveCount}  color="#94a3b8" />
-        <KpiCard icon={Shield}    label={lang === 'ar' ? 'مديرين نظام'       : 'Admins'}        value={adminCount}     color="#EF4444" />
+        <KpiCard icon={Shield}    label={lang === 'ar' ? 'مديرين نظام'       : 'Admins'}        value={adminCount}     color="#D6403B" />
       </div>
 
       {/* ── SmartFilter ── */}
@@ -600,8 +600,8 @@ export default function UsersPage() {
           {paged.map(user => {
             const name = (isRTL ? (user.name_ar || user.full_name_ar) : (user.name_en || user.full_name_en)) || user.name_ar || user.full_name_ar || user.email;
             const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
-            const avatarColors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8'];
-            const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#4A7AAB';
+            const avatarColors = ['#1B3347', '#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8'];
+            const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#2F6BD3';
 
             return (
               <Tr key={user.id} className="cursor-pointer hover:bg-brand-500/[0.04]" onClick={() => openEditModal(user)}>
@@ -699,7 +699,7 @@ export default function UsersPage() {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-            <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
+            <Users size={28} color="#2F6BD3" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-bold text-content dark:text-content-dark mb-1.5">
             {lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}

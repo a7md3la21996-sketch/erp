@@ -21,10 +21,10 @@ import {
 const PAGE_SIZE_DEFAULT = 25;
 
 const STATUS_CONFIG = {
-  pending:  { ar: 'معلق',     en: 'Pending',  color: '#F59E0B', icon: Clock },
-  approved: { ar: 'موافق عليه', en: 'Approved', color: '#10B981', icon: CheckCircle2 },
-  rejected: { ar: 'مرفوض',    en: 'Rejected', color: '#EF4444', icon: XCircle },
-  paid:     { ar: 'مدفوع',    en: 'Paid',     color: '#4A7AAB', icon: CreditCard },
+  pending:  { ar: 'معلق',     en: 'Pending',  color: '#C9860A', icon: Clock },
+  approved: { ar: 'موافق عليه', en: 'Approved', color: '#158A57', icon: CheckCircle2 },
+  rejected: { ar: 'مرفوض',    en: 'Rejected', color: '#D6403B', icon: XCircle },
+  paid:     { ar: 'مدفوع',    en: 'Paid',     color: '#2F6BD3', icon: CreditCard },
 };
 
 export default function ExpenseClaimsPage() {
@@ -201,7 +201,7 @@ export default function ExpenseClaimsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Receipt size={22} color="#4A7AAB" />
+            <Receipt size={22} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textPrimary }}>
@@ -212,17 +212,17 @@ export default function ExpenseClaimsPage() {
             </p>
           </div>
         </div>
-        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={16} /> {isRTL ? 'طلب جديد' : 'New Claim'}
         </button>
       </div>
 
       {/* ── KPI Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
-        <KpiCard icon={FileText} label={isRTL ? 'إجمالي الطلبات' : 'Total Claims'} value={stats.totalCount || 0} sub={isRTL ? 'جميع الطلبات' : 'All claims'} color="#4A7AAB" />
-        <KpiCard icon={Clock} label={isRTL ? 'معلقة' : 'Pending'} value={fmtAmount(stats.pendingAmount || 0)} sub={`${stats.pendingCount || 0} ${isRTL ? 'طلب' : 'claims'}`} color="#F59E0B" />
-        <KpiCard icon={CheckCircle2} label={isRTL ? 'موافق عليها' : 'Approved'} value={fmtAmount(stats.approvedAmount || 0)} sub={`${stats.approvedCount || 0} ${isRTL ? 'طلب' : 'claims'}`} color="#10B981" />
-        <KpiCard icon={XCircle} label={isRTL ? 'مرفوضة' : 'Rejected'} value={stats.rejectedCount || 0} sub={isRTL ? 'طلبات مرفوضة' : 'Rejected claims'} color="#EF4444" />
+        <KpiCard icon={FileText} label={isRTL ? 'إجمالي الطلبات' : 'Total Claims'} value={stats.totalCount || 0} sub={isRTL ? 'جميع الطلبات' : 'All claims'} color="#2F6BD3" />
+        <KpiCard icon={Clock} label={isRTL ? 'معلقة' : 'Pending'} value={fmtAmount(stats.pendingAmount || 0)} sub={`${stats.pendingCount || 0} ${isRTL ? 'طلب' : 'claims'}`} color="#C9860A" />
+        <KpiCard icon={CheckCircle2} label={isRTL ? 'موافق عليها' : 'Approved'} value={fmtAmount(stats.approvedAmount || 0)} sub={`${stats.approvedCount || 0} ${isRTL ? 'طلب' : 'claims'}`} color="#158A57" />
+        <KpiCard icon={XCircle} label={isRTL ? 'مرفوضة' : 'Rejected'} value={stats.rejectedCount || 0} sub={isRTL ? 'طلبات مرفوضة' : 'Rejected claims'} color="#D6403B" />
         <KpiCard icon={CalendarDays} label={isRTL ? 'هذا الشهر' : 'This Month'} value={fmtAmount(stats.thisMonthAmount || 0)} sub={`${stats.thisMonthCount || 0} ${isRTL ? 'طلب' : 'claims'}`} color="#6B8DB5" />
       </div>
 
@@ -237,7 +237,7 @@ export default function ExpenseClaimsPage() {
         ].map(pill => {
           const active = statusFilter === pill.key;
           const count = statusCounts[pill.key] || 0;
-          const pillColor = pill.key === 'all' ? '#4A7AAB' : STATUS_CONFIG[pill.key]?.color || '#4A7AAB';
+          const pillColor = pill.key === 'all' ? '#2F6BD3' : STATUS_CONFIG[pill.key]?.color || '#2F6BD3';
           return (
             <button key={pill.key} onClick={() => { setStatusFilter(pill.key); setPage(1); }} style={{
               padding: '6px 14px', borderRadius: 20, border: `1px solid ${active ? pillColor : borderColor}`,
@@ -338,22 +338,22 @@ export default function ExpenseClaimsPage() {
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {claim.status === 'pending' && (
                             <>
-                              <button onClick={() => openEdit(claim)} title={isRTL ? 'تعديل' : 'Edit'} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#4A7AAB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11 }}>
+                              <button onClick={() => openEdit(claim)} title={isRTL ? 'تعديل' : 'Edit'} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#2F6BD3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11 }}>
                                 <Edit3 size={12} />
                               </button>
-                              <button onClick={() => handleDelete(claim.id)} title={isRTL ? 'حذف' : 'Delete'} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11 }}>
+                              <button onClick={() => handleDelete(claim.id)} title={isRTL ? 'حذف' : 'Delete'} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#D6403B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11 }}>
                                 <Trash2 size={12} />
                               </button>
-                              <button onClick={() => handleApprove(claim)} title={isRTL ? 'موافقة' : 'Approve'} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #10B98130', background: '#10B98110', color: '#10B981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
+                              <button onClick={() => handleApprove(claim)} title={isRTL ? 'موافقة' : 'Approve'} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #158A5730', background: '#158A5710', color: '#158A57', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
                                 <CheckCircle2 size={12} /> {isRTL ? 'موافقة' : 'Approve'}
                               </button>
-                              <button onClick={() => { setRejectingId(isRejecting ? null : claim.id); setRejectReason(''); }} title={isRTL ? 'رفض' : 'Reject'} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #EF444430', background: '#EF444410', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
+                              <button onClick={() => { setRejectingId(isRejecting ? null : claim.id); setRejectReason(''); }} title={isRTL ? 'رفض' : 'Reject'} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #D6403B30', background: '#D6403B10', color: '#D6403B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
                                 <Ban size={12} /> {isRTL ? 'رفض' : 'Reject'}
                               </button>
                             </>
                           )}
                           {claim.status === 'approved' && (
-                            <button onClick={() => handleMarkPaid(claim)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #4A7AAB30', background: '#4A7AAB10', color: '#4A7AAB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
+                            <button onClick={() => handleMarkPaid(claim)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #2F6BD330', background: '#2F6BD310', color: '#2F6BD3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600 }}>
                               <CreditCard size={12} /> {isRTL ? 'تم الدفع' : 'Mark Paid'}
                             </button>
                           )}
@@ -365,7 +365,7 @@ export default function ExpenseClaimsPage() {
                               style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 11, outline: 'none' }}
                               onKeyDown={e => e.key === 'Enter' && handleReject(claim)}
                             />
-                            <button onClick={() => handleReject(claim)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#EF4444', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                            <button onClick={() => handleReject(claim)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#D6403B', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                               {isRTL ? 'تأكيد' : 'Confirm'}
                             </button>
                           </div>
@@ -388,8 +388,8 @@ export default function ExpenseClaimsPage() {
                               </div>
                               {claim.rejected_reason && (
                                 <div>
-                                  <p style={{ margin: 0, fontSize: 10, color: '#EF4444', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{isRTL ? 'سبب الرفض' : 'Rejection Reason'}</p>
-                                  <p style={{ margin: 0, fontSize: 12, color: '#EF4444' }}>{claim.rejected_reason}</p>
+                                  <p style={{ margin: 0, fontSize: 10, color: '#D6403B', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{isRTL ? 'سبب الرفض' : 'Rejection Reason'}</p>
+                                  <p style={{ margin: 0, fontSize: 12, color: '#D6403B' }}>{claim.rejected_reason}</p>
                                 </div>
                               )}
                               <div>
@@ -417,7 +417,7 @@ export default function ExpenseClaimsPage() {
                                     ))}
                                     <tr>
                                       <td style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, color: textPrimary }}>{isRTL ? 'الإجمالي' : 'Total'}</td>
-                                      <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 800, color: '#4A7AAB' }}>{fmtAmount(claim.amount, claim.currency)}</td>
+                                      <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 800, color: '#2F6BD3' }}>{fmtAmount(claim.amount, claim.currency)}</td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -475,7 +475,7 @@ export default function ExpenseClaimsPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: textPrimary }}>{isRTL ? 'البنود' : 'Line Items'}</label>
-                  <button onClick={addItem} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#4A7AAB', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={addItem} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: `1px solid ${borderColor}`, background: 'transparent', color: '#2F6BD3', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                     <Plus size={12} /> {isRTL ? 'إضافة بند' : 'Add Item'}
                   </button>
                 </div>
@@ -484,7 +484,7 @@ export default function ExpenseClaimsPage() {
                     <input value={item.description} onChange={e => updateItem(idx, 'description', e.target.value)} placeholder={isRTL ? 'البيان...' : 'Description...'} style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 12, outline: 'none' }} />
                     <input type="number" value={item.amount} onChange={e => updateItem(idx, 'amount', e.target.value)} placeholder={isRTL ? 'المبلغ' : 'Amount'} style={{ width: 100, padding: '7px 10px', borderRadius: 6, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 12, outline: 'none' }} />
                     {form.items.length > 1 && (
-                      <button onClick={() => removeItem(idx)} style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}>
+                      <button onClick={() => removeItem(idx)} style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', color: '#D6403B', cursor: 'pointer' }}>
                         <Trash2 size={14} />
                       </button>
                     )}
@@ -493,7 +493,7 @@ export default function ExpenseClaimsPage() {
                 {/* Total */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center', marginTop: 8, padding: '8px 12px', borderRadius: 8, background: isDark ? '#132337' : '#f1f5f9' }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: textSecondary }}>{isRTL ? 'الإجمالي:' : 'Total:'}</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: '#4A7AAB' }}>{totalAmount.toLocaleString()} EGP</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: '#2F6BD3' }}>{totalAmount.toLocaleString()} EGP</span>
                 </div>
               </div>
               {/* Receipt ref */}
@@ -512,7 +512,7 @@ export default function ExpenseClaimsPage() {
               <button onClick={() => setShowModal(false)} style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${borderColor}`, background: 'transparent', color: textSecondary, fontSize: 13, cursor: 'pointer' }}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
-              <button onClick={handleSubmit} disabled={!form.title.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: form.title.trim() ? '#4A7AAB' : `${textSecondary}40`, color: '#fff', fontSize: 13, fontWeight: 600, cursor: form.title.trim() ? 'pointer' : 'not-allowed', opacity: form.title.trim() ? 1 : 0.6 }}>
+              <button onClick={handleSubmit} disabled={!form.title.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: form.title.trim() ? '#2F6BD3' : `${textSecondary}40`, color: '#fff', fontSize: 13, fontWeight: 600, cursor: form.title.trim() ? 'pointer' : 'not-allowed', opacity: form.title.trim() ? 1 : 0.6 }}>
                 {editingClaim ? (isRTL ? 'حفظ التعديلات' : 'Save Changes') : (isRTL ? 'تقديم الطلب' : 'Submit Claim')}
               </button>
             </div>

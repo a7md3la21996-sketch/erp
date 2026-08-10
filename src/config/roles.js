@@ -118,7 +118,7 @@ export const ROLE_PERMISSIONS = {
   admin: Object.values(P),
 
   sales_director: [
-    P.DASHBOARD,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
     // Contacts: full access (no export, no delete)
     P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
     // Opportunities: full access (no export, no delete)
@@ -132,7 +132,7 @@ export const ROLE_PERMISSIONS = {
   ],
 
   sales_manager: [
-    P.DASHBOARD,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
     // Contacts: view/edit/bulk only. No import + no export per May 17
     // requirement — import/export are admin/operations responsibilities;
     // sales_manager works the leads rather than feeding/exporting the pool.
@@ -148,7 +148,7 @@ export const ROLE_PERMISSIONS = {
   ],
 
   team_leader: [
-    P.DASHBOARD,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
     // Contacts: view own + edit own + bulk (for team assignment)
     P.CONTACTS_VIEW_OWN, P.CONTACTS_EDIT_OWN, P.CONTACTS_BULK,
     // Opportunities: view own + edit own + bulk
@@ -166,7 +166,7 @@ export const ROLE_PERMISSIONS = {
   ],
 
   sales_agent: [
-    P.DASHBOARD,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
     // Contacts: view own + edit own + basic bulk (Batch Call + SMS only)
     P.CONTACTS_VIEW_OWN, P.CONTACTS_EDIT_OWN, P.CONTACTS_BULK_BASIC,
     // Opportunities: view own + edit own only
@@ -179,11 +179,11 @@ export const ROLE_PERMISSIONS = {
     P.PROJECTS_VIEW, P.UNITS_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE,
   ],
 
-  marketing: [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.CAMPAIGNS_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
+  marketing: [P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW, P.CONTACTS_VIEW_OWN, P.CAMPAIGNS_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
   hr: [P.DASHBOARD, P.HR_VIEW_OWN, P.HR_VIEW_ALL, P.HR_POLICIES_MANAGE, P.HR_EMPLOYEES_VIEW, P.HR_EMPLOYEES_MANAGE, P.ATTEND_VIEW_OWN, P.LEAVE_REQUEST, P.PAYROLL_VIEW, P.PAYROLL_MANAGE, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
   finance: [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.FINANCE_VIEW, P.EXPENSES_VIEW_OWN, P.DEALS_VIEW_OWN, P.COMM_VIEW_OWN, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE, P.OPS_VIEW, P.OPS_PAYMENTS],
   operations: [
-    P.DASHBOARD,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
     // Operations
     P.OPS_VIEW, P.OPS_MANAGE, P.OPS_PAYMENTS, P.OPS_HANDOVER, P.OPS_AFTERSALES,
     // Sales (contacts, opps, deals)

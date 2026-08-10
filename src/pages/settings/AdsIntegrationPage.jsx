@@ -47,7 +47,7 @@ export default function AdsIntegrationPage() {
   }, []);
 
   // Styles
-  const accent = '#4A7AAB';
+  const accent = '#2F6BD3';
   const cardBg = isDark ? '#1a2332' : '#ffffff';
   const cardBorder = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)';
   const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
@@ -187,12 +187,12 @@ export default function AdsIntegrationPage() {
       </span>
     );
     if (status === 'connected') return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#22c55e' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#158A57' }}>
         <CheckCircle2 size={14} /> {t('متصل', 'Connected')}
       </span>
     );
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#ef4444' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#D6403B' }}>
         <XCircle size={14} /> {t('غير متصل', 'Disconnected')}
       </span>
     );
@@ -209,7 +209,7 @@ export default function AdsIntegrationPage() {
             <StatusBadge status={status} />
           </div>
           <button
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: config.enabled ? '#22c55e' : textSecondary }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: config.enabled ? '#158A57' : textSecondary }}
             onClick={() => setConfig({ ...config, enabled: !config.enabled })}
             title={config.enabled ? t('تعطيل', 'Disable') : t('تفعيل', 'Enable')}
           >
@@ -284,7 +284,7 @@ export default function AdsIntegrationPage() {
 
           {/* Error */}
           {error && (
-            <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>{error}</p>
+            <p style={{ fontSize: 12, color: '#D6403B', margin: 0 }}>{error}</p>
           )}
 
           {/* Actions */}
@@ -317,8 +317,8 @@ export default function AdsIntegrationPage() {
       {toast && (
         <div style={{
           position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-          background: toast.type === 'error' ? '#fef2f2' : '#f0fdf4',
-          color: toast.type === 'error' ? '#dc2626' : '#16a34a',
+          background: toast.type === 'error' ? '#FBEDEC' : '#f0fdf4',
+          color: toast.type === 'error' ? '#B93531' : '#117049',
           border: `1px solid ${toast.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
           borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600,
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)',

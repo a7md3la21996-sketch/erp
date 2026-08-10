@@ -112,7 +112,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set((contacts || []).map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set((contacts || []).map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
-    { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
     // _agent_count filter removed in Phase 3 — always 0 or 1 after single-assignment migration.
     // "No activity" filter — pick "Anyone" to find contacts with no activity at
     // all, or a specific agent to find contacts that agent hasn't touched.
@@ -120,6 +119,14 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       options: [
         { value: '__anyone', label: 'أي شخص', labelEn: 'Anyone' },
         ...((allAgentNames || []).map(n => ({ value: n, label: n, labelEn: n }))),
+      ]},
+    // Has-a-meeting filter — server-side via an activities inner-join embed
+    // (see contactsService fetchContacts / filters.meetingBucket). Uncapped.
+    { id: '_meeting', label: 'عليه اجتماع', labelEn: 'Has meeting', type: 'select',
+      options: [
+        { value: 'any',      label: 'أي اجتماع',  labelEn: 'Any meeting' },
+        { value: 'upcoming', label: 'اجتماع قادم', labelEn: 'Upcoming' },
+        { value: 'happened', label: 'اجتماع حصل',  labelEn: 'Happened' },
       ]},
     ...auditFields,
   ], [contacts, auditFields, deptView]);
@@ -132,8 +139,12 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
 
   const ALL_SORT_OPTIONS = [
     { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
+    { value: 'created_asc', label: 'ترتيب: الأقدم', labelEn: 'Sort: Oldest' },
+    { value: 'next_follow_up', label: 'ترتيب: متابعة الأقرب', labelEn: 'Sort: Follow-up soonest' },
+    { value: 'next_follow_up_desc', label: 'ترتيب: متابعة الأبعد', labelEn: 'Sort: Follow-up latest' },
     { value: 'assigned', label: 'ترتيب: تاريخ التوزيع', labelEn: 'Sort: Assignment Date' },
     { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
+    { value: 'updated', label: 'ترتيب: آخر تحديث', labelEn: 'Sort: Recently Updated' },
     { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
     { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
     { value: 'stale', label: 'ترتيب: يحتاج متابعة', labelEn: 'Sort: Needs Follow-up' },
@@ -156,7 +167,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       ...c,
       _country: c._country || detectCountry(c.phone),
       _campaign_count: (c.campaign_interactions || []).length,
-      _opp_count: c._opp_count || 0,
       // _agent_count already set by withAgentView — keep it aligned with the
       // old logic (use assigned_to_name when array missing).
       _agent_count: c._agent_count ?? (Array.isArray(c.assigned_to_names) ? c.assigned_to_names.length : (c.assigned_to_name ? 1 : 0)),
@@ -164,7 +174,12 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     // meName is kept for downstream code that may log it
     void meName;
     // Client-only smart filters — exclude fields already sent to server
-    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by'];
+    // Fields resolved SERVER-SIDE in fetchContacts — must NOT be re-applied
+    // client-side, or the client would strip rows from the (already-correct)
+    // server page and desync the list from the total count. Includes the
+    // column-backed smart filters newly moved to the server applier.
+    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by', '_meeting',
+      'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'assigned_at', 'last_activity_at', 'my_score', '_country'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
     list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
@@ -181,6 +196,18 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
       if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      if (sortBy === 'created_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      if (sortBy === 'updated') return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+      if (sortBy === 'next_follow_up' || sortBy === 'next_follow_up_desc') {
+        // Soonest (or latest) follow-up first; leads without a next follow-up
+        // always sink to the bottom, regardless of direction.
+        const av = a.next_follow_up_at ? new Date(a.next_follow_up_at).getTime() : Infinity;
+        const bv = b.next_follow_up_at ? new Date(b.next_follow_up_at).getTime() : Infinity;
+        if (av === bv) return 0;
+        if (av === Infinity) return 1;
+        if (bv === Infinity) return -1;
+        return sortBy === 'next_follow_up_desc' ? bv - av : av - bv;
+      }
       if (sortBy === 'assigned') return new Date(b.assigned_at || 0) - new Date(a.assigned_at || 0); // latest assigned first; null assigned_at sinks to bottom
       if (sortBy === 'stale') return new Date(a.last_activity_at || 0) - new Date(b.last_activity_at || 0);
       return 0;

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drawer Redesign V2 — Premium</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eff6ff', 100:'#dbeafe', 400:'#60a5fa', 500:'#4A7AAB', 600:'#3b6794', 700:'#2c4f72', 900:'#1e3a5f' },
+        },
+        fontFamily: { sans: ['Cairo', 'sans-serif'] },
+        animation: {
+          'shimmer': 'shimmer 3s ease-in-out infinite',
+          'float': 'float 4s ease-in-out infinite',
+          'glow': 'glow 2s ease-in-out infinite alternate',
+        },
+        keyframes: {
+          shimmer: { '0%,100%': { backgroundPosition: '0% 50%' }, '50%': { backgroundPosition: '100% 50%' } },
+          float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-3px)' } },
+          glow: { '0%': { boxShadow: '0 0 20px rgba(239,68,68,0.4)' }, '100%': { boxShadow: '0 0 30px rgba(239,68,68,0.7)' } },
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Cairo', sans-serif; }
+  body.light { background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 50%, #fef3c7 100%); }
+  body.dark { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); }
+  .scroll-area::-webkit-scrollbar { width: 4px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.4); border-radius: 4px; }
+
+  /* Glassmorphism */
+  .glass-light { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .glass-dark { background: rgba(15,23,42,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+
+  /* Hero gradient mesh */
+  .hero-mesh-light {
+    background:
+      radial-gradient(at 20% 0%, rgba(74,122,171,0.15) 0%, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(239,68,68,0.10) 0%, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(168,85,247,0.08) 0%, transparent 50%),
+      #ffffff;
+  }
+  .hero-mesh-dark {
+    background:
+      radial-gradient(at 20% 0%, rgba(74,122,171,0.30) 0%, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(239,68,68,0.20) 0%, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(168,85,247,0.20) 0%, transparent 50%),
+      #0f172a;
+  }
+
+  .glow-hot { box-shadow: 0 0 0 1px rgba(239,68,68,0.25), 0 4px 20px rgba(239,68,68,0.25); }
+  .ring-pulse { animation: ringPulse 2s infinite; }
+  @keyframes ringPulse {
+    0% { box-shadow: 0 0 0 0 rgba(74,122,171,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(74,122,171,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,122,171,0); }
+  }
+  .action-btn { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .action-btn:hover { transform: translateY(-2px); }
+  .action-btn:active { transform: translateY(0) scale(0.95); }
+
+  /* Progress journey bar */
+  .journey-step { transition: all 0.3s; }
+  .journey-line { background: linear-gradient(90deg, #10b981 0%, #10b981 60%, #e2e8f0 60%, #e2e8f0 100%); }
+  .dark .journey-line { background: linear-gradient(90deg, #10b981 0%, #10b981 60%, #334155 60%, #334155 100%); }
+
+  /* Sparkline */
+  .sparkline-bar { transition: all 0.3s; }
+  .sparkline-bar:hover { transform: scaleY(1.1); transform-origin: bottom; }
+
+  /* Avatar gradient */
+  .avatar-grad { background: linear-gradient(135deg, #4A7AAB 0%, #2c4f72 50%, #1e3a5f 100%); }
+
+  /* Card hover lift */
+  .card-lift { transition: all 0.25s; }
+  .card-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -8px rgba(15,23,42,0.15); }
+</style>
+</head>
+<body class="light min-h-screen p-0 md:p-6 transition-colors duration-300">
+
+<!-- Toolbar -->
+<div class="max-w-[460px] mx-auto mb-3 px-4 md:px-0 hidden md:flex items-center justify-between text-content dark:text-white">
+  <div>
+    <h1 class="text-base font-bold">✨ Drawer V2 — Premium Redesign</h1>
+    <p class="text-[11px] opacity-70 mt-0.5">Glassmorphism · Journey · Sparkline · Smart Suggestions</p>
+  </div>
+  <div class="flex gap-2 text-[11px]">
+    <button onclick="document.body.classList.toggle('dark'); document.body.classList.toggle('light'); document.documentElement.classList.toggle('dark')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold shadow-sm">🌓 Dark/Light</button>
+    <button onclick="document.documentElement.dir=document.documentElement.dir==='rtl'?'ltr':'rtl'" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold shadow-sm">RTL/LTR</button>
+  </div>
+</div>
+
+<!-- Drawer container -->
+<div class="max-w-[460px] mx-auto md:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 transition-colors" style="height: 100vh; max-height: 920px;">
+
+  <!-- ═══ STICKY HERO with mesh gradient ═══ -->
+  <div class="sticky top-0 z-30 hero-mesh-light dark:hero-mesh-dark border-b border-slate-200/40 dark:border-slate-700/40">
+
+    <!-- Top action bar -->
+    <div class="flex items-center justify-between px-4 pt-3 pb-1">
+      <button class="w-9 h-9 rounded-full hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition-all text-slate-600 dark:text-slate-300">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="flex items-center gap-1">
+        <button class="w-8 h-8 rounded-full hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition text-slate-500 dark:text-slate-400" title="Pin">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 002-2V3H6v1a2 2 0 002 2h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition text-slate-500 dark:text-slate-400" title="Previous">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition text-slate-500 dark:text-slate-400" title="Next">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition text-slate-500 dark:text-slate-400" title="More">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Identity row: avatar + name + identity -->
+    <div class="px-4 pb-3 flex items-start gap-3">
+      <div class="relative shrink-0">
+        <div class="w-14 h-14 rounded-2xl avatar-grad flex items-center justify-center text-white font-extrabold text-xl shadow-lg ring-pulse">
+          خ
+        </div>
+        <!-- Online status dot -->
+        <div class="absolute -bottom-0.5 -end-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"></div>
+      </div>
+      <div class="flex-1 min-w-0 mt-0.5">
+        <div class="flex items-center gap-2 mb-0.5">
+          <h2 class="text-lg font-extrabold text-slate-900 dark:text-white truncate leading-none">خالد محمد علي</h2>
+          <span class="text-[9px] px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-400 to-amber-600 text-white font-extrabold shadow-sm shadow-amber-500/40">VIP</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+          <span class="font-semibold">+20 100 ••• 4567</span>
+          <span class="text-slate-400/40">·</span>
+          <span>القاهرة الجديدة</span>
+        </div>
+        <!-- Last contact pill -->
+        <div class="flex items-center gap-1.5 mt-1.5 text-[10px]">
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold">
+            <span class="w-1 h-1 rounded-full bg-amber-500"></span>
+            آخر تواصل · من ٣ أيام
+          </span>
+        </div>
+      </div>
+      <!-- Score circle -->
+      <div class="shrink-0 text-center">
+        <svg width="48" height="48" viewBox="0 0 36 36" class="-rotate-90">
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none" stroke="rgba(148,163,184,0.2)" stroke-width="3" />
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none" stroke="url(#scoreGrad)" stroke-width="3" stroke-dasharray="75, 100" stroke-linecap="round" />
+          <defs>
+            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#10b981"/>
+              <stop offset="100%" stop-color="#059669"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="absolute" style="margin-top: -32px; width: 48px;">
+          <div class="text-[14px] font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">75</div>
+          <div class="text-[8px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">SCORE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead Journey Progress -->
+    <div class="px-4 pb-3">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">رحلة العميل</span>
+        <span class="text-[9px] text-slate-500 dark:text-slate-400">٣ من ٥</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <!-- Step 1: New (done) -->
+        <div class="flex-1 flex items-center gap-1">
+          <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="flex-1 h-0.5 bg-emerald-500"></div>
+        </div>
+        <div class="flex-1 flex items-center gap-1">
+          <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="flex-1 h-0.5 bg-emerald-500"></div>
+        </div>
+        <div class="flex-1 flex items-center gap-1">
+          <div class="w-5 h-5 rounded-full bg-brand-500 ring-2 ring-brand-500/30 flex items-center justify-center text-white shrink-0 text-[9px] font-bold">٣</div>
+          <div class="flex-1 h-0.5 bg-slate-200 dark:bg-slate-700"></div>
+        </div>
+        <div class="flex-1 flex items-center gap-1">
+          <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0 text-[9px] font-bold">٤</div>
+          <div class="flex-1 h-0.5 bg-slate-200 dark:bg-slate-700"></div>
+        </div>
+        <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0 text-[9px] font-bold">٥</div>
+      </div>
+      <div class="flex items-center justify-between mt-1 text-[9px] text-slate-500 dark:text-slate-400">
+        <span class="text-emerald-600 dark:text-emerald-400 font-bold">جديد</span>
+        <span class="text-emerald-600 dark:text-emerald-400 font-bold">تواصل</span>
+        <span class="text-brand-500 font-bold">متابعة ●</span>
+        <span>فرصة</span>
+        <span>صفقة</span>
+      </div>
+    </div>
+
+    <!-- Status / Temp chips (big & interactive) -->
+    <div class="px-4 pb-3 flex items-center gap-2">
+      <button class="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-extrabold px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:scale-[1.03] active:scale-95 transition-all">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        متابعة
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" class="opacity-60"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button class="flex-1 inline-flex items-center justify-center gap-1.5 text-[11px] font-extrabold px-3 py-2 rounded-xl bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/30 hover:scale-[1.03] active:scale-95 transition-all glow-hot">
+        🔥 ساخن
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" class="opacity-60"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- Quick action bar — premium with gradients & glow -->
+    <div class="px-3 pb-3 grid grid-cols-4 gap-2">
+      <button class="action-btn group flex flex-col items-center gap-1 py-2.5 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/40">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        <span class="text-[10px] font-extrabold">اتصال</span>
+      </button>
+      <button class="action-btn group flex flex-col items-center gap-1 py-2.5 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/40">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+        <span class="text-[10px] font-extrabold">واتساب</span>
+      </button>
+      <button class="action-btn group flex flex-col items-center gap-1 py-2.5 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/40">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="text-[10px] font-extrabold">موعد</span>
+      </button>
+      <button class="action-btn group flex flex-col items-center gap-1 py-2.5 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/40">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        <span class="text-[10px] font-extrabold">ملاحظة</span>
+      </button>
+    </div>
+
+    <!-- Mini Stats Strip -->
+    <div class="px-4 pb-3 grid grid-cols-4 gap-1.5 border-t border-slate-200/50 dark:border-slate-700/50 pt-2.5">
+      <div class="text-center">
+        <div class="text-[14px] font-extrabold text-blue-600 dark:text-blue-400 leading-none">٨</div>
+        <div class="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">مكالمات</div>
+      </div>
+      <div class="text-center border-s border-slate-200/50 dark:border-slate-700/50">
+        <div class="text-[14px] font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">١٢</div>
+        <div class="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">واتساب</div>
+      </div>
+      <div class="text-center border-s border-slate-200/50 dark:border-slate-700/50">
+        <div class="text-[14px] font-extrabold text-purple-600 dark:text-purple-400 leading-none">٢</div>
+        <div class="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">مواعيد</div>
+      </div>
+      <div class="text-center border-s border-slate-200/50 dark:border-slate-700/50">
+        <div class="text-[14px] font-extrabold text-amber-600 dark:text-amber-400 leading-none">٣.٢ﻡ</div>
+        <div class="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">قيمة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCROLLABLE STREAM ═══ -->
+  <div class="scroll-area overflow-y-auto bg-slate-50 dark:bg-slate-900" style="height: calc(100% - 460px); padding-bottom: 32px;">
+
+    <!-- Sticky TOC -->
+    <div class="sticky top-0 z-20 glass-light dark:glass-dark border-b border-slate-200/40 dark:border-slate-700/40 px-4 py-2">
+      <div class="flex gap-1.5 overflow-x-auto">
+        <a href="#timeline" class="shrink-0 text-[11px] font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/40">الأحداث · ١٢</a>
+        <a href="#opps" class="shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100">فرص · ١</a>
+        <a href="#engagement" class="shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100">تفاعل</a>
+        <a href="#info" class="shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100">المعلومات</a>
+        <a href="#docs" class="shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100">مستندات · ٣</a>
+      </div>
+    </div>
+
+    <!-- Smart Suggestion (premium AI card) -->
+    <div class="mx-4 mt-3 mb-4 p-3.5 rounded-2xl bg-gradient-to-br from-brand-500/8 via-purple-500/8 to-pink-500/8 dark:from-brand-500/15 dark:via-purple-500/15 dark:to-pink-500/15 border border-brand-500/20 dark:border-brand-500/30 relative overflow-hidden card-lift">
+      <!-- Sparkle accent -->
+      <div class="absolute top-2 end-2 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 opacity-10 rounded-full blur-2xl"></div>
+      <div class="relative flex items-start gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center shrink-0 shadow-md shadow-brand-500/30">
+          <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-[12px] font-extrabold text-slate-900 dark:text-white">اقتراح ذكي</span>
+            <span class="text-[8px] px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 font-extrabold uppercase">AI</span>
+          </div>
+          <p class="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed mb-2">السكور وصل ٧٥ + ساخن + ٣ أيام بدون تواصل. الأنسب دلوقتي:</p>
+          <div class="flex gap-1.5 flex-wrap">
+            <button class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm">+ فرصة جديدة</button>
+            <button class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-brand-500/30">📅 موعد عاينة</button>
+            <button class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600">رفض</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ENGAGEMENT (sparkline) ═══ -->
+    <section id="engagement" class="mx-4 mb-4">
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3.5 card-lift">
+        <div class="flex items-center justify-between mb-2.5">
+          <div>
+            <h3 class="text-[12px] font-extrabold text-slate-900 dark:text-white">معدل التفاعل</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">آخر ٧ أيام</p>
+          </div>
+          <div class="text-end">
+            <div class="text-[16px] font-extrabold text-emerald-600 dark:text-emerald-400">+٢٤٪</div>
+            <div class="text-[9px] text-slate-500 dark:text-slate-400 font-bold">عن الأسبوع اللي فات</div>
+          </div>
+        </div>
+        <!-- Bar sparkline -->
+        <div class="flex items-end gap-1.5 h-16">
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 30%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 50%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 25%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 70%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 45%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-brand-500/30 to-brand-500/60" style="height: 85%"></div>
+          <div class="sparkline-bar flex-1 rounded-t-md bg-gradient-to-t from-emerald-500 to-emerald-600 ring-2 ring-emerald-500/30" style="height: 100%"></div>
+        </div>
+        <div class="flex justify-between mt-1.5 text-[8px] text-slate-400 font-bold">
+          <span>س</span><span>أ</span><span>إث</span><span>ث</span><span>أر</span><span>خ</span><span>ج</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TIMELINE ═══ -->
+    <section id="timeline" class="mx-4 mb-4">
+      <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-700">
+          <h3 class="text-[12px] font-extrabold text-slate-900 dark:text-white">الأحداث</h3>
+          <div class="flex items-center gap-1">
+            <button class="text-[10px] font-bold px-2 py-1 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400">الكل</button>
+            <button class="text-[10px] font-bold px-2 py-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">📞</button>
+            <button class="text-[10px] font-bold px-2 py-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">💬</button>
+            <button class="text-[10px] font-bold px-2 py-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">📝</button>
+          </div>
+        </div>
+        <div class="px-3.5 py-3">
+          <!-- Day group: Today -->
+          <div class="text-[10px] font-extrabold text-brand-500 mb-2 flex items-center gap-2 uppercase tracking-wider">
+            النهاردة
+            <div class="flex-1 h-px bg-gradient-to-l from-brand-500/30 to-transparent"></div>
+          </div>
+          <div class="relative space-y-3 mb-3">
+            <!-- Connector line -->
+            <div class="absolute end-3.5 top-3 bottom-3 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+            <div class="flex gap-2.5 relative">
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] text-slate-900 dark:text-white"><b>اتصلت بـ خالد</b> · ٥ دقائق</div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">"مهتم بشقة ٣ غرف بحديقة، جاي يتفرج الجمعة"</div>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>أنت</span><span>·</span><span>من ساعتين</span>
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shrink-0 z-10 shadow-md shadow-blue-500/40">
+                <svg width="13" height="13" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              </div>
+            </div>
+
+            <div class="flex gap-2.5 relative">
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] text-slate-900 dark:text-white"><b>ملاحظة</b></div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">"عايز يقابل المهندس الاستشاري قبل العاينة"</div>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>أنت</span><span>·</span><span>من ٤ ساعات</span>
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 z-10 shadow-md shadow-amber-500/40">
+                <svg width="13" height="13" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Day group: Yesterday -->
+          <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-2 uppercase tracking-wider">
+            امبارح
+            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+          </div>
+          <div class="relative space-y-3 mb-3">
+            <div class="absolute end-3.5 top-3 bottom-3 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+            <div class="flex gap-2.5 relative">
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] text-slate-900 dark:text-white"><b>واتساب من العميل</b></div>
+                <div class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">"ابعتلي بروشور المشروع لو سمحت"</div>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>العميل</span><span>·</span><span>٤:٢٠ م</span>
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shrink-0 z-10 shadow-md shadow-emerald-500/40">
+                <svg width="13" height="13" fill="white" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+              </div>
+            </div>
+
+            <div class="flex gap-2.5 relative">
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] text-slate-900 dark:text-white"><b>الحالة</b>: جديد ← متابعة</div>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>أنت</span><span>·</span><span>١:١٠ م</span>
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center shrink-0 z-10 shadow-md">
+                <svg width="13" height="13" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <button class="w-full text-[11px] font-extrabold text-brand-500 dark:text-brand-400 py-2 rounded-xl hover:bg-brand-500/8 transition">
+            عرض كل الـ ١٢ حدث
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ OPPORTUNITIES ═══ -->
+    <section id="opps" class="mx-4 mb-4">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <h3 class="text-[12px] font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">فرص · ١</h3>
+        <button class="text-[10px] font-extrabold text-brand-500 dark:text-brand-400 px-2 py-1 rounded-md hover:bg-brand-500/10 flex items-center gap-1">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          فرصة
+        </button>
+      </div>
+      <div class="rounded-2xl border-2 border-dashed border-emerald-500/30 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-500/5 to-transparent p-3.5 card-lift">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-start gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
+              <svg width="14" height="14" fill="none" stroke="#059669" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 21h18M3 18h18M3 10h18M3 13h18M3 6h18"/></svg>
+            </div>
+            <div>
+              <div class="font-extrabold text-[13px] text-slate-900 dark:text-white">كمبوند الزهور · ٣ غرف</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">عقد بتاع الفرصة #OPP-1284</div>
+            </div>
+          </div>
+          <span class="text-[9px] font-extrabold px-2 py-1 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-400 uppercase">تأهيل</span>
+        </div>
+        <!-- Stage progress mini -->
+        <div class="grid grid-cols-5 gap-1 mb-2">
+          <div class="h-1 rounded-full bg-emerald-500"></div>
+          <div class="h-1 rounded-full bg-emerald-500"></div>
+          <div class="h-1 rounded-full bg-amber-500"></div>
+          <div class="h-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+          <div class="h-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+        </div>
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="font-extrabold text-emerald-700 dark:text-emerald-400 text-[14px]">٣,٢٠٠,٠٠٠ ج.م</span>
+          <div class="flex items-center gap-1.5 text-[10px]">
+            <span class="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400 font-bold">🔥 ساخن</span>
+            <span class="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold">عالي</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ INFO (collapsible) ═══ -->
+    <section id="info" class="mx-4 mb-4">
+      <button class="w-full flex items-center justify-between mb-2 text-start px-1" onclick="document.getElementById('info-body').classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')">
+        <h3 class="text-[12px] font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">المعلومات</h3>
+        <svg class="text-slate-400 transition-transform" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div id="info-body" class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden hidden">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/50">
+          <div class="flex items-center justify-between px-3.5 py-2.5 text-[12px]">
+            <span class="text-slate-500 dark:text-slate-400">الميزانية</span>
+            <span class="font-extrabold text-slate-900 dark:text-white">٣ - ٤ مليون ج.م</span>
+          </div>
+          <div class="flex items-center justify-between px-3.5 py-2.5 text-[12px]">
+            <span class="text-slate-500 dark:text-slate-400">الموقع</span>
+            <span class="font-extrabold text-slate-900 dark:text-white">القاهرة الجديدة</span>
+          </div>
+          <div class="flex items-center justify-between px-3.5 py-2.5 text-[12px]">
+            <span class="text-slate-500 dark:text-slate-400">المصدر</span>
+            <span class="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" style="background:#1877F2"></span>
+              فيسبوك
+            </span>
+          </div>
+          <div class="flex items-center justify-between px-3.5 py-2.5 text-[12px]">
+            <span class="text-slate-500 dark:text-slate-400">الكامبين</span>
+            <span class="font-extrabold text-slate-900 dark:text-white">صيف ٢٠٢٦ — العاصمة</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tip strip -->
+    <div class="mx-4 mb-3 text-center text-[10px] text-slate-400 dark:text-slate-500">
+      اسحب لتحت من الفوق عشان تقفل · اسحب يمين/شمال للعميل التالي
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom legend -->
+<div class="max-w-[460px] mx-auto mt-4 px-4 md:px-0 text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed hidden md:block">
+  <div class="bg-white/70 dark:bg-slate-800/70 backdrop-blur p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+    <b class="text-slate-900 dark:text-white">✨ الإضافات في V2:</b>
+    <ul class="mt-1.5 space-y-0.5">
+      <li>• 🎨 خلفية mesh gradient ملوّنة (بدل الأبيض الجاف)</li>
+      <li>• 👤 صورة avatar مع نقطة "online" تنبض</li>
+      <li>• 🎯 Score circle رسومي (دائرة progress) بدل رقم عادي</li>
+      <li>• 🛣️ Lead Journey progress bar (٥ مراحل)</li>
+      <li>• 📊 Engagement sparkline (آخر ٧ أيام + نسبة تغير)</li>
+      <li>• 📈 Mini stats: مكالمات/واتساب/مواعيد/قيمة</li>
+      <li>• ✨ AI suggestion card فيه quick actions جاهزة</li>
+      <li>• 🌓 Dark mode فعلي (ضغط Toggle فوق)</li>
+      <li>• 💎 Glassmorphism في الـ TOC sticky</li>
+      <li>• 🎬 Animations: pulse, float, glow, scale on tap</li>
+      <li>• Timeline Events بأيقونات ملوّنة مع gradients + connector line</li>
+      <li>• Opportunity card فيه stage progress mini-bar</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

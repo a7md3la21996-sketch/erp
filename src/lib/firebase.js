@@ -13,12 +13,24 @@ const firebaseConfig = {
 const VAPID_KEY = 'BLj4aC9mvOnIJ15R-vN8CsWzwBcOmXUg202U6EuP8l9jlf7d5XmPAkcWQi0JluG5UDKhZJGeRMsCQmFDOOyLFbw';
 
 const app = initializeApp(firebaseConfig);
-let messaging = null;
 
-try {
-  messaging = getMessaging(app);
-} catch {
-  // Firebase messaging not supported (e.g. Safari private mode)
+// Lazily initialize messaging ONLY when a user actually engages notifications.
+// getMessaging(app) triggers a Firebase Installations request; running it at
+// module import (as before) fired that call on EVERY app load — the stray
+// bootstrap 400 — even for users who never enable push. Now it inits on first
+// real use behind the permission gate, so non-opted-in users make no Firebase
+// messaging calls at all.
+let messaging = null;
+let _messagingTried = false;
+function getMessagingInstance() {
+  if (messaging || _messagingTried) return messaging;
+  _messagingTried = true;
+  try {
+    messaging = getMessaging(app);
+  } catch {
+    // Firebase messaging not supported (e.g. Safari private mode)
+  }
+  return messaging;
 }
 
 /**
@@ -26,13 +38,15 @@ try {
  * Does NOT prompt — Chrome/Safari block requestPermission() outside
  * a user gesture, so the explicit "Enable notifications" button in
  * the Header is the only place that can legally ask. This function
- * is safe to call from useEffect on app load.
+ * is safe to call from useEffect on app load: it no-ops (and inits
+ * nothing) until permission is granted.
  */
 export async function getFCMToken() {
-  if (!messaging) return null;
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null;
+  const m = getMessagingInstance();
+  if (!m) return null;
   try {
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    const token = await getToken(m, { vapidKey: VAPID_KEY });
     return token;
   } catch {
     return null;
@@ -40,11 +54,14 @@ export async function getFCMToken() {
 }
 
 /**
- * Listen for foreground messages
+ * Listen for foreground messages. Only wires up (and thus initializes
+ * messaging) for users who have already opted into notifications.
  */
 export function onForegroundMessage(callback) {
-  if (!messaging) return () => {};
-  return onMessage(messaging, (payload) => {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return () => {};
+  const m = getMessagingInstance();
+  if (!m) return () => {};
+  return onMessage(m, (payload) => {
     callback(payload);
   });
 }

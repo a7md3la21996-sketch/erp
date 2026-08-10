@@ -25,14 +25,15 @@ import { thCls } from '../../utils/tableStyles';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 
 // ── Status Config ────────────────────────────────────────────────
+// Deal-events model: one shared status vocabulary across the drawer Deal tab,
+// this page, and the dashboards. (The old detailed pipeline — under_review /
+// docs_collection / contract_prep / contract_signed — had zero deals in it.)
 const STATUSES = [
-  { id: 'new_deal',         ar: 'صفقة جديدة',     en: 'New Deal',         color: '#3B82F6' },
-  { id: 'under_review',     ar: 'تحت المراجعة',    en: 'Under Review',     color: '#F59E0B' },
-  { id: 'docs_collection',  ar: 'تجميع المستندات', en: 'Docs Collection',  color: '#8B5CF6' },
-  { id: 'contract_prep',    ar: 'تحضير العقد',     en: 'Contract Prep',    color: '#F97316' },
-  { id: 'contract_signed',  ar: 'عقد موقع',        en: 'Contract Signed',  color: '#10B981' },
-  { id: 'completed',        ar: 'مكتملة',          en: 'Completed',        color: '#22C55E' },
-  { id: 'cancelled',        ar: 'ملغية',           en: 'Cancelled',        color: '#EF4444' },
+  { id: 'new_deal',   ar: 'صفقة جديدة', en: 'New Deal',   color: '#2F6BD3' },
+  { id: 'reserved',   ar: 'محجوز',      en: 'Reserved',   color: '#5A63C4' },
+  { id: 'contracted', ar: 'متعاقد',     en: 'Contracted', color: '#0B5A53' },
+  { id: 'won',        ar: 'مكسوبة',     en: 'Won',        color: '#158A57' },
+  { id: 'lost',       ar: 'خسارة',      en: 'Lost',       color: '#D6403B' },
 ];
 
 const DOC_LABELS = {
@@ -167,11 +168,11 @@ export default function DealsPage() {
   // KPIs
   const totalValue = (deals || []).reduce((s, d) => s + (d.deal_value || 0), 0);
   const avgValue = (deals || []).length > 0 ? Math.round(totalValue / (deals || []).length) : 0;
-  const activeDeals = (deals || []).filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
-  const completedDeals = (deals || []).filter(d => d.status === 'completed').length;
+  const activeDeals = (deals || []).filter(d => ['new_deal', 'reserved', 'contracted'].includes(d.status)).length;
+  const completedDeals = (deals || []).filter(d => d.status === 'won').length;
   const docsPending = (deals || []).filter(d => {
     const p = docProgress(d.documents);
-    return p.pct < 100 && d.status !== 'cancelled';
+    return p.pct < 100 && d.status !== 'lost';
   }).length;
 
   // Drawer nav
@@ -212,7 +213,7 @@ export default function DealsPage() {
   if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={6} />;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
 
       {/* ═══ Header ═══ */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -247,12 +248,12 @@ export default function DealsPage() {
 
       {/* ═══ KPI Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <KpiCard icon={Briefcase} label={isRTL ? 'إجمالي الصفقات' : 'Total Deals'} value={(deals || []).length} color="#4A7AAB" />
-        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي القيمة' : 'Total Value'} value={fmtMoney(totalValue) + ' EGP'} color="#4A7AAB" />
+        <KpiCard icon={Briefcase} label={isRTL ? 'إجمالي الصفقات' : 'Total Deals'} value={(deals || []).length} color="#2F6BD3" />
+        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي القيمة' : 'Total Value'} value={fmtMoney(totalValue) + ' EGP'} color="#2F6BD3" />
         <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط القيمة' : 'Avg Deal Value'} value={fmtMoney(avgValue) + ' EGP'} color="#6B21A8" />
-        <KpiCard icon={Clock} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} color="#F59E0B" />
-        <KpiCard icon={CheckCircle2} label={isRTL ? 'مكتملة' : 'Completed'} value={completedDeals} color="#22C55E" />
-        <KpiCard icon={FileText} label={isRTL ? 'مستندات ناقصة' : 'Docs Pending'} value={docsPending} color={docsPending > 0 ? '#EF4444' : '#22C55E'} />
+        <KpiCard icon={Clock} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} color="#C9860A" />
+        <KpiCard icon={CheckCircle2} label={isRTL ? 'مكسوبة' : 'Won'} value={completedDeals} color="#158A57" />
+        <KpiCard icon={FileText} label={isRTL ? 'مستندات ناقصة' : 'Docs Pending'} value={docsPending} color={docsPending > 0 ? '#D6403B' : '#158A57'} />
       </div>
 
       {/* ═══ SmartFilter ═══ */}
@@ -345,7 +346,7 @@ export default function DealsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12] min-w-[50px] max-w-[70px]">
-                        <div className="h-full rounded" style={{ width: `${dp.pct}%`, backgroundColor: dp.pct === 100 ? '#22C55E' : dp.pct >= 60 ? '#F59E0B' : '#EF4444' }} />
+                        <div className="h-full rounded" style={{ width: `${dp.pct}%`, backgroundColor: dp.pct === 100 ? '#158A57' : dp.pct >= 60 ? '#C9860A' : '#D6403B' }} />
                       </div>
                       <span className="text-[10px] font-medium text-content-muted dark:text-content-muted-dark">{dp.done}/{dp.total}</span>
                     </div>
@@ -380,7 +381,7 @@ export default function DealsPage() {
         <span>{isRTL ? 'الإجمالي:' : 'Total:'} <strong>{fmtMoney(totalValue)} EGP</strong></span>
         <span>{isRTL ? 'المتوسط:' : 'Avg:'} <strong>{fmtMoney(avgValue)} EGP</strong></span>
         <span>{isRTL ? 'نشطة:' : 'Active:'} <strong>{activeDeals}</strong></span>
-        <span>{isRTL ? 'مكتملة:' : 'Completed:'} <strong>{completedDeals}</strong></span>
+        <span>{isRTL ? 'مكسوبة:' : 'Won:'} <strong>{completedDeals}</strong></span>
         <span>{isRTL ? 'عرض:' : 'Showing:'} <strong>{filtered.length}</strong> / {(deals || []).length}</span>
       </div>
 
@@ -438,12 +439,12 @@ export default function DealsPage() {
                       className="w-8 h-8 flex items-center justify-center rounded-lg border cursor-pointer"
                       style={{
                         background: 'transparent',
-                        borderColor: dealIsFav ? '#F59E0B' : undefined,
-                        color: dealIsFav ? '#F59E0B' : undefined,
+                        borderColor: dealIsFav ? '#C9860A' : undefined,
+                        color: dealIsFav ? '#C9860A' : undefined,
                       }}
                       title={dealIsFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
                     >
-                      <Star size={14} fill={dealIsFav ? '#F59E0B' : 'none'} />
+                      <Star size={14} fill={dealIsFav ? '#C9860A' : 'none'} />
                     </button>
                   );
                 })()}
@@ -517,7 +518,7 @@ export default function DealsPage() {
                       <span className="text-content dark:text-content-dark font-medium">{fmtMoney(deal.down_payment)} / {fmtMoney(deal.deal_value)} EGP ({downPct}%)</span>
                     </div>
                     <div className="h-2 bg-brand-500/10 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: Math.min(downPct, 100) + '%', backgroundColor: '#10B981' }} />
+                      <div className="h-full rounded-full transition-all" style={{ width: Math.min(downPct, 100) + '%', backgroundColor: '#158A57' }} />
                     </div>
                   </div>
                 )}
@@ -554,7 +555,7 @@ export default function DealsPage() {
                   </div>
                   {/* Progress bar */}
                   <div className="h-2 bg-brand-500/10 rounded-full overflow-hidden mb-3">
-                    <div className="h-full rounded-full transition-all" style={{ width: dp.pct + '%', backgroundColor: dp.pct === 100 ? '#22C55E' : dp.pct >= 60 ? '#F59E0B' : '#EF4444' }} />
+                    <div className="h-full rounded-full transition-all" style={{ width: dp.pct + '%', backgroundColor: dp.pct === 100 ? '#158A57' : dp.pct >= 60 ? '#C9860A' : '#D6403B' }} />
                   </div>
                   {/* Checklist */}
                   <div className="space-y-1.5">

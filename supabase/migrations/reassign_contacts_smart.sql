@@ -34,13 +34,20 @@ SET search_path TO 'public'
 AS $$
 DECLARE
   v_actor_role text;
+  v_actor_id   uuid := auth.uid();
+  v_actor_name text;
   v_to_name    text;
   v_moved      int := 0;
   v_skipped    jsonb := '[]'::jsonb;
   r            record;
 BEGIN
-  -- Authorization (same set as bulk_reassign_contacts).
-  SELECT role INTO v_actor_role FROM users WHERE id = auth.uid();
+  -- Authorization (same set as bulk_reassign_contacts). Capture the actor's
+  -- canonical (English-preferred) name too, so the reassignment activity is
+  -- attributed by user_id + a language-stable name instead of whatever string
+  -- the client passed (p_assigned_by_name was often the Arabic UI name).
+  SELECT role, COALESCE(full_name_en, full_name_ar)
+    INTO v_actor_role, v_actor_name
+    FROM users WHERE id = v_actor_id;
   IF v_actor_role NOT IN ('admin','operations','sales_director','sales_manager','team_leader') THEN
     RAISE EXCEPTION 'Not authorized: role=%', COALESCE(v_actor_role,'unknown');
   END IF;
@@ -71,7 +78,7 @@ BEGIN
       ) VALUES (
         'reassignment', 'contact', r.id,
         COALESCE(r.assigned_to_name,'—') || ' → ' || v_to_name,
-        NULL, p_assigned_by_name, r.assigned_to, p_to_user_id, 'completed', NOW()
+        v_actor_id, COALESCE(v_actor_name, p_assigned_by_name), r.assigned_to, p_to_user_id, 'completed', NOW()
       );
 
       UPDATE contacts SET
@@ -80,6 +87,9 @@ BEGIN
         assigned_to_names = jsonb_build_array(v_to_name),
         assigned_by_name  = p_assigned_by_name,
         assigned_at       = NOW(),
+        -- Reassigned leads become 'rotation' for the receiving agent (matches
+        -- the backfill: any owner-to-owner move => rotation, not fresh).
+        lead_category     = 'rotation',
         contact_status    = COALESCE(p_new_status, contact_status),
         temperature       = COALESCE(p_new_temperature, temperature)
       WHERE id = r.id;

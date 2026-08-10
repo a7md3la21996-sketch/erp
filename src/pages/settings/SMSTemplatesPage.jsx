@@ -19,8 +19,8 @@ import Pagination from '../../components/ui/Pagination';
 
 // ── Category badge color map ──────────────────────────────────────────
 const CAT_COLORS = {
-  welcome: '#10B981', followup: '#4A7AAB', reminder: '#F59E0B',
-  promotion: '#EC4899', confirmation: '#8B5CF6', custom: '#6B8DB5',
+  welcome: '#158A57', followup: '#2F6BD3', reminder: '#C9860A',
+  promotion: '#C14D7E', confirmation: '#5A63C4', custom: '#6B8DB5',
 };
 
 // ── KPI Card ──────────────────────────────────────────────────────────
@@ -34,10 +34,10 @@ function KpiCard({ icon: Icon, label, value, color, isDark }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <div style={{
           width: 34, height: 34, borderRadius: 10,
-          background: (color || '#4A7AAB') + '15',
+          background: (color || '#2F6BD3') + '15',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Icon size={17} color={color || '#4A7AAB'} />
+          <Icon size={17} color={color || '#2F6BD3'} />
         </div>
         <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', fontWeight: 500 }}>{label}</span>
       </div>
@@ -56,7 +56,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 16px',
       }}>
-        <MessageSquare size={28} color="#4A7AAB" />
+        <MessageSquare size={28} color="#2F6BD3" />
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
         {isRTL ? 'لا توجد قوالب رسائل' : 'No SMS Templates Yet'}
@@ -67,7 +67,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
       <button onClick={onAdd} style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+        background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
       }}>
         <Plus size={15} />
         {isRTL ? 'إضافة قالب' : 'Add Template'}
@@ -188,9 +188,9 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
               {AVAILABLE_VARIABLES.map(v => (
                 <button key={v.key} onClick={() => insertVariable('body', v.key)} style={{
                   padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                  background: form.variables.includes(v.key) ? '#4A7AAB18' : (isDark ? '#0a1929' : '#f8fafc'),
-                  border: `1px solid ${form.variables.includes(v.key) ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
-                  color: form.variables.includes(v.key) ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                  background: form.variables.includes(v.key) ? '#2F6BD318' : (isDark ? '#0a1929' : '#f8fafc'),
+                  border: `1px solid ${form.variables.includes(v.key) ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
+                  color: form.variables.includes(v.key) ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                 }}>
                   {`{${v.key}}`}
                 </button>
@@ -202,7 +202,7 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <label style={{ ...labelStyle, marginBottom: 0 }}>{isRTL ? 'نص الرسالة (EN)' : 'Message Body (EN)'}</label>
-              <span style={{ fontSize: 11, color: charCountEn > 160 ? '#EF4444' : (isDark ? '#94a3b8' : '#64748b') }}>
+              <span style={{ fontSize: 11, color: charCountEn > 160 ? '#D6403B' : (isDark ? '#94a3b8' : '#64748b') }}>
                 {charCountEn}/160 {smsCountEn > 1 ? `(${smsCountEn} SMS)` : ''}
               </span>
             </div>
@@ -214,7 +214,7 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <label style={{ ...labelStyle, marginBottom: 0 }}>{isRTL ? 'نص الرسالة (AR)' : 'Message Body (AR)'}</label>
-              <span style={{ fontSize: 11, color: charCountAr > 160 ? '#EF4444' : (isDark ? '#94a3b8' : '#64748b') }}>
+              <span style={{ fontSize: 11, color: charCountAr > 160 ? '#D6403B' : (isDark ? '#94a3b8' : '#64748b') }}>
                 {charCountAr}/160 {smsCountAr > 1 ? `(${smsCountAr} SMS)` : ''}
               </span>
             </div>
@@ -229,7 +229,7 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
               background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.04)',
               border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`,
             }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#4A7AAB', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#2F6BD3', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Eye size={12} /> {isRTL ? 'معاينة حية' : 'Live Preview'}
               </div>
               {previewEn && (
@@ -259,7 +259,7 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
           </button>
           <button onClick={handleSave} disabled={!canSave} style={{
             padding: '8px 20px', borderRadius: 10, border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
-            background: canSave ? '#4A7AAB' : '#4A7AAB60', color: '#fff', fontSize: 13, fontWeight: 600,
+            background: canSave ? '#2F6BD3' : '#2F6BD360', color: '#fff', fontSize: 13, fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: 6, opacity: canSave ? 1 : 0.6,
           }}>
             <Check size={14} />
@@ -324,9 +324,9 @@ function SendTestModal({ template, onClose, onSend, isRTL, isDark }) {
             {['en', 'ar'].map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
                 flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: lang === l ? '#4A7AAB18' : 'transparent',
-                border: `1px solid ${lang === l ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
-                color: lang === l ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                background: lang === l ? '#2F6BD318' : 'transparent',
+                border: `1px solid ${lang === l ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
+                color: lang === l ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
               }}>
                 {l === 'en' ? 'English' : 'عربي'}
               </button>
@@ -354,7 +354,7 @@ function SendTestModal({ template, onClose, onSend, isRTL, isDark }) {
           </button>
           <button onClick={() => { if (phone.trim()) onSend(phone.trim(), preview); }} disabled={!phone.trim()} style={{
             padding: '7px 18px', borderRadius: 10, border: 'none', fontSize: 12, fontWeight: 600,
-            background: phone.trim() ? '#4A7AAB' : '#4A7AAB60', color: '#fff',
+            background: phone.trim() ? '#2F6BD3' : '#2F6BD360', color: '#fff',
             cursor: phone.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 5,
             opacity: phone.trim() ? 1 : 0.6,
           }}>
@@ -436,7 +436,7 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
             background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.04)',
             border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#4A7AAB', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#2F6BD3', marginBottom: 4 }}>
               {isRTL ? (template.nameAr || template.name) : template.name}
             </div>
             <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', lineHeight: 1.5 }}
@@ -450,9 +450,9 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
             {['en', 'ar'].map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
                 flex: 1, padding: '5px 0', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                background: lang === l ? '#4A7AAB18' : 'transparent',
-                border: `1px solid ${lang === l ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
-                color: lang === l ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                background: lang === l ? '#2F6BD318' : 'transparent',
+                border: `1px solid ${lang === l ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.2)' : '#e2e8f0')}`,
+                color: lang === l ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
               }}>
                 {l === 'en' ? 'English' : 'عربي'}
               </button>
@@ -478,7 +478,7 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <button onClick={toggleAll} style={{
               background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              color: '#4A7AAB', padding: 0,
+              color: '#2F6BD3', padding: 0,
             }}>
               {selected.length === filtered.length ? (isRTL ? 'إلغاء الكل' : 'Deselect All') : (isRTL ? 'تحديد الكل' : 'Select All')}
             </button>
@@ -506,8 +506,8 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
                 }}>
                   <div style={{
                     width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                    border: `2px solid ${isSelected ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.3)' : '#cbd5e1')}`,
-                    background: isSelected ? '#4A7AAB' : 'transparent',
+                    border: `2px solid ${isSelected ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.3)' : '#cbd5e1')}`,
+                    background: isSelected ? '#2F6BD3' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {isSelected && <Check size={11} color="#fff" />}
@@ -536,7 +536,7 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
           </button>
           <button onClick={() => { if (selected.length > 0) { onSend(selected, lang); setSent(true); } }} disabled={selected.length === 0 || sent} style={{
             padding: '7px 18px', borderRadius: 10, border: 'none', fontSize: 12, fontWeight: 600,
-            background: (selected.length > 0 && !sent) ? '#4A7AAB' : '#4A7AAB60', color: '#fff',
+            background: (selected.length > 0 && !sent) ? '#2F6BD3' : '#2F6BD360', color: '#fff',
             cursor: (selected.length > 0 && !sent) ? 'pointer' : 'not-allowed',
             display: 'flex', alignItems: 'center', gap: 5, opacity: (selected.length > 0 && !sent) ? 1 : 0.6,
           }}>
@@ -601,7 +601,7 @@ function PreviewModal({ template, onClose, isRTL, isDark }) {
             background: isDark ? '#0a1929' : '#f8fafc', borderRadius: 16, padding: 16,
             border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e2e8f0'}`,
           }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#4A7AAB', marginBottom: 8 }}>English</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#2F6BD3', marginBottom: 8 }}>English</div>
             <div style={{
               background: isDark ? '#132337' : '#ffffff', borderRadius: 12, padding: 12,
               fontSize: 12, lineHeight: 1.7, color: isDark ? '#e2e8f0' : '#1e293b', marginBottom: 10,
@@ -611,7 +611,7 @@ function PreviewModal({ template, onClose, isRTL, isDark }) {
             </div>
             {previewAr && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#4A7AAB', marginBottom: 8 }}>عربي</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#2F6BD3', marginBottom: 8 }}>عربي</div>
                 <div style={{
                   background: isDark ? '#132337' : '#ffffff', borderRadius: 12, padding: 12,
                   fontSize: 12, lineHeight: 1.7, color: isDark ? '#e2e8f0' : '#1e293b',
@@ -633,7 +633,7 @@ function PreviewModal({ template, onClose, isRTL, isDark }) {
                 {template.variables.map(v => (
                   <span key={v} style={{
                     padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 500,
-                    background: '#4A7AAB15', color: '#4A7AAB', border: '1px solid #4A7AAB30',
+                    background: '#2F6BD315', color: '#2F6BD3', border: '1px solid #2F6BD330',
                   }}>
                     {`{${v}}`}
                   </span>
@@ -784,7 +784,7 @@ export default function SMSTemplatesPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MessageSquare size={22} color="#4A7AAB" />
+            <MessageSquare size={22} color="#2F6BD3" />
             {isRTL ? 'قوالب الرسائل القصيرة' : 'SMS Templates'}
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: textSecondary }}>
@@ -793,7 +793,7 @@ export default function SMSTemplatesPage() {
         </div>
         <button onClick={() => setShowModal('new')} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 10,
-          border: 'none', cursor: 'pointer', background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+          border: 'none', cursor: 'pointer', background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           <Plus size={15} />
           {isRTL ? 'قالب جديد' : 'New Template'}
@@ -802,10 +802,10 @@ export default function SMSTemplatesPage() {
 
       {/* KPI Cards */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-        <KpiCard icon={FileText} label={isRTL ? 'إجمالي القوالب' : 'Total Templates'} value={totalTemplates} color="#4A7AAB" isDark={isDark} />
-        <KpiCard icon={Send} label={isRTL ? 'إجمالي المرسل' : 'Total Sent'} value={totalSent} color="#10B981" isDark={isDark} />
-        <KpiCard icon={Clock} label={isRTL ? 'مرسل اليوم' : "Today's Sent"} value={todaySent} color="#F59E0B" isDark={isDark} />
-        <KpiCard icon={TrendingUp} label={isRTL ? 'الأكثر استخداماً' : 'Most Used'} value={mostUsed ? (isRTL ? (mostUsed.nameAr || mostUsed.name) : mostUsed.name) : '—'} color="#8B5CF6" isDark={isDark} />
+        <KpiCard icon={FileText} label={isRTL ? 'إجمالي القوالب' : 'Total Templates'} value={totalTemplates} color="#2F6BD3" isDark={isDark} />
+        <KpiCard icon={Send} label={isRTL ? 'إجمالي المرسل' : 'Total Sent'} value={totalSent} color="#158A57" isDark={isDark} />
+        <KpiCard icon={Clock} label={isRTL ? 'مرسل اليوم' : "Today's Sent"} value={todaySent} color="#C9860A" isDark={isDark} />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'الأكثر استخداماً' : 'Most Used'} value={mostUsed ? (isRTL ? (mostUsed.nameAr || mostUsed.name) : mostUsed.name) : '—'} color="#5A63C4" isDark={isDark} />
       </div>
 
       {/* Tabs */}
@@ -817,8 +817,8 @@ export default function SMSTemplatesPage() {
           <button key={t.id} onClick={() => { setTab(t.id); setPage(1); setSearch(''); setFilters([]); }} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', cursor: 'pointer',
             background: 'transparent', border: 'none', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-            color: tab === t.id ? '#4A7AAB' : textSecondary,
-            borderBottom: tab === t.id ? '2px solid #4A7AAB' : '2px solid transparent',
+            color: tab === t.id ? '#2F6BD3' : textSecondary,
+            borderBottom: tab === t.id ? '2px solid #2F6BD3' : '2px solid transparent',
             marginBottom: -2,
           }}>
             <t.icon size={14} />
@@ -894,7 +894,7 @@ export default function SMSTemplatesPage() {
                   {/* Variables */}
                   <span style={{ fontSize: 12, color: textSecondary }}>{t.variables?.length || 0}</span>
                   {/* Send count */}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A7AAB' }}>{t.send_count || 0}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#2F6BD3' }}>{t.send_count || 0}</span>
                   {/* Created */}
                   <span style={{ fontSize: 11, color: textSecondary }}>
                     {t.created_at ? new Date(t.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-GB') : '—'}
@@ -911,28 +911,28 @@ export default function SMSTemplatesPage() {
                     <button onClick={() => setShowModal(t)} title={isRTL ? 'تعديل' : 'Edit'} style={{
                       width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`,
                       background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#4A7AAB',
+                      color: '#2F6BD3',
                     }}>
                       <Pencil size={13} />
                     </button>
                     <button onClick={() => setShowTest(t)} title={isRTL ? 'إرسال تجريبي' : 'Send Test'} style={{
                       width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`,
                       background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#10B981',
+                      color: '#158A57',
                     }}>
                       <Send size={13} />
                     </button>
                     <button onClick={() => setShowBulk(t)} title={isRTL ? 'إرسال جماعي' : 'Bulk Send'} style={{
                       width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`,
                       background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#F59E0B',
+                      color: '#C9860A',
                     }}>
                       <Users size={13} />
                     </button>
                     <button onClick={() => handleDelete(t)} title={isRTL ? 'حذف' : 'Delete'} style={{
                       width: 28, height: 28, borderRadius: 8, border: `1px solid ${borderColor}`,
                       background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#EF4444',
+                      color: '#D6403B',
                     }}>
                       <Trash2 size={13} />
                     </button>
@@ -993,11 +993,11 @@ export default function SMSTemplatesPage() {
                     {l.message}
                   </span>
                   <span style={{ fontSize: 12, color: textSecondary }} dir="ltr">{l.phone}</span>
-                  <span style={{ fontSize: 11, color: '#4A7AAB', fontWeight: 500 }}>{l.template_name || '—'}</span>
+                  <span style={{ fontSize: 11, color: '#2F6BD3', fontWeight: 500 }}>{l.template_name || '—'}</span>
                   <span style={{
                     display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 600, width: 'fit-content',
-                    background: l.status === 'sent' ? '#10B98118' : '#EF444418',
-                    color: l.status === 'sent' ? '#10B981' : '#EF4444',
+                    background: l.status === 'sent' ? '#158A5718' : '#D6403B18',
+                    color: l.status === 'sent' ? '#158A57' : '#D6403B',
                   }}>
                     {l.status === 'sent' ? (isRTL ? 'مرسل' : 'Sent') : (isRTL ? 'فشل' : 'Failed')}
                   </span>

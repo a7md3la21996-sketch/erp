@@ -382,8 +382,8 @@ export default function FinancePage() {
     <div className="flex flex-col gap-4">
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <KpiCard icon={TrendingUp} label={L('إيرادات الشهر', 'Monthly Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
-        <KpiCard icon={TrendingDown} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
+        <KpiCard icon={TrendingUp} label={L('إيرادات الشهر', 'Monthly Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#2F6BD3" />
+        <KpiCard icon={TrendingDown} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#D6403B" />
         <KpiCard icon={DollarSign} label={L('ذمم مدينة (مطورين)', 'Receivable (Devs)')} value={fmtShort(receivable)} sub="EGP" color="#2B4C6F" />
         <KpiCard icon={Wallet} label={L('عمولات سيلز مستحقة', 'Agent Comm. Payable')} value={fmtShort(payable)} sub="EGP" color="#6B8DB5" />
       </div>
@@ -403,12 +403,12 @@ export default function FinancePage() {
                     <div className="flex items-end gap-0.5 h-[120px]">
                       <div
                         className="w-[40%] rounded-t-sm transition-[height] duration-[400ms]"
-                        style={{ height: revH, background: isLast ? '#4A7AAB' : '#4A7AAB60' }}
+                        style={{ height: revH, background: isLast ? '#2F6BD3' : '#2F6BD360' }}
                         title={fmtMoney(m.revenue)}
                       />
                       <div
                         className="w-[40%] rounded-t-sm transition-[height] duration-[400ms]"
-                        style={{ height: expH, background: isLast ? '#EF4444' : '#EF444440' }}
+                        style={{ height: expH, background: isLast ? '#D6403B' : '#D6403B40' }}
                         title={fmtMoney(m.expenses)}
                       />
                     </div>
@@ -445,7 +445,7 @@ export default function FinancePage() {
                   <div className="h-[5px] rounded-sm bg-gray-200 dark:bg-white/[0.08]">
                     <div
                       className="h-full rounded-sm transition-[width] duration-[400ms]"
-                      style={{ width: Math.min(pct, 100) + '%', background: over ? '#EF4444' : '#4A7AAB' }}
+                      style={{ width: Math.min(pct, 100) + '%', background: over ? '#D6403B' : '#2F6BD3' }}
                     />
                   </div>
                 </div>
@@ -462,7 +462,7 @@ export default function FinancePage() {
           <div className="px-5 py-3">
             {[
               { label: L('معلق', 'Pending'), val: companyComm.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0), color: '#6B8DB5' },
-              { label: L('معتمد', 'Approved'), val: companyComm.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0), color: '#4A7AAB' },
+              { label: L('معتمد', 'Approved'), val: companyComm.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0), color: '#2F6BD3' },
               { label: L('محصّل', 'Collected'), val: companyComm.filter(c => c.status === 'paid').reduce((s, c) => s + c.amount, 0), color: '#2B4C6F' },
             ].map((row, i) => (
               <div key={i} className={`flex justify-between items-center py-2 ${i < 2 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
@@ -594,7 +594,7 @@ export default function FinancePage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <KpiCard icon={BookOpen} label={L('إجمالي القيود', 'Total Entries')} value={journalEntries.length} color="#4A7AAB" />
+          <KpiCard icon={BookOpen} label={L('إجمالي القيود', 'Total Entries')} value={journalEntries.length} color="#2F6BD3" />
           <KpiCard icon={CheckCircle} label={L('مرحّلة', 'Posted')} value={postedEntries.length} color="#2B4C6F" />
           <KpiCard icon={Clock} label={L('مسودات', 'Drafts')} value={draftCount} color="#6B8DB5" />
           <KpiCard icon={DollarSign} label={L('إجمالي المبالغ المرحّلة', 'Total Posted Amount')} value={fmtShort(totalPosted)} sub="EGP" color="#1B3347" />
@@ -684,9 +684,9 @@ export default function FinancePage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <KpiCard icon={TrendingUp} label={L('فواتير بيع', 'Sales Invoices')} value={fmtShort(salesTotal)} sub="EGP" color="#4A7AAB" />
-          <KpiCard icon={TrendingDown} label={L('فواتير شراء', 'Purchase Bills')} value={fmtShort(purchaseTotal)} sub="EGP" color="#EF4444" />
-          <KpiCard icon={AlertTriangle} label={L('متأخرات', 'Overdue')} value={fmtShort(overdueTotal)} sub="EGP" color="#EF4444" />
+          <KpiCard icon={TrendingUp} label={L('فواتير بيع', 'Sales Invoices')} value={fmtShort(salesTotal)} sub="EGP" color="#2F6BD3" />
+          <KpiCard icon={TrendingDown} label={L('فواتير شراء', 'Purchase Bills')} value={fmtShort(purchaseTotal)} sub="EGP" color="#D6403B" />
+          <KpiCard icon={AlertTriangle} label={L('متأخرات', 'Overdue')} value={fmtShort(overdueTotal)} sub="EGP" color="#D6403B" />
           <KpiCard icon={Receipt} label={L('ضرائب', 'Tax')} value={fmtShort(taxTotal)} sub="EGP" color="#6B8DB5" />
         </div>
 
@@ -729,7 +729,7 @@ export default function FinancePage() {
                     return (
                       <Tr key={inv.id} onClick={() => setViewInvoice(inv)} className="cursor-pointer">
                         <Td className="font-bold text-brand-500">{inv.number}</Td>
-                        <Td><StatusBadge label={inv.type === 'sales' ? L('بيع', 'Sales') : L('شراء', 'Purchase')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} /></Td>
+                        <Td><StatusBadge label={inv.type === 'sales' ? L('بيع', 'Sales') : L('شراء', 'Purchase')} color={inv.type === 'sales' ? '#2F6BD3' : '#6B8DB5'} /></Td>
                         <Td>{L(inv.counterparty_ar, inv.counterparty_en)}</Td>
                         <Td className="text-content-muted dark:text-content-muted-dark">{inv.date}</Td>
                         <Td className={`${inv.status === 'overdue' ? 'text-red-500 font-bold' : 'text-content-muted dark:text-content-muted-dark'}`}>{inv.due_date}</Td>
@@ -775,7 +775,7 @@ export default function FinancePage() {
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <KpiCard icon={Clock} label={L('معلق', 'Pending')} value={fmtShort(pendingAmt)} sub="EGP" color="#6B8DB5" />
-          <KpiCard icon={CheckCircle} label={L('معتمد', 'Approved')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
+          <KpiCard icon={CheckCircle} label={L('معتمد', 'Approved')} value={fmtShort(approvedAmt)} sub="EGP" color="#2F6BD3" />
           <KpiCard icon={DollarSign} label={L('مصروف', 'Paid')} value={fmtShort(paidAmt)} sub="EGP" color="#2B4C6F" />
         </div>
 
@@ -912,8 +912,8 @@ export default function FinancePage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <KpiCard icon={Receipt} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
-          <KpiCard icon={CheckCircle} label={L('معتمد + مدفوع', 'Approved + Paid')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
+          <KpiCard icon={Receipt} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#D6403B" />
+          <KpiCard icon={CheckCircle} label={L('معتمد + مدفوع', 'Approved + Paid')} value={fmtShort(approvedAmt)} sub="EGP" color="#2F6BD3" />
           <KpiCard icon={Clock} label={L('في الانتظار', 'Pending')} value={pendingExpenses.length} sub={fmtMoney(pendingAmt)} color="#6B8DB5" />
           <KpiCard icon={PieChart} label={L('أكبر بند', 'Largest Category')} value={sortedCats[0]?.[0] || '—'} sub={sortedCats[0] ? fmtMoney(sortedCats[0][1]) : ''} color="#2B4C6F" />
         </div>
@@ -998,7 +998,7 @@ export default function FinancePage() {
             <div className="px-5 py-3">
               {sortedCats.map(([cat, amt], i) => {
                 const pct = Math.round((amt / totalExpenseAmt) * 100);
-                const barColors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
+                const barColors = ['#1B3347', '#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8', '#D6403B'];
                 return (
                   <div key={cat} className="mb-2.5">
                     <div className="flex justify-between mb-0.5">
@@ -1167,8 +1167,8 @@ export default function FinancePage() {
 
             {/* Right — KPIs */}
             <div className="flex flex-col gap-3.5">
-              <KpiCard icon={Layers} label={L('إجمالي الأصول', 'Total Assets')} value={fmtShort(totalAssets)} sub="EGP" color="#4A7AAB" />
-              <KpiCard icon={AlertTriangle} label={L('إجمالي الخصوم', 'Total Liabilities')} value={fmtShort(totalLiabilities)} sub="EGP" color="#EF4444" />
+              <KpiCard icon={Layers} label={L('إجمالي الأصول', 'Total Assets')} value={fmtShort(totalAssets)} sub="EGP" color="#2F6BD3" />
+              <KpiCard icon={AlertTriangle} label={L('إجمالي الخصوم', 'Total Liabilities')} value={fmtShort(totalLiabilities)} sub="EGP" color="#D6403B" />
               <KpiCard icon={Wallet} label={L('حقوق الملكية', 'Equity')} value={fmtShort(totalEquity + netIncomeCalc)} sub="EGP" color="#2B4C6F" />
               <KpiCard icon={TrendingUp} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color="#1B3347" />
 
@@ -1232,9 +1232,9 @@ export default function FinancePage() {
 
             {/* Right — Chart */}
             <div className="flex flex-col gap-3.5">
-              <KpiCard icon={TrendingUp} label={L('الإيرادات', 'Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
-              <KpiCard icon={TrendingDown} label={L('المصروفات', 'Expenses')} value={fmtShort(totalExpPosted)} sub="EGP" color="#EF4444" />
-              <KpiCard icon={DollarSign} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color={netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444'} />
+              <KpiCard icon={TrendingUp} label={L('الإيرادات', 'Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#2F6BD3" />
+              <KpiCard icon={TrendingDown} label={L('المصروفات', 'Expenses')} value={fmtShort(totalExpPosted)} sub="EGP" color="#D6403B" />
+              <KpiCard icon={DollarSign} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color={netIncomeCalc >= 0 ? '#2B4C6F' : '#D6403B'} />
 
               {/* Expense breakdown mini */}
               <CardWrap title={L('توزيع المصروفات', 'Expense Breakdown')} icon={PieChart}>
@@ -1251,7 +1251,7 @@ export default function FinancePage() {
                     let amt = 0;
                     postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amt += l.debit - l.credit; }));
                     const pct = totalExpPosted > 0 ? Math.round((amt / totalExpPosted) * 100) : 0;
-                    const colors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
+                    const colors = ['#1B3347', '#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8', '#D6403B'];
                     return (
                       <div key={a.id} className="mb-2">
                         <div className="flex justify-between mb-0.5">
@@ -1302,8 +1302,8 @@ export default function FinancePage() {
             </CardWrap>
 
             <div className="flex flex-col gap-3.5">
-              <KpiCard icon={ArrowUpRight} label={L('إجمالي التحصيلات', 'Total Inflows')} value={fmtShort(cashInflows)} sub="EGP" color="#4A7AAB" />
-              <KpiCard icon={ArrowDownRight} label={L('إجمالي المدفوعات', 'Total Outflows')} value={fmtShort(cashOutflows)} sub="EGP" color="#EF4444" />
+              <KpiCard icon={ArrowUpRight} label={L('إجمالي التحصيلات', 'Total Inflows')} value={fmtShort(cashInflows)} sub="EGP" color="#2F6BD3" />
+              <KpiCard icon={ArrowDownRight} label={L('إجمالي المدفوعات', 'Total Outflows')} value={fmtShort(cashOutflows)} sub="EGP" color="#D6403B" />
               <KpiCard icon={Wallet} label={L('إجمالي النقدية', 'Total Cash')} value={fmtShort(totalCash)} sub="EGP" color="#2B4C6F" />
 
               {/* Cash breakdown */}
@@ -1311,7 +1311,7 @@ export default function FinancePage() {
                 <div className="px-5 py-3.5">
                   {[
                     { label: L('الصندوق', 'Cash on Hand'), amount: cashBal, color: '#1B3347' },
-                    { label: L('بنك CIB', 'CIB Bank'), amount: bankCIB, color: '#4A7AAB' },
+                    { label: L('بنك CIB', 'CIB Bank'), amount: bankCIB, color: '#2F6BD3' },
                     { label: L('بنك NBE', 'NBE Bank'), amount: bankNBE, color: '#8BA8C8' },
                   ].map((item, i) => {
                     const pct = totalCash !== 0 ? Math.round((Math.abs(item.amount) / Math.abs(totalCash)) * 100) : 0;
@@ -1356,10 +1356,10 @@ export default function FinancePage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <KpiCard icon={Target} label={L('الموازنة الشهرية', 'Monthly Budget')} value={fmtShort(totalMonthly)} sub="EGP" color="#4A7AAB" />
+          <KpiCard icon={Target} label={L('الموازنة الشهرية', 'Monthly Budget')} value={fmtShort(totalMonthly)} sub="EGP" color="#2F6BD3" />
           <KpiCard icon={BarChart2} label={L('الفعلي YTD', 'Actual YTD')} value={fmtShort(totalActualYtd)} sub="EGP" color="#2B4C6F" />
-          <KpiCard icon={PieChart} label={L('نسبة الاستهلاك', 'Usage Rate')} value={overallPct + '%'} sub={L('من الموازنة', 'of budget')} color={overallPct > 100 ? '#EF4444' : '#4A7AAB'} />
-          <KpiCard icon={AlertTriangle} label={L('بنود تجاوزت', 'Over Budget')} value={overBudgetCount} sub={L('بند', 'items')} color={overBudgetCount > 0 ? '#EF4444' : '#2B4C6F'} />
+          <KpiCard icon={PieChart} label={L('نسبة الاستهلاك', 'Usage Rate')} value={overallPct + '%'} sub={L('من الموازنة', 'of budget')} color={overallPct > 100 ? '#D6403B' : '#2F6BD3'} />
+          <KpiCard icon={AlertTriangle} label={L('بنود تجاوزت', 'Over Budget')} value={overBudgetCount} sub={L('بند', 'items')} color={overBudgetCount > 0 ? '#D6403B' : '#2B4C6F'} />
         </div>
 
         {/* Overall progress */}
@@ -1372,7 +1372,7 @@ export default function FinancePage() {
             <div className="h-2.5 rounded-[5px] bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
               <div
                 className="h-full rounded-[5px] transition-[width] duration-[400ms]"
-                style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#EF4444' : overallPct > 85 ? '#f59e0b' : '#4A7AAB' }}
+                style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#D6403B' : overallPct > 85 ? '#C9860A' : '#2F6BD3' }}
               />
             </div>
             <div className="flex justify-between mt-1">
@@ -1423,7 +1423,7 @@ export default function FinancePage() {
                         <div className="h-1.5 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
                           <div
                             className="h-full rounded-sm transition-[width] duration-300"
-                            style={{ width: Math.min(pct, 100) + '%', background: over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#4A7AAB' }}
+                            style={{ width: Math.min(pct, 100) + '%', background: over ? '#D6403B' : pct > 85 ? '#C9860A' : '#2F6BD3' }}
                           />
                         </div>
                       </Td>
@@ -1442,7 +1442,7 @@ export default function FinancePage() {
                   <td className={`px-3 py-2.5 text-xs font-bold ${overallPct > 100 ? 'text-red-500' : 'text-brand-800'}`}>{overallPct}%</td>
                   <td className="px-3 py-2.5">
                     <div className="h-1.5 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
-                      <div className="h-full rounded-sm" style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#EF4444' : '#4A7AAB' }} />
+                      <div className="h-full rounded-sm" style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#D6403B' : '#2F6BD3' }} />
                     </div>
                   </td>
                 </tr>
@@ -1546,7 +1546,7 @@ export default function FinancePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div>
             <div className="text-xs text-content-muted dark:text-content-muted-dark mb-0.5">{L('النوع', 'Type')}</div>
-            <StatusBadge label={inv.type === 'sales' ? L('فاتورة بيع', 'Sales Invoice') : L('فاتورة شراء', 'Purchase Bill')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} />
+            <StatusBadge label={inv.type === 'sales' ? L('فاتورة بيع', 'Sales Invoice') : L('فاتورة شراء', 'Purchase Bill')} color={inv.type === 'sales' ? '#2F6BD3' : '#6B8DB5'} />
           </div>
           <div>
             <div className="text-xs text-content-muted dark:text-content-muted-dark mb-0.5">{L('التاريخ', 'Date')}</div>
@@ -1637,7 +1637,7 @@ export default function FinancePage() {
      ═══════════════════════════════════════════════════════════════════════ */
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">

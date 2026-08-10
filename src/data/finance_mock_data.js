@@ -5,38 +5,38 @@
 export const JOURNAL_STATUS = {
   draft:  { ar: 'مسودة', en: 'Draft',  color: '#6B8DB5' },
   posted: { ar: 'مرحّل', en: 'Posted', color: '#2B4C6F' },
-  voided: { ar: 'ملغي',  en: 'Voided', color: '#EF4444' },
+  voided: { ar: 'ملغي',  en: 'Voided', color: '#D6403B' },
 };
 
 export const INVOICE_STATUS = {
   draft:          { ar: 'مسودة',     en: 'Draft',          color: '#8BA8C8' },
   sent:           { ar: 'مرسلة',     en: 'Sent',           color: '#6B8DB5' },
-  partially_paid: { ar: 'مدفوع جزئي', en: 'Partially Paid', color: '#4A7AAB' },
+  partially_paid: { ar: 'مدفوع جزئي', en: 'Partially Paid', color: '#2F6BD3' },
   paid:           { ar: 'مدفوعة',    en: 'Paid',           color: '#2B4C6F' },
-  overdue:        { ar: 'متأخرة',    en: 'Overdue',        color: '#EF4444' },
-  cancelled:      { ar: 'ملغاة',     en: 'Cancelled',      color: '#EF4444' },
+  overdue:        { ar: 'متأخرة',    en: 'Overdue',        color: '#D6403B' },
+  cancelled:      { ar: 'ملغاة',     en: 'Cancelled',      color: '#D6403B' },
 };
 
 export const COMMISSION_STATUS = {
   pending:  { ar: 'معلق',   en: 'Pending',  color: '#6B8DB5' },
-  approved: { ar: 'معتمد',  en: 'Approved', color: '#4A7AAB' },
+  approved: { ar: 'معتمد',  en: 'Approved', color: '#2F6BD3' },
   paid:     { ar: 'مصروف',  en: 'Paid',     color: '#2B4C6F' },
-  rejected: { ar: 'مرفوض',  en: 'Rejected', color: '#EF4444' },
+  rejected: { ar: 'مرفوض',  en: 'Rejected', color: '#D6403B' },
 };
 
 export const EXPENSE_STATUS = {
   pending:  { ar: 'معلق',   en: 'Pending',  color: '#6B8DB5' },
-  approved: { ar: 'معتمد',  en: 'Approved', color: '#4A7AAB' },
-  rejected: { ar: 'مرفوض',  en: 'Rejected', color: '#EF4444' },
+  approved: { ar: 'معتمد',  en: 'Approved', color: '#2F6BD3' },
+  rejected: { ar: 'مرفوض',  en: 'Rejected', color: '#D6403B' },
   paid:     { ar: 'مدفوع',  en: 'Paid',     color: '#2B4C6F' },
 };
 
 export const ACCOUNT_TYPES = {
-  asset:     { ar: 'أصول',          en: 'Assets',      color: '#4A7AAB', normal: 'debit'  },
+  asset:     { ar: 'أصول',          en: 'Assets',      color: '#2F6BD3', normal: 'debit'  },
   liability: { ar: 'خصوم',          en: 'Liabilities', color: '#6B8DB5', normal: 'credit' },
   equity:    { ar: 'حقوق ملكية',    en: 'Equity',      color: '#2B4C6F', normal: 'credit' },
   revenue:   { ar: 'إيرادات',       en: 'Revenue',     color: '#1B3347', normal: 'credit' },
-  expense:   { ar: 'مصروفات',       en: 'Expenses',    color: '#EF4444', normal: 'debit'  },
+  expense:   { ar: 'مصروفات',       en: 'Expenses',    color: '#D6403B', normal: 'debit'  },
 };
 
 export const EXPENSE_CATEGORIES = {

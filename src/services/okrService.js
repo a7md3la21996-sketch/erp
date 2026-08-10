@@ -11,24 +11,24 @@ const LOCAL_KEY = 'platform_okrs';
 
 // ── Status colors ──────────────────────────────────────────────────────
 export const STATUS_COLORS = {
-  on_track: '#10B981',
-  at_risk: '#F59E0B',
-  behind: '#EF4444',
-  completed: '#4A7AAB',
+  on_track: '#158A57',
+  at_risk: '#C9860A',
+  behind: '#D6403B',
+  completed: '#2F6BD3',
 };
 
 export const OBJ_STATUS_OPTIONS = [
   { value: 'draft', label_ar: 'مسودة', label_en: 'Draft', color: '#94a3b8' },
-  { value: 'active', label_ar: 'نشط', label_en: 'Active', color: '#4A7AAB' },
-  { value: 'completed', label_ar: 'مكتمل', label_en: 'Completed', color: '#10B981' },
-  { value: 'cancelled', label_ar: 'ملغي', label_en: 'Cancelled', color: '#EF4444' },
+  { value: 'active', label_ar: 'نشط', label_en: 'Active', color: '#2F6BD3' },
+  { value: 'completed', label_ar: 'مكتمل', label_en: 'Completed', color: '#158A57' },
+  { value: 'cancelled', label_ar: 'ملغي', label_en: 'Cancelled', color: '#D6403B' },
 ];
 
 export const KR_STATUS_OPTIONS = [
-  { value: 'on_track', label_ar: 'على المسار', label_en: 'On Track', color: '#10B981' },
-  { value: 'at_risk', label_ar: 'في خطر', label_en: 'At Risk', color: '#F59E0B' },
-  { value: 'behind', label_ar: 'متأخر', label_en: 'Behind', color: '#EF4444' },
-  { value: 'completed', label_ar: 'مكتمل', label_en: 'Completed', color: '#4A7AAB' },
+  { value: 'on_track', label_ar: 'على المسار', label_en: 'On Track', color: '#158A57' },
+  { value: 'at_risk', label_ar: 'في خطر', label_en: 'At Risk', color: '#C9860A' },
+  { value: 'behind', label_ar: 'متأخر', label_en: 'Behind', color: '#D6403B' },
+  { value: 'completed', label_ar: 'مكتمل', label_en: 'Completed', color: '#2F6BD3' },
 ];
 
 export const KR_UNIT_OPTIONS = [

@@ -14,11 +14,11 @@ const ICONS = {
 };
 
 const COLORS = {
-  success: { border: 'rgba(74,122,171,0.4)', icon: '#4A7AAB' },
-  error:   { border: 'rgba(239,68,68,0.4)',  icon: '#EF4444' },
+  success: { border: 'rgba(74,122,171,0.4)', icon: '#2F6BD3' },
+  error:   { border: 'rgba(239,68,68,0.4)',  icon: '#D6403B' },
   warning: { border: 'rgba(107,141,181,0.4)',icon: '#6B8DB5' },
   info:    { border: 'rgba(74,122,171,0.35)',icon: '#8BA8C8' },
-  loading: { border: 'rgba(74,122,171,0.35)',icon: '#4A7AAB' },
+  loading: { border: 'rgba(74,122,171,0.35)',icon: '#2F6BD3' },
 };
 
 function ToastItem({ toast, onRemove }) {

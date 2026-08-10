@@ -78,9 +78,9 @@ export async function updateReminder(id, updates) {
 }
 
 export const REMINDER_TYPES = {
-  call:     { en: 'Call',        ar: '\u0645\u0643\u0627\u0644\u0645\u0629',    color: '#10B981', icon: 'Phone' },
+  call:     { en: 'Call',        ar: '\u0645\u0643\u0627\u0644\u0645\u0629',    color: '#158A57', icon: 'Phone' },
   whatsapp: { en: 'WhatsApp',    ar: '\u0648\u0627\u062a\u0633\u0627\u0628',    color: '#25D366', icon: 'MessageCircle' },
-  visit:    { en: 'Site Visit',  ar: '\u0632\u064a\u0627\u0631\u0629 \u0645\u0648\u0642\u0639', color: '#4A7AAB', icon: 'MapPin' },
-  meeting:  { en: 'Meeting',     ar: '\u0627\u062c\u062a\u0645\u0627\u0639',    color: '#8B5CF6', icon: 'Users' },
-  email:    { en: 'Email',       ar: '\u0628\u0631\u064a\u062f',                  color: '#F59E0B', icon: 'Mail' },
+  visit:    { en: 'Site Visit',  ar: '\u0632\u064a\u0627\u0631\u0629 \u0645\u0648\u0642\u0639', color: '#2F6BD3', icon: 'MapPin' },
+  meeting:  { en: 'Meeting',     ar: '\u0627\u062c\u062a\u0645\u0627\u0639',    color: '#5A63C4', icon: 'Users' },
+  email:    { en: 'Email',       ar: '\u0628\u0631\u064a\u062f',                  color: '#C9860A', icon: 'Mail' },
 };

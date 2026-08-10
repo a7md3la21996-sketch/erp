@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drawer V4 Final</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: { DEFAULT:'#0a0a0a', muted:'#737373', soft:'#a3a3a3', faint:'#d4d4d4' },
+          line: { DEFAULT:'#ededed', strong:'#e5e5e5' },
+          brand: { 50:'#eef4fb', 100:'#dde9f5', 500:'#4A7AAB', 600:'#3b6794', 700:'#2c4f72' },
+        },
+        fontFamily: { sans: ['Cairo', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Cairo', sans-serif; background: #fafafa; color: #0a0a0a; -webkit-font-smoothing: antialiased; }
+  .scroll-area::-webkit-scrollbar { width: 0; }
+  .hairline { border-color: #ededed; }
+  button { transition: opacity 0.15s, background 0.15s, transform 0.15s, border-color 0.15s; }
+  button:active { opacity: 0.85; transform: scale(0.99); }
+  .ghost-btn { color: #525252; }
+  .ghost-btn:hover { background: #f5f5f5; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 999px; display: inline-block; }
+  .accordion-head:hover { background: #fafafa; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .chev { transform: rotate(180deg); }
+  .chev { transition: transform 0.2s; }
+  /* Action button new style: outlined, icon top, tiny accent dot */
+  .act-btn { background: white; border: 1px solid #ededed; }
+  .act-btn:hover { border-color: #d4d4d4; background: #fafafa; }
+  .act-btn.primary { background: #0a0a0a; border-color: #0a0a0a; color: white; }
+  .act-btn.primary:hover { background: #262626; }
+  .act-acc { width: 5px; height: 5px; border-radius: 999px; position: absolute; top: 6px; inset-inline-end: 6px; }
+</style>
+</head>
+<body class="min-h-screen p-0 md:p-6">
+
+<!-- Toolbar -->
+<div class="max-w-[420px] mx-auto mb-3 px-4 md:px-0 hidden md:flex items-center justify-between">
+  <div>
+    <h1 class="text-sm font-semibold text-ink">Drawer V4 · Final</h1>
+    <p class="text-[10px] text-ink-muted mt-0.5">Single scroll · لا tabs · كل البيانات لها مكان</p>
+  </div>
+  <button onclick="document.documentElement.dir=document.documentElement.dir==='rtl'?'ltr':'rtl'" class="text-[11px] px-2.5 py-1 rounded-md ghost-btn font-semibold border border-line">RTL/LTR</button>
+</div>
+
+<!-- Drawer -->
+<div class="max-w-[420px] mx-auto bg-white md:rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden border border-line" style="height: 100vh; max-height: 880px;">
+
+  <!-- ═══ HERO (sticky) ═══ -->
+  <div class="sticky top-0 z-30 bg-white border-b hairline">
+
+    <!-- Top nav -->
+    <div class="flex items-center justify-between px-3 pt-2.5">
+      <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center" title="رجوع">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="flex items-center gap-0.5">
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center" title="السابق">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center" title="التالي">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center" title="تثبيت">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 002-2V3H6v1a2 2 0 002 2h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center" title="المزيد">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Identity -->
+    <div class="px-4 pt-2 pb-3">
+      <div class="flex items-baseline gap-2">
+        <h2 class="text-xl font-bold text-ink leading-tight">خالد محمد علي</h2>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">VIP</span>
+      </div>
+      <p class="text-[12px] text-ink-muted mt-1">+20 100 ••• 4567 · khaled@example.com · القاهرة الجديدة</p>
+    </div>
+
+    <!-- Status / Temp / Score chips -->
+    <div class="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
+      <button class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+        <span class="chip-dot bg-emerald-500"></span>
+        متابعة
+      </button>
+      <button class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 hover:bg-red-100">
+        <span class="chip-dot bg-red-500"></span>
+        ساخن
+      </button>
+      <button class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-700">
+        <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+        75
+      </button>
+      <span class="ms-auto text-[10px] text-ink-soft">آخر تواصل · منذ ٣ أيام</span>
+    </div>
+
+    <!-- Action buttons (NEW STYLE: outlined + tiny accent dot, primary is solid black) -->
+    <div class="px-3 pb-3 grid grid-cols-4 gap-1.5">
+      <button class="act-btn primary relative flex flex-col items-center gap-1 py-2.5 rounded-xl">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        <span class="text-[10.5px] font-bold">اتصال</span>
+      </button>
+      <button class="act-btn relative flex flex-col items-center gap-1 py-2.5 rounded-xl text-ink">
+        <span class="act-acc bg-emerald-500"></span>
+        <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+        <span class="text-[10.5px] font-semibold">واتساب</span>
+      </button>
+      <button class="act-btn relative flex flex-col items-center gap-1 py-2.5 rounded-xl text-ink">
+        <span class="act-acc bg-purple-500"></span>
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+        <span class="text-[10.5px] font-semibold">موعد</span>
+      </button>
+      <button class="act-btn relative flex flex-col items-center gap-1 py-2.5 rounded-xl text-ink">
+        <span class="act-acc bg-amber-500"></span>
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        <span class="text-[10.5px] font-semibold">ملاحظة</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STREAM (single scroll, no tabs) ═══ -->
+  <div class="scroll-area overflow-y-auto bg-neutral-50/50" style="height: calc(100% - 222px);">
+
+    <!-- ALERTS (only if any) — admin/important only -->
+    <div class="bg-amber-50/60 border-b border-amber-200/40 px-4 py-2 text-[11px] flex items-center gap-2">
+      <svg width="12" height="12" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span class="text-amber-800 flex-1">تم نقل العميل من <b>سامي إبراهيم</b> منذ ١٤ يومًا</span>
+      <button class="text-[10px] font-bold text-amber-700 hover:bg-amber-100 px-2 py-0.5 rounded">تفاصيل</button>
+    </div>
+
+    <!-- Sticky jump TOC -->
+    <div class="sticky top-0 z-20 bg-white border-b hairline px-4 py-2">
+      <div class="flex gap-1.5 overflow-x-auto text-[11px]">
+        <a href="#sec-activity" class="shrink-0 px-2.5 py-1 rounded-full bg-ink text-white font-bold">النشاط</a>
+        <a href="#sec-pipeline" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">خط الصفقات · ١</a>
+        <a href="#sec-tasks" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">المهام · ٢</a>
+        <a href="#sec-info" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">المعلومات</a>
+        <a href="#sec-docs" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">المستندات · ٣</a>
+        <a href="#sec-comments" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">التعليقات · ٢</a>
+        <a href="#sec-history" class="shrink-0 px-2.5 py-1 rounded-full bg-white border border-line text-ink-muted hover:text-ink font-semibold">السجل</a>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="bg-white border-b hairline px-4 py-3 flex items-center gap-2">
+      <input type="text" placeholder="سجّل نشاطًا أو ملاحظة..." class="flex-1 bg-transparent text-[13px] placeholder:text-ink-soft outline-none" />
+      <button class="text-[11px] font-bold text-brand-600 px-2 py-1 rounded-md hover:bg-brand-50">حفظ</button>
+    </div>
+
+    <!-- ═══ النشاط ═══ -->
+    <section id="sec-activity" class="bg-white px-4 py-4 border-b hairline">
+      <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider mb-3">النشاط</h3>
+
+      <!-- Today -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">اليوم</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">اتصال</b> · ٥ دقائق</div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"مهتم بشقة ٣ غرف بحديقة، يرغب في المعاينة يوم الجمعة"</div>
+            <div class="text-[10px] text-ink-soft mt-1">منذ ساعتين</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#d97706" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">ملاحظة</b></div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"يطلب مقابلة المهندس الاستشاري قبل المعاينة"</div>
+            <div class="text-[10px] text-ink-soft mt-1">منذ ٤ ساعات</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Yesterday -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">أمس</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="#10b981" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">واتساب</b> · من العميل</div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"أرسل لي بروشور المشروع لو سمحت"</div>
+            <div class="text-[10px] text-ink-soft mt-1">٤:٢٠ م</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#737373" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">الحالة</b> · جديد ← متابعة</div>
+            <div class="text-[10px] text-ink-soft mt-1">١:١٠ م</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Earlier -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">الأسبوع الماضي</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#737373" stroke-width="2.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">تم التعيين</b> إليك</div>
+            <div class="text-[10px] text-ink-soft mt-1">السبت · ٩:٠٠ ص</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="text-[12px] text-ink-muted font-semibold hover:text-ink">عرض كافة الأحداث (١٢)</button>
+    </section>
+
+    <!-- ═══ خط الصفقات (Pipeline) ═══ -->
+    <section id="sec-pipeline" class="bg-white px-4 py-4 border-b hairline">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">خط الصفقات · ١</h3>
+        <button class="text-[12px] text-brand-600 font-bold hover:bg-brand-50 px-2 py-1 rounded-md">+ فرصة</button>
+      </div>
+      <button class="w-full text-start hover:bg-neutral-50 -mx-2 px-2 py-2 rounded-lg">
+        <div class="flex items-baseline justify-between gap-2 mb-1">
+          <span class="text-[14px] font-bold text-ink truncate">كمبوند الزهور · ٣ غرف</span>
+          <span class="text-[13px] font-bold text-ink shrink-0">٣.٢ﻡ ج.م</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[11px] text-ink-muted">
+          <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold">قيد التأهيل</span>
+          <span class="px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-semibold">ساخن</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold">عالي</span>
+        </div>
+      </button>
+    </section>
+
+    <!-- ═══ المهام ═══ -->
+    <section id="sec-tasks" class="bg-white px-4 py-4 border-b hairline">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">المهام · ٢</h3>
+        <button class="text-[12px] text-brand-600 font-bold hover:bg-brand-50 px-2 py-1 rounded-md">+ مهمة</button>
+      </div>
+      <div class="space-y-2">
+        <button class="w-full text-start hover:bg-neutral-50 -mx-2 px-2 py-2 rounded-lg flex items-start gap-2.5">
+          <input type="checkbox" class="mt-1 w-4 h-4 accent-emerald-600" />
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink font-semibold">إرسال بروشور المشروع</div>
+            <div class="text-[10.5px] text-ink-soft mt-0.5">يستحق · اليوم ٦:٠٠ م · أولوية عالية</div>
+          </div>
+        </button>
+        <button class="w-full text-start hover:bg-neutral-50 -mx-2 px-2 py-2 rounded-lg flex items-start gap-2.5">
+          <input type="checkbox" class="mt-1 w-4 h-4 accent-emerald-600" />
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink font-semibold">تأكيد موعد المعاينة</div>
+            <div class="text-[10.5px] text-ink-soft mt-0.5">يستحق · الجمعة ١٠:٠٠ ص</div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══ المعلومات (كل التفاصيل) ═══ -->
+    <section id="sec-info" class="bg-white border-b hairline">
+      <div class="px-4 py-4 border-b hairline">
+        <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">المعلومات</h3>
+      </div>
+
+      <!-- Sub-section: Contact -->
+      <details open class="border-b hairline">
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          بيانات التواصل
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-2 text-[12.5px]">
+          <div class="flex justify-between"><span class="text-ink-muted">الموبايل ١</span><span class="font-semibold">+20 100 ••• 4567</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الموبايل ٢</span><span class="font-semibold">+20 122 ••• 9821</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الإيميل</span><span class="font-semibold">khaled@example.com</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">العنوان</span><span class="font-semibold">القاهرة الجديدة</span></div>
+        </div>
+      </details>
+
+      <!-- Sub-section: Personal -->
+      <details class="border-b hairline">
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          بيانات شخصية
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-2 text-[12.5px]">
+          <div class="flex justify-between"><span class="text-ink-muted">الجنس</span><span class="font-semibold">ذكر</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الجنسية</span><span class="font-semibold">مصري</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الميلاد</span><span class="font-semibold">١٩٨٤/٥/١٢</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الشركة</span><span class="font-semibold">المصرية للتأمين</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">المسمى الوظيفي</span><span class="font-semibold">مدير مالي</span></div>
+        </div>
+      </details>
+
+      <!-- Sub-section: Business -->
+      <details open class="border-b hairline">
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          متطلبات العقار
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-2 text-[12.5px]">
+          <div class="flex justify-between"><span class="text-ink-muted">الميزانية</span><span class="font-semibold">٣ - ٤ مليون ج.م</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الموقع المفضل</span><span class="font-semibold">القاهرة الجديدة</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">نوع العقار</span><span class="font-semibold">سكني</span></div>
+        </div>
+      </details>
+
+      <!-- Sub-section: Assignment -->
+      <details class="border-b hairline">
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          التوزيع والمصدر
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-2 text-[12.5px]">
+          <div class="flex justify-between"><span class="text-ink-muted">السيلز المسؤول</span><span class="font-semibold">أحمد علاء</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">من قام بالتعيين</span><span class="font-semibold">محمد عصام</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">تاريخ التعيين</span><span class="font-semibold">٢٦ أبريل ٢٠٢٦</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">المصدر</span><span class="font-semibold flex items-center gap-1.5"><span class="chip-dot" style="background:#1877F2"></span>فيسبوك</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">الكامبين</span><span class="font-semibold">صيف ٢٠٢٦ — العاصمة</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">من أنشأ العميل</span><span class="font-semibold">نظام التكامل</span></div>
+        </div>
+      </details>
+
+      <!-- Sub-section: Custom Fields -->
+      <details class="border-b hairline">
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          حقول مخصصة <span class="text-[10px] text-ink-soft font-normal">(٣)</span>
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-2 text-[12.5px]">
+          <div class="flex justify-between"><span class="text-ink-muted">طريقة الدفع المفضلة</span><span class="font-semibold">تقسيط ٧ سنين</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">عدد الأطفال</span><span class="font-semibold">٣</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">مهتم بـ</span><span class="font-semibold">شقة بحديقة</span></div>
+        </div>
+      </details>
+
+      <!-- Sub-section: Campaign Analytics -->
+      <details>
+        <summary class="accordion-head px-4 py-2.5 flex items-center justify-between text-[12px] font-bold text-ink">
+          تحليل الحملات <span class="text-[10px] text-ink-soft font-normal">(٢ تفاعلات)</span>
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-1.5 text-[12px]">
+          <div class="flex justify-between"><span class="text-ink-muted">صيف ٢٠٢٦ — العاصمة</span><span class="font-semibold">تفاعل واحد · ٢٢ أبريل</span></div>
+          <div class="flex justify-between"><span class="text-ink-muted">رمضان ٢٠٢٦</span><span class="font-semibold">تفاعل واحد · ١٠ مارس</span></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═══ المستندات ═══ -->
+    <section id="sec-docs" class="bg-white border-b hairline">
+      <details>
+        <summary class="accordion-head px-4 py-3 flex items-center justify-between">
+          <span class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">المستندات · ٣</span>
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-1.5 text-[12.5px]">
+          <div class="flex items-center gap-2 py-1.5 border-b hairline last:border-0">
+            <svg width="14" height="14" fill="none" stroke="#737373" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="flex-1">صورة البطاقة.jpg</span>
+            <span class="text-[10px] text-ink-soft">٢٢ أبريل</span>
+          </div>
+          <div class="flex items-center gap-2 py-1.5 border-b hairline last:border-0">
+            <svg width="14" height="14" fill="none" stroke="#737373" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+            <span class="flex-1">عرض السعر.pdf</span>
+            <span class="text-[10px] text-ink-soft">٢٤ أبريل</span>
+          </div>
+          <div class="flex items-center gap-2 py-1.5">
+            <svg width="14" height="14" fill="none" stroke="#737373" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+            <span class="flex-1">طلب التمويل.pdf</span>
+            <span class="text-[10px] text-ink-soft">٢ مايو</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═══ التعليقات ═══ -->
+    <section id="sec-comments" class="bg-white border-b hairline">
+      <details>
+        <summary class="accordion-head px-4 py-3 flex items-center justify-between">
+          <span class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">التعليقات · ٢</span>
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 space-y-3 text-[12.5px]">
+          <div>
+            <div class="flex items-baseline justify-between mb-0.5">
+              <span class="font-bold text-ink">محمد عصام</span>
+              <span class="text-[10px] text-ink-soft">منذ ٣ أيام</span>
+            </div>
+            <p class="text-ink-muted">"عميل جدًا جاد، تابعه أول بأول."</p>
+          </div>
+          <div class="border-t hairline pt-3">
+            <div class="flex items-baseline justify-between mb-0.5">
+              <span class="font-bold text-ink">سامي إبراهيم</span>
+              <span class="text-[10px] text-ink-soft">١٤ أبريل</span>
+            </div>
+            <p class="text-ink-muted">"تم نقل العميل لأحمد بسبب نقل الفريق."</p>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ═══ السجل (admin/historical) ═══ -->
+    <section id="sec-history" class="bg-white border-b hairline">
+      <details>
+        <summary class="accordion-head px-4 py-3 flex items-center justify-between">
+          <span class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">السجل والمراجعة</span>
+          <svg class="chev text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="px-4 pb-3 text-[12px]">
+          <div class="text-[10px] font-bold text-ink-soft mt-1 mb-2 uppercase">سجل التعيينات</div>
+          <div class="space-y-1.5">
+            <div class="flex justify-between"><span>سامي إبراهيم ← أحمد علاء</span><span class="text-ink-soft">١٤ أبريل</span></div>
+            <div class="flex justify-between"><span>غير معين ← سامي إبراهيم</span><span class="text-ink-soft">٢٢ مارس</span></div>
+          </div>
+          <div class="text-[10px] font-bold text-ink-soft mt-3 mb-2 uppercase">شوهد بواسطة</div>
+          <div class="space-y-1.5">
+            <div class="flex justify-between"><span>محمد عصام (مدير)</span><span class="text-ink-soft">٧ مرات · أمس</span></div>
+            <div class="flex justify-between"><span>أحمد علاء (سيلز)</span><span class="text-ink-soft">١٢ مرة · اليوم</span></div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Spacer -->
+    <div class="h-12"></div>
+  </div>
+</div>
+
+<!-- Notes -->
+<div class="max-w-[420px] mx-auto mt-4 px-4 md:px-0 text-[11px] text-ink-muted leading-relaxed hidden md:block">
+  <div class="bg-white p-3 rounded-xl border border-line">
+    <b class="text-ink">V4 Final — التغييرات:</b>
+    <ul class="mt-1 space-y-0.5">
+      <li>• ✅ كل البيانات الموجودة في drawer الحالي لها مكان</li>
+      <li>• 🆕 Action buttons: outlined + نقطة لون صغيرة، اتصال أسود = primary</li>
+      <li>• 🆕 لا tabs — scroll واحد طويل، TOC pills فوق للقفز</li>
+      <li>• 🆕 المعلومات قسم واحد كبير فيه ٦ accordions (تواصل / شخصية / متطلبات / توزيع / حقول مخصصة / تحليل حملات)</li>
+      <li>• 🆕 خط الصفقات (Pipeline) = فرص + صفقات</li>
+      <li>• 🆕 المهام قسم منفصل بـ checkbox</li>
+      <li>• 🆕 تنبيهات (Alerts) فوق التايملاين — banner أصفر للنقل/الـ DQ/البلاكليست</li>
+      <li>• ✅ عربي فصحى: اليوم/أمس/منذ/الأسبوع الماضي</li>
+      <li>• 🚫 لا اقتراح ذكي AI</li>
+      <li>• البريد، موبايل ٢، الجنس، الجنسية، الميلاد، الشركة، الوظيفة، DQ، Pin، Hand Off، Print، Email، SMS — كلها لها مكان (More menu أو في الـ Info accordions)</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

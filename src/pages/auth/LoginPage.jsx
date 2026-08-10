@@ -33,7 +33,7 @@ export default function LoginPage() {
       } else {
         localStorage.removeItem('rememberedEmail');
       }
-      navigate('/dashboard', { replace: true });
+      navigate('/home', { replace: true });
     } catch (err) {
       setError(err.message || t('auth.invalidCredentials'));
     } finally {

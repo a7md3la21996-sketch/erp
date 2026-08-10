@@ -7,13 +7,13 @@ import { getRecentComments, getMentions, getTeamMembers } from '../services/chat
 import Pagination from '../components/ui/Pagination';
 
 const ENTITY_CONFIG = {
-  contact:     { ar: 'جهة اتصال', en: 'Contact',     color: '#4A7AAB', icon: User },
-  deal:        { ar: 'صفقة',      en: 'Deal',         color: '#10B981', icon: Briefcase },
-  opportunity: { ar: 'فرصة',      en: 'Opportunity',  color: '#F59E0B', icon: Target },
-  task:        { ar: 'مهمة',      en: 'Task',         color: '#8B5CF6', icon: Users },
+  contact:     { ar: 'جهة اتصال', en: 'Contact',     color: '#2F6BD3', icon: User },
+  deal:        { ar: 'صفقة',      en: 'Deal',         color: '#158A57', icon: Briefcase },
+  opportunity: { ar: 'فرصة',      en: 'Opportunity',  color: '#C9860A', icon: Target },
+  task:        { ar: 'مهمة',      en: 'Task',         color: '#5A63C4', icon: Users },
 };
 
-const AVATAR_COLORS = ['#4A7AAB', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#EC4899', '#14B8A6', '#F97316'];
+const AVATAR_COLORS = ['#2F6BD3', '#158A57', '#C9860A', '#5A63C4', '#D6403B', '#C14D7E', '#12897E', '#DD6327'];
 function avatarColor(id) {
   let hash = 0;
   for (let i = 0; i < (id || '').length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
@@ -42,7 +42,7 @@ function renderText(text, isDark) {
   const parts = text.split(/(@[\u0600-\u06FF\w\s]+?)(?=\s|@|$)/g);
   return parts.map((part, i) => {
     if (part.startsWith('@')) {
-      return <span key={i} style={{ color: '#4A7AAB', fontWeight: 600 }}>{part}</span>;
+      return <span key={i} style={{ color: '#2F6BD3', fontWeight: 600 }}>{part}</span>;
     }
     return part;
   });
@@ -184,10 +184,10 @@ export default function ChatInboxPage() {
     padding: '10px 20px',
     fontSize: 13,
     fontWeight: active ? 700 : 500,
-    color: active ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+    color: active ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
     background: 'none',
     border: 'none',
-    borderBottom: `2px solid ${active ? '#4A7AAB' : 'transparent'}`,
+    borderBottom: `2px solid ${active ? '#2F6BD3' : 'transparent'}`,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -209,9 +209,9 @@ export default function ChatInboxPage() {
     fontSize: 11,
     fontWeight: 600,
     borderRadius: 20,
-    border: `1px solid ${active ? '#4A7AAB' : (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(0,0,0,0.1)')}`,
+    border: `1px solid ${active ? '#2F6BD3' : (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(0,0,0,0.1)')}`,
     background: active ? 'rgba(74,122,171,0.12)' : 'transparent',
-    color: active ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+    color: active ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
     cursor: 'pointer',
     transition: 'all 0.15s',
   });
@@ -287,7 +287,7 @@ export default function ChatInboxPage() {
       {/* Header */}
       <div>
         <h1 style={titleStyle}>
-          <MessageSquare size={22} color="#4A7AAB" />
+          <MessageSquare size={22} color="#2F6BD3" />
           {isRTL ? 'المحادثات' : 'Chat Inbox'}
         </h1>
         <p style={subtitleStyle}>
@@ -300,12 +300,12 @@ export default function ChatInboxPage() {
         <button style={tabStyle(activeTab === 'all')} onClick={() => { setActiveTab('all'); setPage(1); }}>
           <MessageSquare size={14} />
           {isRTL ? 'كل التعليقات' : 'All Comments'}
-          <span style={{ fontSize: 10, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)', padding: '1px 6px', borderRadius: 8, fontWeight: 700, color: '#4A7AAB' }}>{allComments.length}</span>
+          <span style={{ fontSize: 10, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)', padding: '1px 6px', borderRadius: 8, fontWeight: 700, color: '#2F6BD3' }}>{allComments.length}</span>
         </button>
         <button style={tabStyle(activeTab === 'mentions')} onClick={() => { setActiveTab('mentions'); setPage(1); }}>
           <AtSign size={14} />
           {isRTL ? 'الإشارات' : 'Mentions'}
-          <span style={{ fontSize: 10, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)', padding: '1px 6px', borderRadius: 8, fontWeight: 700, color: '#4A7AAB' }}>{mentionComments.length}</span>
+          <span style={{ fontSize: 10, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)', padding: '1px 6px', borderRadius: 8, fontWeight: 700, color: '#2F6BD3' }}>{mentionComments.length}</span>
         </button>
       </div>
 

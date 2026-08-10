@@ -72,7 +72,7 @@ export default function SelfServicePage() {
   const leaveBalance = emp?.leave_balance ?? 0;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* ─── Hero ─── */}
       <Card className="p-5 md:p-6 mb-5">
         <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -92,9 +92,9 @@ export default function SelfServicePage() {
 
       {/* ─── Stat Strip ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={Palmtree} label={isRTL ? 'رصيد الإجازة' : 'Leave Balance'} value={`${leaveBalance}`} sub={isRTL ? 'يوم متبقي' : 'days left'} color="#4A7AAB" />
-        <KpiCard icon={AlertCircle} label={isRTL ? 'طلبات معلقة' : 'Pending'} value={pendingLeaves + pendingClaims} sub={isRTL ? 'بانتظار الموافقة' : 'awaiting approval'} color="#F59E0B" />
-        <KpiCard icon={Receipt} label={isRTL ? 'مصروفات الشهر' : 'Month Expenses'} value={claims.filter(c => c.status !== 'rejected').reduce((s, c) => s + (Number(c.amount) || 0), 0).toLocaleString()} sub={isRTL ? 'ج.م' : 'EGP'} color="#10B981" />
+        <KpiCard icon={Palmtree} label={isRTL ? 'رصيد الإجازة' : 'Leave Balance'} value={`${leaveBalance}`} sub={isRTL ? 'يوم متبقي' : 'days left'} color="#2F6BD3" />
+        <KpiCard icon={AlertCircle} label={isRTL ? 'طلبات معلقة' : 'Pending'} value={pendingLeaves + pendingClaims} sub={isRTL ? 'بانتظار الموافقة' : 'awaiting approval'} color="#C9860A" />
+        <KpiCard icon={Receipt} label={isRTL ? 'مصروفات الشهر' : 'Month Expenses'} value={claims.filter(c => c.status !== 'rejected').reduce((s, c) => s + (Number(c.amount) || 0), 0).toLocaleString()} sub={isRTL ? 'ج.م' : 'EGP'} color="#158A57" />
         <KpiCard icon={Clock} label={isRTL ? 'مدة العمل' : 'Tenure'} value={emp?.hire_date ? `${((Date.now() - new Date(emp.hire_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1)}` : '—'} sub={isRTL ? 'سنة' : 'yrs'} color="#6B8DB5" />
       </div>
 
@@ -105,7 +105,7 @@ export default function SelfServicePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-6">
         <BigAction
           icon={CalendarOff}
-          color="#4A7AAB"
+          color="#2F6BD3"
           title_ar="طلب إجازة"
           title_en="Request Leave"
           desc_ar="أرسل طلب إجازة جديد لمديرك"
@@ -115,7 +115,7 @@ export default function SelfServicePage() {
         />
         <BigAction
           icon={Receipt}
-          color="#10B981"
+          color="#158A57"
           title_ar="تقديم مصروف"
           title_en="Submit Expense"
           desc_ar="أضف مصروف للموافقة عليه"
@@ -161,7 +161,7 @@ export default function SelfServicePage() {
                     <RequestRow
                       key={`l-${l.id}`}
                       icon={CalendarOff}
-                      iconColor="#4A7AAB"
+                      iconColor="#2F6BD3"
                       title={isRTL ? `إجازة ${l.type || ''}` : `${l.type || 'Leave'} request`}
                       sub={`${l.start_date} → ${l.end_date}`}
                       status={l.status}
@@ -172,7 +172,7 @@ export default function SelfServicePage() {
                     <RequestRow
                       key={`c-${c.id}`}
                       icon={Receipt}
-                      iconColor="#10B981"
+                      iconColor="#158A57"
                       title={c.title || (isRTL ? 'مصروف' : 'Expense')}
                       sub={`${Number(c.amount || 0).toLocaleString()} ${c.currency || 'EGP'} · ${c.date || ''}`}
                       status={c.status}
@@ -247,10 +247,10 @@ function BigAction({ icon: Icon, color, title_ar, title_en, desc_ar, desc_en, to
 
 function RequestRow({ icon: Icon, iconColor, title, sub, status, isRTL }) {
   const statusMap = {
-    pending: { ar: 'معلق', en: 'Pending', color: '#F59E0B' },
-    approved: { ar: 'موافق', en: 'Approved', color: '#10B981' },
-    rejected: { ar: 'مرفوض', en: 'Rejected', color: '#EF4444' },
-    paid: { ar: 'مدفوع', en: 'Paid', color: '#4A7AAB' },
+    pending: { ar: 'معلق', en: 'Pending', color: '#C9860A' },
+    approved: { ar: 'موافق', en: 'Approved', color: '#158A57' },
+    rejected: { ar: 'مرفوض', en: 'Rejected', color: '#D6403B' },
+    paid: { ar: 'مدفوع', en: 'Paid', color: '#2F6BD3' },
   };
   const s = statusMap[status] || { ar: status, en: status, color: '#6B7280' };
   return (

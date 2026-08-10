@@ -11,7 +11,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getSystemHealth, getErrorLog, clearErrorLog } from '../../services/healthService';
 import { useNavigate } from 'react-router-dom';
 
-const COLORS = ['#4A7AAB', '#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b', '#06b6d4', '#84cc16'];
+const COLORS = ['#2F6BD3', '#5A63C4', '#C9860A', '#158A57', '#D6403B', '#5A63C4', '#C14D7E', '#12897E', '#DD6327', '#64748b', '#2088A0', '#6E9E1E'];
 
 export default function SystemHealthPage() {
   const { i18n } = useTranslation();
@@ -78,7 +78,7 @@ export default function SystemHealthPage() {
   if (loading && !health) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <RefreshCw size={24} style={{ color: '#4A7AAB', animation: 'spin 1s linear infinite' }} />
+        <RefreshCw size={24} style={{ color: '#2F6BD3', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -86,13 +86,13 @@ export default function SystemHealthPage() {
   if (!health) return null;
 
   const statusConfig = {
-    healthy: { color: '#10b981', bg: 'rgba(16,185,129,0.1)', label: t('System Healthy', 'النظام يعمل بشكل طبيعي'), icon: CheckCircle },
-    warning: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', label: t('System Warning', 'تحذيرات في النظام'), icon: AlertTriangle },
-    critical: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: t('System Critical', 'حالة حرجة'), icon: XCircle },
+    healthy: { color: '#158A57', bg: 'rgba(16,185,129,0.1)', label: t('System Healthy', 'النظام يعمل بشكل طبيعي'), icon: CheckCircle },
+    warning: { color: '#C9860A', bg: 'rgba(245,158,11,0.1)', label: t('System Warning', 'تحذيرات في النظام'), icon: AlertTriangle },
+    critical: { color: '#D6403B', bg: 'rgba(239,68,68,0.1)', label: t('System Critical', 'حالة حرجة'), icon: XCircle },
   };
   const sc = statusConfig[health.status];
 
-  const storageColor = health.storage.percentage < 60 ? '#10b981' : health.storage.percentage < 80 ? '#f59e0b' : '#ef4444';
+  const storageColor = health.storage.percentage < 60 ? '#158A57' : health.storage.percentage < 80 ? '#C9860A' : '#D6403B';
 
   // Pie chart data
   const pieData = health.storage.breakdown
@@ -105,7 +105,7 @@ export default function SystemHealthPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Activity size={22} style={{ color: '#4A7AAB' }} />
+          <Activity size={22} style={{ color: '#2F6BD3' }} />
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary }}>
             {t('System Health', 'حالة النظام')}
           </h1>
@@ -115,7 +115,7 @@ export default function SystemHealthPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
             background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.3)',
-            borderRadius: 10, cursor: 'pointer', color: '#4A7AAB', fontSize: 13, fontWeight: 500,
+            borderRadius: 10, cursor: 'pointer', color: '#2F6BD3', fontSize: 13, fontWeight: 500,
           }}
         >
           <RefreshCw size={14} />
@@ -157,19 +157,19 @@ export default function SystemHealthPage() {
             sub: `${health.storage.used.toFixed(1)} / ${(health.storage.total / 1024).toFixed(0)} MB`,
           },
           {
-            icon: AlertTriangle, color: health.errors.today > 0 ? '#ef4444' : '#10b981',
+            icon: AlertTriangle, color: health.errors.today > 0 ? '#D6403B' : '#158A57',
             label: t('Errors Today', 'أخطاء اليوم'),
             value: health.errors.today,
             sub: t(`${health.errors.thisWeek} this week`, `${health.errors.thisWeek} هذا الأسبوع`),
           },
           {
-            icon: Clock, color: '#4A7AAB',
+            icon: Clock, color: '#2F6BD3',
             label: t('Uptime', 'مدة التشغيل'),
             value: health.session.uptime,
             sub: health.session.browser,
           },
           {
-            icon: Database, color: '#6366f1',
+            icon: Database, color: '#5A63C4',
             label: t('Total Records', 'إجمالي السجلات'),
             value: health.totalRecords.toLocaleString(),
             sub: t(`${health.dataStats.filter(d => d.count > 0).length} entities`, `${health.dataStats.filter(d => d.count > 0).length} كيان`),
@@ -196,7 +196,7 @@ export default function SystemHealthPage() {
         {/* Storage Progress */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <HardDrive size={16} style={{ color: '#4A7AAB' }} />
+            <HardDrive size={16} style={{ color: '#2F6BD3' }} />
             <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
               {t('Storage Usage', 'استخدام التخزين')}
             </span>
@@ -222,7 +222,7 @@ export default function SystemHealthPage() {
         {/* Pie Chart */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Database size={16} style={{ color: '#4A7AAB' }} />
+            <Database size={16} style={{ color: '#2F6BD3' }} />
             <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
               {t('Storage Breakdown', 'تفصيل التخزين')}
             </span>
@@ -264,7 +264,7 @@ export default function SystemHealthPage() {
       {/* Data Stats Table */}
       <div style={{ ...cardStyle, marginBottom: 20, overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Server size={16} style={{ color: '#4A7AAB' }} />
+          <Server size={16} style={{ color: '#2F6BD3' }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
             {t('Data Statistics', 'إحصائيات البيانات')}
           </span>
@@ -312,14 +312,14 @@ export default function SystemHealthPage() {
       {health.warnings.length > 0 && (
         <div style={{ ...cardStyle, marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
+            <AlertTriangle size={16} style={{ color: '#C9860A' }} />
             <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
               {t('Warnings', 'تحذيرات')}
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {health.warnings.map((w, i) => {
-              const wColor = w.type === 'error' ? '#ef4444' : w.type === 'warning' ? '#f59e0b' : '#4A7AAB';
+              const wColor = w.type === 'error' ? '#D6403B' : w.type === 'warning' ? '#C9860A' : '#2F6BD3';
               const WIcon = w.type === 'error' ? XCircle : w.type === 'warning' ? AlertTriangle : Info;
               return (
                 <div key={i} style={{
@@ -345,12 +345,12 @@ export default function SystemHealthPage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+            <AlertTriangle size={16} style={{ color: '#D6403B' }} />
             <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
               {t('Error Log', 'سجل الأخطاء')}
             </span>
             <span style={{
-              background: 'rgba(239,68,68,0.1)', color: '#ef4444',
+              background: 'rgba(239,68,68,0.1)', color: '#D6403B',
               padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
             }}>
               {errorLog.length}
@@ -368,7 +368,7 @@ export default function SystemHealthPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
                     background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: 8, cursor: 'pointer', color: '#ef4444', fontSize: 12, fontWeight: 500,
+                    borderRadius: 8, cursor: 'pointer', color: '#D6403B', fontSize: 12, fontWeight: 500,
                   }}
                 >
                   <Trash2 size={12} />
@@ -388,7 +388,7 @@ export default function SystemHealthPage() {
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9'}`,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#ef4444' }}>{err.context || 'Error'}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#D6403B' }}>{err.context || 'Error'}</span>
                       <span style={{ fontSize: 11, color: textSecondary }}>
                         {new Date(err.timestamp).toLocaleString(isRTL ? 'ar-EG' : 'en-US')}
                       </span>
@@ -407,7 +407,7 @@ export default function SystemHealthPage() {
       {/* System Info */}
       <div style={{ ...cardStyle, marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <Monitor size={16} style={{ color: '#4A7AAB' }} />
+          <Monitor size={16} style={{ color: '#2F6BD3' }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
             {t('System Information', 'معلومات النظام')}
           </span>
@@ -434,7 +434,7 @@ export default function SystemHealthPage() {
       {/* Actions */}
       <div style={{ ...cardStyle }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <Shield size={16} style={{ color: '#4A7AAB' }} />
+          <Shield size={16} style={{ color: '#2F6BD3' }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
             {t('Actions', 'إجراءات')}
           </span>
@@ -445,7 +445,7 @@ export default function SystemHealthPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 10, cursor: 'pointer', color: '#ef4444', fontSize: 13, fontWeight: 500,
+              borderRadius: 10, cursor: 'pointer', color: '#D6403B', fontSize: 13, fontWeight: 500,
             }}
           >
             <Trash2 size={14} />
@@ -456,7 +456,7 @@ export default function SystemHealthPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
               background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.3)',
-              borderRadius: 10, cursor: 'pointer', color: '#4A7AAB', fontSize: 13, fontWeight: 500,
+              borderRadius: 10, cursor: 'pointer', color: '#2F6BD3', fontSize: 13, fontWeight: 500,
             }}
           >
             <ExternalLink size={14} />
@@ -467,7 +467,7 @@ export default function SystemHealthPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
               background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: 10, cursor: 'pointer', color: '#f59e0b', fontSize: 13, fontWeight: 500,
+              borderRadius: 10, cursor: 'pointer', color: '#C9860A', fontSize: 13, fontWeight: 500,
             }}
           >
             <Wifi size={14} />

@@ -35,11 +35,11 @@ export {
 
 // ── Notification Types Config ──
 export const NOTIFICATION_TYPES = {
-  lead_assigned: { color: '#4A7AAB', icon: 'UserPlus' },
-  task_assigned: { color: '#F59E0B', icon: 'CheckSquare' },
+  lead_assigned: { color: '#2F6BD3', icon: 'UserPlus' },
+  task_assigned: { color: '#C9860A', icon: 'CheckSquare' },
   reminder: { color: '#6B21A8', icon: 'Bell' },
-  deal_won: { color: '#10B981', icon: 'Trophy' },
-  opportunity_update: { color: '#4A7AAB', icon: 'TrendingUp' },
+  deal_won: { color: '#158A57', icon: 'Trophy' },
+  opportunity_update: { color: '#2F6BD3', icon: 'TrendingUp' },
   system: { color: '#6B7280', icon: 'Info' },
 };
 

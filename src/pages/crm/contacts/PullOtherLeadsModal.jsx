@@ -6,10 +6,10 @@ import { fetchContactsByPhone, updateContact } from '../../../services/contactsS
 import { useToast } from '../../../contexts/ToastContext';
 
 const STATUS_COLORS = {
-  new: '#3B82F6',
-  contacted: '#F59E0B',
-  following: '#10B981',
-  has_opportunity: '#8B5CF6',
+  new: '#2F6BD3',
+  contacted: '#C9860A',
+  following: '#158A57',
+  has_opportunity: '#5A63C4',
   disqualified: '#6B7280',
   inactive: '#9CA3AF',
 };

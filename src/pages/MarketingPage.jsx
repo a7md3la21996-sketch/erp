@@ -14,10 +14,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination, Modal, ModalFooter } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
-import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignContacts, getCampaignInteractions } from '../services/marketingService';
-import { fetchContacts } from '../services/contactsService';
-import { fetchOpportunities } from '../services/opportunitiesService';
-import { getWonDeals } from '../services/dealsService';
+import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignStats, getCampaignFunnel, getCampaignDetail } from '../services/marketingService';
 import { normalizePhone } from './crm/contacts/constants';
 import { logView } from '../services/viewTrackingService';
 import { fmtMoney } from '../utils/formatting';
@@ -31,15 +28,15 @@ const PLATFORMS = [
   { id: 'tiktok',     ar: 'تيك توك',      en: 'TikTok',       color: '#000000' },
   { id: 'snapchat',   ar: 'سناب شات',     en: 'Snapchat',     color: '#FFFC00' },
   { id: 'linkedin',   ar: 'لينكدإن',      en: 'LinkedIn',     color: '#0A66C2' },
-  { id: 'website',    ar: 'الموقع',        en: 'Website',      color: '#4A7AAB' },
+  { id: 'website',    ar: 'الموقع',        en: 'Website',      color: '#2F6BD3' },
   { id: 'cold_call',  ar: 'كولد كول',     en: 'Cold Call',    color: '#6B8DB5' },
-  { id: 'referral',   ar: 'توصية',        en: 'Referral',     color: '#10B981' },
-  { id: 'walk_in',    ar: 'زيارة مباشرة',  en: 'Walk-in',      color: '#F59E0B' },
+  { id: 'referral',   ar: 'توصية',        en: 'Referral',     color: '#158A57' },
+  { id: 'walk_in',    ar: 'زيارة مباشرة',  en: 'Walk-in',      color: '#C9860A' },
   { id: 'other',      ar: 'أخرى',         en: 'Other',        color: '#6B7280' },
 ];
 const STATUSES = [
-  { id: 'active',    ar: 'نشط',    en: 'Active',    color: '#22C55E' },
-  { id: 'paused',    ar: 'متوقف',  en: 'Paused',    color: '#F59E0B' },
+  { id: 'active',    ar: 'نشط',    en: 'Active',    color: '#158A57' },
+  { id: 'paused',    ar: 'متوقف',  en: 'Paused',    color: '#C9860A' },
   { id: 'completed', ar: 'مكتمل',  en: 'Completed', color: '#6B7280' },
   { id: 'draft',     ar: 'مسودة',  en: 'Draft',     color: '#94A3B8' },
 ];
@@ -72,6 +69,8 @@ const SORT_OPTIONS = [
   { value: 'budget_desc', label: 'الميزانية (الأعلى)', labelEn: 'Budget (High)' },
   { value: 'leads_desc', label: 'الليدز (الأكثر)', labelEn: 'Leads (Most)' },
   { value: 'cpl_asc', label: 'تكلفة/ليد (الأقل)', labelEn: 'CPL (Lowest)' },
+  { value: 'qualified_desc', label: 'الأكثر تأهيلًا', labelEn: 'Most Qualified' },
+  { value: 'dq_desc', label: 'الأعلى رفضًا %', labelEn: 'Highest DQ%' },
   { value: 'roi_desc', label: 'ROI (الأعلى)', labelEn: 'ROI (Best)' },
   { value: 'date_desc', label: 'الأحدث', labelEn: 'Newest' },
 ];
@@ -97,9 +96,10 @@ export default function MarketingPage() {
     return 'dashboard';
   }, [location.pathname]);
   const [campaigns, setCampaigns] = useState([]);
-  const [contacts, setContacts] = useState([]);
-  const [opportunities, setOpportunities] = useState([]);
-  const [deals, setDeals] = useState([]);
+  const [statsRows, setStatsRows] = useState([]);   // get_campaign_stats() rows
+  const [funnelRows, setFunnelRows] = useState([]); // get_campaign_funnel() rows
+  const [drawerContacts, setDrawerContacts] = useState([]); // on-demand per-campaign
+  const [drawerLoading, setDrawerLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch] = useState('');
@@ -119,77 +119,68 @@ export default function MarketingPage() {
   ], [auditFields]);
 
 
-  // Load data
+  // Load data — campaigns + DB-side aggregates (no more pulling the whole
+  // contacts/opps/deals tables into the browser).
   useEffect(() => {
     Promise.all([
       fetchCampaigns(),
-      fetchContacts({ role: profile?.role, userId: profile?.id }).catch(() => {
-        return [];
-      }),
-      fetchOpportunities({ role: profile?.role, userId: profile?.id }).catch(() => []),
-      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
-    ]).then(([c, ct, opps, d]) => {
+      getCampaignStats(),
+      getCampaignFunnel(),
+    ]).then(([c, s, f]) => {
       setCampaigns(c);
-      setContacts(ct);
-      setOpportunities(opps);
-      setDeals(d);
+      setStatsRows(s);
+      setFunnelRows(f);
       setLoading(false);
     });
   }, [profile?.role, profile?.id]);
 
-  // Compute leads per campaign from contacts
+  // On-demand: load the selected campaign's contacts when the drawer opens
+  // (or when navigating prev/next inside it).
+  useEffect(() => {
+    if (!selectedCampaign?.id) { setDrawerContacts([]); return; }
+    let cancelled = false;
+    setDrawerLoading(true);
+    getCampaignDetail(selectedCampaign).then(d => {
+      if (!cancelled) { setDrawerContacts(d); setDrawerLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [selectedCampaign?.id]);
+
+  // Per-campaign stats — now sourced from the DB aggregate RPC (get_campaign_stats)
+  // instead of computing over a capped client-side contacts array.
   const campaignStats = useMemo(() => {
+    const byCamp = {};
+    campaigns.forEach(c => { byCamp[c.id] = c; });
     const stats = {};
-    campaigns.forEach(camp => {
-      const nameEn = camp.name_en?.toLowerCase().trim();
-      const nameAr = camp.name_ar?.toLowerCase().trim();
-      let leads = 0;
-      let totalInteractions = 0;
-      let repeats = 0;
-      const contactIds = new Set();
-
-      contacts.forEach(c => {
-        let matched = false;
-        // Prefer campaign_id matching (reliable), fall back to name matching
-        if (c.campaign_id && c.campaign_id === camp.id) matched = true;
-        if (!matched) {
-          const cn = c.campaign_name?.toLowerCase().trim();
-          if (cn && (cn === nameEn || cn === nameAr)) matched = true;
-        }
-
-        let contactInteractions = 0;
-        (c.campaign_interactions || []).forEach(i => {
-          // Prefer campaign_id match, fall back to name match
-          const idMatch = i.campaign_id && i.campaign_id === camp.id;
-          const ic = i.campaign?.toLowerCase().trim();
-          if (idMatch || ic === nameEn || ic === nameAr) {
-            matched = true;
-            contactInteractions++;
-            totalInteractions++;
-          }
-        });
-
-        if (matched && !c.campaign_interactions?.length && !c.campaign_id) {
-          totalInteractions++;
-        }
-
-        if (matched) {
-          leads++;
-          contactIds.add(c.id);
-          if (contactInteractions > 1) repeats += contactInteractions - 1;
-        }
-      });
-
-      const spent = camp.spent || 0;
+    statsRows.forEach(r => {
+      const spent = byCamp[r.campaign_id]?.spent || 0;
+      const leads = Number(r.leads) || 0;
+      const engaged = Number(r.engaged) || 0;         // qualified = following + has_opportunity
+      const disqualified = Number(r.disqualified) || 0;
+      const interactions = Number(r.interactions) || 0;
       const cpl = leads > 0 ? Math.round(spent / leads) : 0;
-      // Count how many became active/has_opportunity (engaged leads)
-      const engagedLeads = contacts.filter(c => contactIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status)).length;
-      const conversionRate = leads > 0 ? Math.round((engagedLeads / leads) * 100) : 0;
-
-      stats[camp.id] = { leads, totalInteractions, repeats, cpl, contactedLeads: engagedLeads, conversionRate, contactIds: [...contactIds] };
+      // Cost per QUALIFIED lead — the real efficiency metric (junk leads excluded).
+      const cpql = engaged > 0 ? Math.round(spent / engaged) : 0;
+      const conversionRate = leads > 0 ? Math.round((engaged / leads) * 100) : 0;
+      const disqualRate = leads > 0 ? Math.round((disqualified / leads) * 100) : 0;
+      stats[r.campaign_id] = {
+        leads,
+        totalInteractions: interactions,
+        repeats: Math.max(0, interactions - leads), // interactions beyond first touch
+        cpl,
+        cpql,
+        contactedLeads: engaged,
+        qualified: engaged,
+        disqualified,
+        conversionRate,
+        disqualRate,
+        opps: Number(r.opps) || 0,
+        wonDeals: Number(r.won_deals) || 0,
+        revenue: Number(r.revenue) || 0,
+      };
     });
     return stats;
-  }, [campaigns, contacts]);
+  }, [campaigns, statsRows]);
 
   // Filter + sort
   const filtered = useMemo(() => {
@@ -204,11 +195,17 @@ export default function MarketingPage() {
     const stats = campaignStats;
     result.sort((a, b) => {
       switch (sortBy) {
-        case 'name': return (lang === 'ar' ? a.name_ar : a.name_en).localeCompare(lang === 'ar' ? b.name_ar : b.name_en);
+        case 'name': return ((lang === 'ar' ? a.name_ar : a.name_en) || '').localeCompare((lang === 'ar' ? b.name_ar : b.name_en) || '');
         case 'budget_desc': return (b.budget || 0) - (a.budget || 0);
         case 'leads_desc': return (stats[b.id]?.leads || 0) - (stats[a.id]?.leads || 0);
         case 'cpl_asc': return (stats[a.id]?.cpl || 99999) - (stats[b.id]?.cpl || 99999);
-        case 'roi_desc': return (stats[b.id]?.conversionRate || 0) - (stats[a.id]?.conversionRate || 0);
+        case 'qualified_desc': return (stats[b.id]?.qualified || 0) - (stats[a.id]?.qualified || 0);
+        case 'dq_desc': return (stats[b.id]?.disqualRate || 0) - (stats[a.id]?.disqualRate || 0);
+        // True ROI = (revenue - spent) / spent (was mistakenly sorting by contact-rate).
+        case 'roi_desc': {
+          const roi = (c) => { const s = stats[c.id]; const sp = c.spent || 0; return s && sp > 0 ? (s.revenue - sp) / sp : -Infinity; };
+          return roi(b) - roi(a);
+        }
         case 'date_desc': default: return new Date(b.start_date || 0) - new Date(a.start_date || 0);
       }
     });
@@ -246,42 +243,35 @@ export default function MarketingPage() {
     return map;
   }, [campaigns, campaignStats]);
 
-  // Funnel data
+  // Funnel data — now sourced from get_campaign_funnel() (UNIQUE contacts,
+  // company-wide + per-channel), instead of deduping a capped client array.
   const funnelData = useMemo(() => {
-    const allLeadIds = new Set();
-    Object.values(campaignStats).forEach(s => (s.contactIds || []).forEach(id => allLeadIds.add(id)));
-    const totalLeadsFromCampaigns = allLeadIds.size;
-    const engagedLeads = contacts.filter(c => allLeadIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status));
-    const linkedOpps = opportunities.filter(o => {
-      const contactId = o.contact_id || o.contact?.id;
-      return contactId && allLeadIds.has(contactId);
-    });
-    const wonDeals2 = deals.filter(d => {
-      const contactId = d.contact_id || d.contact?.id;
-      return contactId && allLeadIds.has(contactId);
-    });
+    const all = funnelRows.find(r => r.platform === '__all__') || { leads: 0, contacted: 0, opps: 0, deals: 0 };
+    const total = Number(all.leads) || 0;
+    const contacted = Number(all.contacted) || 0;
+    const opportunities = Number(all.opps) || 0;
+    const dealsWon = Number(all.deals) || 0;
     return {
-      total: totalLeadsFromCampaigns,
-      contacted: engagedLeads.length,
-      opportunities: linkedOpps.length,
-      deals: wonDeals2.length,
-      contactedPct: totalLeadsFromCampaigns > 0 ? Math.round((engagedLeads.length / totalLeadsFromCampaigns) * 100) : 0,
-      oppPct: engagedLeads.length > 0 ? Math.round((linkedOpps.length / engagedLeads.length) * 100) : 0,
-      dealPct: linkedOpps.length > 0 ? Math.round((wonDeals2.length / linkedOpps.length) * 100) : 0,
-      overallPct: totalLeadsFromCampaigns > 0 ? Math.round((wonDeals2.length / totalLeadsFromCampaigns) * 100) : 0,
-      // Per-channel funnel
-      byChannel: PLATFORMS.filter(p => channelStats[p.id]?.leads > 0).map(p => {
-        const chLeadIds = new Set();
-        campaigns.filter(c => c.platform === p.id).forEach(camp => {
-          (campaignStats[camp.id]?.contactIds || []).forEach(id => chLeadIds.add(id));
-        });
-        const chContacted = contacts.filter(c => chLeadIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status)).length;
-        const chOpps = opportunities.filter(o => chLeadIds.has(o.contact_id || o.contact?.id)).length;
-        const chDeals = deals.filter(d => chLeadIds.has(d.contact_id || d.contact?.id)).length;
-        return { platform: p, leads: chLeadIds.size, contacted: chContacted, opps: chOpps, deals: chDeals };
-      }),
+      total,
+      contacted,
+      opportunities,
+      deals: dealsWon,
+      contactedPct: total > 0 ? Math.round((contacted / total) * 100) : 0,
+      oppPct: contacted > 0 ? Math.round((opportunities / contacted) * 100) : 0,
+      dealPct: opportunities > 0 ? Math.round((dealsWon / opportunities) * 100) : 0,
+      overallPct: total > 0 ? Math.round((dealsWon / total) * 100) : 0,
+      byChannel: funnelRows
+        .filter(r => r.platform !== '__all__' && (Number(r.leads) || 0) > 0)
+        .map(r => ({
+          platform: getPlatform(r.platform) || { id: r.platform, ar: r.platform, en: r.platform, color: '#6B7280' },
+          leads: Number(r.leads) || 0,
+          contacted: Number(r.contacted) || 0,
+          opps: Number(r.opps) || 0,
+          deals: Number(r.deals) || 0,
+        }))
+        .sort((a, b) => b.leads - a.leads),
     };
-  }, [contacts, opportunities, deals, campaigns, campaignStats, channelStats]);
+  }, [funnelRows]);
 
   // Top campaigns by leads
   const topCampaigns = useMemo(() => {
@@ -289,49 +279,21 @@ export default function MarketingPage() {
   }, [campaigns, campaignStats]);
 
   // ── ROI Performance Data ──────────────────────────────────────
+  // Built from the DB aggregate (campaignStats) + each campaign's spend.
+  // NOTE: "commission" here is really the sum of linked deal_value (the system
+  // has no commission column yet) — kept as-is for accuracy; Track C will model
+  // true commission.
   const roiData = useMemo(() => {
     const rows = campaigns.map(camp => {
-      const nameEn = camp.name_en?.toLowerCase().trim();
-      const nameAr = camp.name_ar?.toLowerCase().trim();
+      const s = campaignStats[camp.id] || {};
       const spent = camp.spent || 0;
-
-      // Contacts linked to this campaign (prefer campaign_id, fall back to name)
-      const campaignContactIds = new Set();
-      contacts.forEach(c => {
-        let matched = false;
-        if (c.campaign_id && c.campaign_id === camp.id) matched = true;
-        if (!matched) {
-          const cn = c.campaign_name?.toLowerCase().trim();
-          if (cn && (cn === nameEn || cn === nameAr)) matched = true;
-        }
-        (c.campaign_interactions || []).forEach(i => {
-          const idMatch = i.campaign_id && i.campaign_id === camp.id;
-          const ic = i.campaign?.toLowerCase().trim();
-          if (idMatch || ic === nameEn || ic === nameAr) matched = true;
-        });
-        if (matched) campaignContactIds.add(c.id);
-      });
-
-      const leads = campaignContactIds.size;
-
-      // Opportunities from these contacts
-      const campOpps = opportunities.filter(o => {
-        const cid = o.contact_id || o.contact?.id;
-        return cid && campaignContactIds.has(cid);
-      });
-
-      // Won deals from those opportunities
-      const wonDeals = deals.filter(d => {
-        const oppMatch = campOpps.some(o => o.id === d.opportunity_id);
-        const contactMatch = campaignContactIds.has(d.contact_id || d.contact?.id);
-        return oppMatch || contactMatch;
-      });
-
-      const commission = wonDeals.reduce((sum, d) => sum + (d.deal_value || 0), 0);
+      const leads = s.leads || 0;
+      const opps = s.opps || 0;
+      const wonDeals = s.wonDeals || 0;
+      const commission = s.revenue || 0;
       const costPerLead = leads > 0 ? Math.round(spent / leads) : 0;
-      const costPerDeal = wonDeals.length > 0 ? Math.round(spent / wonDeals.length) : 0;
+      const costPerDeal = wonDeals > 0 ? Math.round(spent / wonDeals) : 0;
       const roi = spent > 0 ? Math.round(((commission - spent) / spent) * 100) : 0;
-
       return {
         id: camp.id,
         name_en: camp.name_en,
@@ -341,8 +303,8 @@ export default function MarketingPage() {
         budget: camp.budget || 0,
         spent,
         leads,
-        opps: campOpps.length,
-        wonDeals: wonDeals.length,
+        opps,
+        wonDeals,
         commission,
         costPerLead,
         costPerDeal,
@@ -354,11 +316,13 @@ export default function MarketingPage() {
     const totalLeadsAll = rows.reduce((s, r) => s + r.leads, 0);
     const totalCommission = rows.reduce((s, r) => s + r.commission, 0);
     const totalDealsWon = rows.reduce((s, r) => s + r.wonDeals, 0);
-    const avgRoi = rows.length > 0 ? Math.round(rows.reduce((s, r) => s + r.roi, 0) / rows.length) : 0;
+    // Pooled ROI (Σrevenue−Σspent)/Σspent — not a simple average of per-campaign
+    // ratios (which zero-spent campaigns drag toward 0 and is statistically wrong).
+    const avgRoi = totalSpentAll > 0 ? Math.round(((totalCommission - totalSpentAll) / totalSpentAll) * 100) : 0;
     const bestCampaign = rows.length > 0 ? [...rows].sort((a, b) => b.roi - a.roi)[0] : null;
 
     return { rows, totalSpentAll, totalLeadsAll, totalCommission, totalDealsWon, avgRoi, bestCampaign };
-  }, [campaigns, contacts, opportunities, deals]);
+  }, [campaigns, campaignStats]);
 
   const [roiSortField, setRoiSortField] = useState('roi');
   const [roiSortDir, setRoiSortDir] = useState('desc');
@@ -439,7 +403,7 @@ export default function MarketingPage() {
 
   // ── Skeleton ─────────────────────────────────────
   if (loading) return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
       <div className="animate-pulse space-y-4">
         <div className="h-10 bg-brand-500/10 rounded-xl w-1/3" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[1,2,3,4].map(i => <div key={i} className="h-20 bg-brand-500/10 rounded-xl" />)}</div>
@@ -449,7 +413,7 @@ export default function MarketingPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
 
       {/* ═══ Header ═══ */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -469,16 +433,43 @@ export default function MarketingPage() {
         {activeTab === 'campaigns' && (
           <div className="flex gap-2">
             <ExportButton
-              data={filtered.map(c => ({ name: isRTL ? c.name_ar : c.name_en, platform: c.platform, status: c.status, type: c.type, budget: c.budget, spent: c.spent, leads: campaignStats[c.id]?.leads || 0, cpl: campaignStats[c.id]?.cpl || 0, created_by: c.created_by_name || '', start: c.start_date, end: c.end_date }))}
+              data={filtered.map(c => { const s = campaignStats[c.id] || {}; return { name: isRTL ? c.name_ar : c.name_en, platform: c.platform, status: c.status, type: c.type, budget: c.budget, spent: c.spent, leads: s.leads || 0, qualified: s.qualified || 0, disqualified: s.disqualified || 0, dq_rate: (s.disqualRate || 0) + '%', cpl: s.cpl || 0, cpql: s.cpql || 0, created_by: c.created_by_name || '', start: c.start_date, end: c.end_date }; })}
               filename="campaigns"
               title={isRTL ? 'الحملات' : 'Campaigns'}
-              columns={[{ header: 'Name', key: 'name' }, { header: 'Platform', key: 'platform' }, { header: 'Status', key: 'status' }, { header: 'Budget', key: 'budget' }, { header: 'Spent', key: 'spent' }, { header: 'Leads', key: 'leads' }, { header: 'CPL', key: 'cpl' }, { header: 'Created By', key: 'created_by' }]}
+              columns={[{ header: 'Name', key: 'name' }, { header: 'Platform', key: 'platform' }, { header: 'Status', key: 'status' }, { header: 'Budget', key: 'budget' }, { header: 'Spent', key: 'spent' }, { header: 'Leads', key: 'leads' }, { header: 'Qualified', key: 'qualified' }, { header: 'Disqualified', key: 'disqualified' }, { header: 'DQ%', key: 'dq_rate' }, { header: 'CPL', key: 'cpl' }, { header: 'CPQL', key: 'cpql' }, { header: 'Created By', key: 'created_by' }]}
             />
             <Button onClick={() => { setEditTarget(null); setModalOpen(true); }}>
               <Plus size={16} /> {isRTL ? 'حملة جديدة' : 'New Campaign'}
             </Button>
           </div>
         )}
+      </div>
+
+      {/* ═══ Section tabs (in-page nav — replaces the old sidebar submenu) ═══ */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
+        {[
+          { key: 'dashboard', path: '/marketing',          icon: BarChart3,  ar: 'نظرة عامة', en: 'Overview' },
+          { key: 'campaigns', path: '/marketing/campaigns', icon: Megaphone,  ar: 'الحملات',   en: 'Campaigns' },
+          { key: 'channels',  path: '/marketing/channels',  icon: Target,     ar: 'القنوات',   en: 'Channels' },
+          { key: 'funnel',    path: '/marketing/funnel',    icon: PieChart,   ar: 'القمع',     en: 'Funnel' },
+          { key: 'roi',       path: '/marketing/roi',       icon: TrendingUp, ar: 'الأداء و ROI', en: 'ROI' },
+        ].map(t => {
+          const active = activeTab === t.key;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => navigate(t.path)}
+              className={`flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg text-xs font-semibold border cursor-pointer transition-colors ${
+                active
+                  ? 'bg-brand-500 text-white border-brand-500'
+                  : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:text-content dark:hover:text-content-dark hover:border-brand-500/40'
+              }`}
+            >
+              <Icon size={14} /> {isRTL ? t.ar : t.en}
+            </button>
+          );
+        })}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
@@ -488,12 +479,12 @@ export default function MarketingPage() {
 
       {/* ═══ KPI Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <KpiCard icon={BarChart3} label={isRTL ? 'إجمالي الحملات' : 'Total Campaigns'} value={campaigns.length} color="#4A7AAB" />
-        <KpiCard icon={TrendingUp} label={isRTL ? 'حملات نشطة' : 'Active'} value={activeCampaigns} color="#22C55E" />
-        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={totalLeads} color="#4A7AAB" />
+        <KpiCard icon={BarChart3} label={isRTL ? 'إجمالي الحملات' : 'Total Campaigns'} value={campaigns.length} color="#2F6BD3" />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'حملات نشطة' : 'Active'} value={activeCampaigns} color="#158A57" />
+        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={totalLeads} color="#2F6BD3" />
         <KpiCard icon={Repeat} label={isRTL ? 'إجمالي التفاعلات' : 'Interactions'} value={totalInteractions} color="#6B21A8" />
-        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المصروف' : 'Total Spent'} value={fmtMoney(totalSpent) + ' EGP'} color="#EF4444" />
-        <KpiCard icon={Target} label={isRTL ? 'متوسط تكلفة/ليد' : 'Avg CPL'} value={avgCPL + ' EGP'} color={avgCPL > 300 ? '#EF4444' : avgCPL > 200 ? '#F59E0B' : '#10B981'} />
+        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المصروف' : 'Total Spent'} value={fmtMoney(totalSpent) + ' EGP'} color="#D6403B" />
+        <KpiCard icon={Target} label={isRTL ? 'متوسط تكلفة/ليد' : 'Avg CPL'} value={avgCPL + ' EGP'} color={avgCPL > 300 ? '#D6403B' : avgCPL > 200 ? '#C9860A' : '#158A57'} />
       </div>
 
       {/* ═══ Top Campaigns Mini Chart ═══ */}
@@ -508,7 +499,7 @@ export default function MarketingPage() {
             return (
               <div key={camp.id} className="flex flex-col items-center min-w-[60px] cursor-pointer group" onClick={() => openDrawer(camp)}>
                 <div className="flex-1 flex items-end h-[90px]">
-                  <div className="w-8 rounded-t-md transition-all group-hover:opacity-80" style={{ height: barH, backgroundColor: platform?.color || '#4A7AAB' }} />
+                  <div className="w-8 rounded-t-md transition-all group-hover:opacity-80" style={{ height: barH, backgroundColor: platform?.color || '#2F6BD3' }} />
                 </div>
                 <span className="text-[9px] font-bold text-content dark:text-content-dark mt-1">{stats.leads || 0}</span>
                 <span className="text-[8px] text-content-muted dark:text-content-muted-dark truncate max-w-[58px]">{isRTL ? camp.name_ar : camp.name_en}</span>
@@ -569,7 +560,7 @@ export default function MarketingPage() {
             </div>
           </div>
           <div className="h-3 bg-brand-500/10 rounded-full overflow-hidden mb-3">
-            <div className="h-full rounded-full" style={{ width: (totalBudget > 0 ? Math.round(totalSpent / totalBudget * 100) : 0) + '%', backgroundColor: totalSpent / totalBudget > 0.9 ? '#EF4444' : totalSpent / totalBudget > 0.7 ? '#F59E0B' : '#10B981' }} />
+            <div className="h-full rounded-full" style={{ width: (totalBudget > 0 ? Math.round(totalSpent / totalBudget * 100) : 0) + '%', backgroundColor: totalBudget <= 0 ? '#158A57' : totalSpent / totalBudget > 0.9 ? '#D6403B' : totalSpent / totalBudget > 0.7 ? '#C9860A' : '#158A57' }} />
           </div>
           {/* Per-channel budget bars */}
           <div className="space-y-1.5">
@@ -622,10 +613,10 @@ export default function MarketingPage() {
           <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'القمع التسويقي' : 'Marketing Funnel'}</p>
           <div className="space-y-3">
             {[
-              { label: isRTL ? 'الليدز' : 'Leads', value: funnelData.total, pct: 100, color: '#4A7AAB', width: 100 },
-              { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, pct: funnelData.contactedPct, color: '#F59E0B', width: Math.max(funnelData.contactedPct, 15) },
+              { label: isRTL ? 'الليدز' : 'Leads', value: funnelData.total, pct: 100, color: '#2F6BD3', width: 100 },
+              { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, pct: funnelData.contactedPct, color: '#C9860A', width: Math.max(funnelData.contactedPct, 15) },
               { label: isRTL ? 'فرص' : 'Opportunities', value: funnelData.opportunities, pct: funnelData.oppPct, color: '#6B21A8', width: Math.max(funnelData.total > 0 ? (funnelData.opportunities / funnelData.total) * 100 : 0, 10) },
-              { label: isRTL ? 'صفقات' : 'Deals', value: funnelData.deals, pct: funnelData.dealPct, color: '#10B981', width: Math.max(funnelData.total > 0 ? (funnelData.deals / funnelData.total) * 100 : 0, 8) },
+              { label: isRTL ? 'صفقات' : 'Deals', value: funnelData.deals, pct: funnelData.dealPct, color: '#158A57', width: Math.max(funnelData.total > 0 ? (funnelData.deals / funnelData.total) * 100 : 0, 8) },
             ].map((stage, i) => (
               <div key={i}>
                 <div className="flex justify-between text-[11px] mb-1">
@@ -677,7 +668,7 @@ export default function MarketingPage() {
           const platform = getPlatform(camp.platform);
           const status = getStatus(camp.status);
           return (
-            <div key={camp.id} onClick={() => openDrawer(camp)} className="px-4 py-3.5 cursor-pointer active:bg-surface-bg dark:active:bg-brand-500/[0.06]" style={{ borderInlineStart: `3px solid ${platform?.color || '#4A7AAB'}` }}>
+            <div key={camp.id} onClick={() => openDrawer(camp)} className="px-4 py-3.5 cursor-pointer active:bg-surface-bg dark:active:bg-brand-500/[0.06]" style={{ borderInlineStart: `3px solid ${platform?.color || '#2F6BD3'}` }}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-semibold text-[13px] text-content dark:text-content-dark truncate flex-1">
                   {isRTL ? camp.name_ar : camp.name_en}
@@ -712,6 +703,8 @@ export default function MarketingPage() {
               <th className={thCls}>{isRTL ? 'المصروف' : 'Spent'}</th>
               <th className={thCls}>{isRTL ? 'الليدز' : 'Leads'}</th>
               <th className={thCls}>{isRTL ? 'تكلفة/ليد' : 'CPL'}</th>
+              <th className={thCls}>{isRTL ? 'مؤهّل' : 'Qualified'}</th>
+              <th className={thCls}>{isRTL ? 'مرفوض%' : 'DQ%'}</th>
               <th className={thCls}>{isRTL ? 'التفاعلات' : 'Interactions'}</th>
               <th className={thCls}>{isRTL ? 'التحويل' : 'Conv.'}</th>
               <th className={thCls}>{isRTL ? 'أنشأها' : 'Created by'}</th>
@@ -721,7 +714,7 @@ export default function MarketingPage() {
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
-              <tr><td colSpan={13} className="text-center py-12 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد حملات' : 'No campaigns'}</td></tr>
+              <tr><td colSpan={15} className="text-center py-12 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد حملات' : 'No campaigns'}</td></tr>
             ) : paginatedData.map(camp => {
               const stats = campaignStats[camp.id] || {};
               const platform = getPlatform(camp.platform);
@@ -753,6 +746,12 @@ export default function MarketingPage() {
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium ${stats.cpl > 300 ? 'text-red-500' : stats.cpl > 200 ? 'text-amber-500' : stats.cpl > 0 ? 'text-emerald-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
                       {stats.cpl > 0 ? stats.cpl + '' : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs font-bold text-emerald-600">{stats.qualified || 0}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-medium ${stats.disqualRate > 60 ? 'text-red-500' : stats.disqualRate > 30 ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                      {stats.disqualRate || 0}%
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -802,10 +801,10 @@ export default function MarketingPage() {
 
       {/* Channel KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <KpiCard icon={PieChart} label={isRTL ? 'قنوات نشطة' : 'Active Channels'} value={PLATFORMS.filter(p => channelStats[p.id]?.campaigns > 0).length} color="#4A7AAB" />
-        <KpiCard icon={DollarSign} label={isRTL ? 'أعلى إنفاق' : 'Top Spend'} value={(() => { const top = PLATFORMS.sort((a, b) => (channelStats[b.id]?.spent || 0) - (channelStats[a.id]?.spent || 0))[0]; return top ? (isRTL ? top.ar : top.en) : '—'; })()} color="#EF4444" />
-        <KpiCard icon={Users} label={isRTL ? 'أفضل قناة (ليدز)' : 'Best Channel (Leads)'} value={(() => { const top = PLATFORMS.sort((a, b) => (channelStats[b.id]?.leads || 0) - (channelStats[a.id]?.leads || 0))[0]; return top ? (isRTL ? top.ar : top.en) : '—'; })()} color="#22C55E" />
-        <KpiCard icon={Target} label={isRTL ? 'أقل CPL' : 'Lowest CPL'} value={(() => { const sorted = PLATFORMS.filter(p => channelStats[p.id]?.leads > 0).sort((a, b) => (channelStats[a.id].spent / channelStats[a.id].leads) - (channelStats[b.id].spent / channelStats[b.id].leads)); return sorted[0] ? (isRTL ? sorted[0].ar : sorted[0].en) : '—'; })()} color="#10B981" />
+        <KpiCard icon={PieChart} label={isRTL ? 'قنوات نشطة' : 'Active Channels'} value={PLATFORMS.filter(p => channelStats[p.id]?.campaigns > 0).length} color="#2F6BD3" />
+        <KpiCard icon={DollarSign} label={isRTL ? 'أعلى إنفاق' : 'Top Spend'} value={(() => { const top = [...PLATFORMS].sort((a, b) => (channelStats[b.id]?.spent || 0) - (channelStats[a.id]?.spent || 0))[0]; return top ? (isRTL ? top.ar : top.en) : '—'; })()} color="#D6403B" />
+        <KpiCard icon={Users} label={isRTL ? 'أفضل قناة (ليدز)' : 'Best Channel (Leads)'} value={(() => { const top = [...PLATFORMS].sort((a, b) => (channelStats[b.id]?.leads || 0) - (channelStats[a.id]?.leads || 0))[0]; return top ? (isRTL ? top.ar : top.en) : '—'; })()} color="#158A57" />
+        <KpiCard icon={Target} label={isRTL ? 'أقل CPL' : 'Lowest CPL'} value={(() => { const sorted = PLATFORMS.filter(p => channelStats[p.id]?.leads > 0).sort((a, b) => ((channelStats[a.id]?.spent || 0) / channelStats[a.id].leads) - ((channelStats[b.id]?.spent || 0) / channelStats[b.id].leads)); return sorted[0] ? (isRTL ? sorted[0].ar : sorted[0].en) : '—'; })()} color="#158A57" />
       </div>
 
       {/* Channel Comparison Table */}
@@ -902,10 +901,10 @@ export default function MarketingPage() {
 
       {/* Funnel KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={funnelData.total} color="#4A7AAB" />
-        <KpiCard icon={Phone} label={isRTL ? 'نشط' : 'Active'} value={`${funnelData.contacted} (${funnelData.contactedPct}%)`} color="#F59E0B" />
+        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={funnelData.total} color="#2F6BD3" />
+        <KpiCard icon={Phone} label={isRTL ? 'نشط' : 'Active'} value={`${funnelData.contacted} (${funnelData.contactedPct}%)`} color="#C9860A" />
         <KpiCard icon={Target} label={isRTL ? 'فرص' : 'Opportunities'} value={`${funnelData.opportunities} (${funnelData.oppPct}%)`} color="#6B21A8" />
-        <KpiCard icon={DollarSign} label={isRTL ? 'صفقات' : 'Deals Won'} value={`${funnelData.deals} (${funnelData.overallPct}%)`} color="#10B981" />
+        <KpiCard icon={DollarSign} label={isRTL ? 'صفقات' : 'Deals Won'} value={`${funnelData.deals} (${funnelData.overallPct}%)`} color="#158A57" />
       </div>
 
       {/* Full Funnel Visual */}
@@ -913,10 +912,10 @@ export default function MarketingPage() {
         <p className="m-0 mb-4 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'القمع التسويقي الكامل' : 'Full Marketing Funnel'}</p>
         <div className="space-y-3 max-w-[500px] mx-auto">
           {[
-            { label: isRTL ? 'ليد جديد' : 'New Lead', value: funnelData.total, color: '#4A7AAB', w: 100 },
-            { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, color: '#F59E0B', w: funnelData.total > 0 ? Math.max((funnelData.contacted / funnelData.total) * 100, 20) : 20 },
+            { label: isRTL ? 'ليد جديد' : 'New Lead', value: funnelData.total, color: '#2F6BD3', w: 100 },
+            { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, color: '#C9860A', w: funnelData.total > 0 ? Math.max((funnelData.contacted / funnelData.total) * 100, 20) : 20 },
             { label: isRTL ? 'فرصة' : 'Opportunity', value: funnelData.opportunities, color: '#6B21A8', w: funnelData.total > 0 ? Math.max((funnelData.opportunities / funnelData.total) * 100, 15) : 15 },
-            { label: isRTL ? 'صفقة ناجحة' : 'Won Deal', value: funnelData.deals, color: '#10B981', w: funnelData.total > 0 ? Math.max((funnelData.deals / funnelData.total) * 100, 10) : 10 },
+            { label: isRTL ? 'صفقة ناجحة' : 'Won Deal', value: funnelData.deals, color: '#158A57', w: funnelData.total > 0 ? Math.max((funnelData.deals / funnelData.total) * 100, 10) : 10 },
           ].map((stage, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="text-[11px] w-20 text-end text-content-muted dark:text-content-muted-dark shrink-0">{stage.label}</span>
@@ -989,10 +988,10 @@ export default function MarketingPage() {
 
       {/* ═══ ROI KPI Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المصروف' : 'Total Spent'} value={fmtMoney(roiData.totalSpentAll) + ' EGP'} color="#EF4444" />
-        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={roiData.totalLeadsAll} color="#4A7AAB" />
-        <KpiCard icon={CircleDollarSign} label={isRTL ? 'إجمالي العمولات' : 'Total Commission'} value={fmtMoney(roiData.totalCommission) + ' EGP'} color="#10B981" />
-        <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط ROI' : 'Average ROI'} value={roiData.avgRoi + '%'} color={roiData.avgRoi > 0 ? '#10B981' : '#EF4444'} />
+        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المصروف' : 'Total Spent'} value={fmtMoney(roiData.totalSpentAll) + ' EGP'} color="#D6403B" />
+        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={roiData.totalLeadsAll} color="#2F6BD3" />
+        <KpiCard icon={CircleDollarSign} label={isRTL ? 'إجمالي الإيرادات' : 'Total Revenue'} value={fmtMoney(roiData.totalCommission) + ' EGP'} color="#158A57" />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط ROI' : 'Average ROI'} value={roiData.avgRoi + '%'} color={roiData.avgRoi > 0 ? '#158A57' : '#D6403B'} />
         <KpiCard
           icon={Award}
           label={isRTL ? 'أفضل حملة' : 'Best Campaign'}
@@ -1023,7 +1022,7 @@ export default function MarketingPage() {
         <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'ROI حسب الحملة' : 'ROI by Campaign'}</p>
         <div style={{ width: '100%', height: 320 }}>
           <ResponsiveContainer>
-            <BarChart data={sortedRoiRows.map(r => ({ name: isRTL ? r.name_ar : r.name_en, ROI: r.roi, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'العمولة' : 'Commission']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+            <BarChart data={sortedRoiRows.map(r => ({ name: isRTL ? r.name_ar : r.name_en, ROI: r.roi, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'الإيرادات' : 'Revenue']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#eee'} />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} angle={-35} textAnchor="end" interval={0} height={80} reversed={isRTL} />
               <YAxis tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} />
@@ -1032,9 +1031,9 @@ export default function MarketingPage() {
                 formatter={(value, name) => [name === 'ROI' ? value + '%' : fmtMoney(value) + ' EGP', name]}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="ROI" fill="#4A7AAB" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="ROI" fill="#2F6BD3" radius={[4, 4, 0, 0]}>
                 {sortedRoiRows.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.roi > 0 ? '#10B981' : '#EF4444'} />
+                  <Cell key={idx} fill={entry.roi > 0 ? '#158A57' : '#D6403B'} />
                 ))}
               </Bar>
             </BarChart>
@@ -1044,17 +1043,17 @@ export default function MarketingPage() {
 
       {/* ═══ Spent vs Commission Chart ═══ */}
       <Card className="p-4 mb-5">
-        <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'المصروف مقابل العمولة' : 'Spent vs Commission'}</p>
+        <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'المصروف مقابل الإيرادات' : 'Spent vs Revenue'}</p>
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
-            <BarChart data={sortedRoiRows.filter(r => r.spent > 0 || r.commission > 0).map(r => ({ name: isRTL ? r.name_ar : r.name_en, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'العمولة' : 'Commission']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+            <BarChart data={sortedRoiRows.filter(r => r.spent > 0 || r.commission > 0).map(r => ({ name: isRTL ? r.name_ar : r.name_en, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'الإيرادات' : 'Revenue']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#eee'} />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} angle={-35} textAnchor="end" interval={0} height={80} reversed={isRTL} />
               <YAxis tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} />
               <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e1e1e' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, borderRadius: 8, fontSize: 12, direction: isRTL ? 'rtl' : 'ltr' }} formatter={(value) => fmtMoney(value) + ' EGP'} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey={isRTL ? 'المصروف' : 'Spent'} fill="#EF4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey={isRTL ? 'العمولة' : 'Commission'} fill="#10B981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={isRTL ? 'المصروف' : 'Spent'} fill="#D6403B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={isRTL ? 'الإيرادات' : 'Revenue'} fill="#158A57" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1086,7 +1085,7 @@ export default function MarketingPage() {
               { header: isRTL ? 'الليدز' : 'Leads', key: 'leads' },
               { header: isRTL ? 'الفرص' : 'Opps', key: 'opportunities' },
               { header: isRTL ? 'صفقات ناجحة' : 'Won Deals', key: 'won_deals' },
-              { header: isRTL ? 'العمولة' : 'Commission', key: 'commission' },
+              { header: isRTL ? 'الإيرادات' : 'Revenue', key: 'commission' },
               { header: isRTL ? 'تكلفة/ليد' : 'Cost/Lead', key: 'cost_per_lead' },
               { header: isRTL ? 'تكلفة/صفقة' : 'Cost/Deal', key: 'cost_per_deal' },
               { header: 'ROI %', key: 'roi' },
@@ -1104,7 +1103,7 @@ export default function MarketingPage() {
                   { key: 'leads', label: isRTL ? 'الليدز' : 'Leads' },
                   { key: 'opps', label: isRTL ? 'الفرص' : 'Opps' },
                   { key: 'wonDeals', label: isRTL ? 'صفقات ناجحة' : 'Won Deals' },
-                  { key: 'commission', label: isRTL ? 'العمولة' : 'Commission' },
+                  { key: 'commission', label: isRTL ? 'الإيرادات' : 'Revenue' },
                   { key: 'costPerLead', label: isRTL ? 'تكلفة/ليد' : 'Cost/Lead' },
                   { key: 'costPerDeal', label: isRTL ? 'تكلفة/صفقة' : 'Cost/Deal' },
                   { key: 'roi', label: 'ROI %' },
@@ -1212,7 +1211,7 @@ export default function MarketingPage() {
                   <p className="m-0 text-[11px] font-bold text-brand-500">{row.leads}</p>
                 </div>
                 <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
-                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'العمولة' : 'Commission'}</p>
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'الإيرادات' : 'Revenue'}</p>
                   <p className="m-0 text-[11px] font-bold text-emerald-500">{row.commission > 0 ? fmtMoney(row.commission) : '—'}</p>
                 </div>
                 <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
@@ -1242,7 +1241,7 @@ export default function MarketingPage() {
         const platform = getPlatform(camp.platform);
         const status = getStatus(camp.status);
         const type = getType(camp.type);
-        const linkedContacts = contacts.filter(c => stats.contactIds?.includes(c.id));
+        const linkedContacts = drawerContacts;
         const spentPct = camp.budget > 0 ? Math.round((camp.spent || 0) / camp.budget * 100) : 0;
 
         // Interaction log
@@ -1293,12 +1292,15 @@ export default function MarketingPage() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: isRTL ? 'الليدز' : 'Leads', value: stats.leads || 0, color: '#4A7AAB' },
+                    { label: isRTL ? 'الليدز' : 'Leads', value: stats.leads || 0, color: '#2F6BD3' },
+                    { label: isRTL ? 'مؤهّل' : 'Qualified', value: stats.qualified || 0, color: '#158A57' },
+                    { label: isRTL ? 'مرفوض' : 'Disqualified', value: `${stats.disqualified || 0}${stats.disqualRate ? ` (${stats.disqualRate}%)` : ''}`, color: stats.disqualRate > 60 ? '#D6403B' : stats.disqualRate > 30 ? '#C9860A' : '#6B7280' },
+                    { label: isRTL ? 'تكلفة/ليد' : 'CPL', value: stats.cpl > 0 ? stats.cpl + '' : '—', color: stats.cpl > 300 ? '#D6403B' : stats.cpl > 200 ? '#C9860A' : '#158A57' },
+                    { label: isRTL ? 'تكلفة/مؤهّل' : 'CPQL', value: stats.cpql > 0 ? stats.cpql + '' : '—', color: stats.cpql > 1000 ? '#D6403B' : stats.cpql > 500 ? '#C9860A' : '#158A57' },
+                    { label: isRTL ? 'التحويل' : 'Conv.', value: stats.conversionRate + '%', color: stats.conversionRate > 50 ? '#158A57' : '#C9860A' },
                     { label: isRTL ? 'التفاعلات' : 'Interactions', value: stats.totalInteractions || 0, color: '#6B21A8' },
-                    { label: isRTL ? 'تكرار' : 'Repeats', value: stats.repeats || 0, color: '#F59E0B' },
-                    { label: isRTL ? 'تكلفة/ليد' : 'CPL', value: stats.cpl > 0 ? stats.cpl + '' : '—', color: stats.cpl > 300 ? '#EF4444' : stats.cpl > 200 ? '#F59E0B' : '#10B981' },
-                    { label: isRTL ? 'التحويل' : 'Conv.', value: stats.conversionRate + '%', color: stats.conversionRate > 50 ? '#10B981' : '#F59E0B' },
-                    { label: isRTL ? 'المصروف' : 'Spent', value: fmtMoney(camp.spent || 0), color: spentPct > 90 ? '#EF4444' : '#4A7AAB' },
+                    { label: isRTL ? 'تكرار' : 'Repeats', value: stats.repeats || 0, color: '#C9860A' },
+                    { label: isRTL ? 'المصروف' : 'Spent', value: fmtMoney(camp.spent || 0), color: spentPct > 90 ? '#D6403B' : '#2F6BD3' },
                   ].map((item, i) => (
                     <div key={i} className="bg-brand-500/[0.06] rounded-xl px-3 py-2.5 text-center">
                       <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{item.label}</p>
@@ -1314,7 +1316,7 @@ export default function MarketingPage() {
                     <span className="text-content dark:text-content-dark font-medium">{fmtMoney(camp.spent || 0)} / {fmtMoney(camp.budget)} EGP</span>
                   </div>
                   <div className="h-2 bg-brand-500/10 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: Math.min(spentPct, 100) + '%', backgroundColor: spentPct > 90 ? '#EF4444' : spentPct > 70 ? '#F59E0B' : '#10B981' }} />
+                    <div className="h-full rounded-full transition-all" style={{ width: Math.min(spentPct, 100) + '%', backgroundColor: spentPct > 90 ? '#D6403B' : spentPct > 70 ? '#C9860A' : '#158A57' }} />
                   </div>
                 </div>
 
@@ -1338,9 +1340,16 @@ export default function MarketingPage() {
                 {/* Linked Contacts */}
                 <div>
                   <p className="m-0 mb-2 text-xs font-bold text-content dark:text-content-dark">
-                    {isRTL ? 'الليدز المرتبطة' : 'Linked Leads'} <span className="text-brand-500">({linkedContacts.length})</span>
+                    {isRTL ? 'الليدز المرتبطة' : 'Linked Leads'} <span className="text-brand-500">({stats.leads || 0})</span>
+                    {!drawerLoading && (stats.leads || 0) > linkedContacts.length && (
+                      <span className="text-[10px] font-normal text-content-muted dark:text-content-muted-dark ms-1">
+                        {isRTL ? `· عرض ${linkedContacts.length}` : `· showing ${linkedContacts.length}`}
+                      </span>
+                    )}
                   </p>
-                  {linkedContacts.length === 0 ? (
+                  {drawerLoading ? (
+                    <p className="text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جاري التحميل…' : 'Loading…'}</p>
+                  ) : linkedContacts.length === 0 ? (
                     <p className="text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا يوجد ليدز مرتبطة بهذه الحملة' : 'No leads linked to this campaign'}</p>
                   ) : (
                     <div className="space-y-1.5 max-h-[200px] overflow-y-auto">

@@ -54,6 +54,10 @@ export async function logSession(user) {
   const ip = await getIP();
 
   const session = {
+    // sessions.id is a UUID column with NO DB default, so an insert without an
+    // id hit a not-null violation (400) on every app load — session tracking was
+    // silently broken. Generate the id client-side (https = secure context).
+    id: crypto.randomUUID(),
     user_id: user.id,
     user_name: user.full_name_ar || user.full_name_en || user.email,
     user_role: user.role,

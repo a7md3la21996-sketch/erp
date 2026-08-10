@@ -264,9 +264,9 @@ export default function PayrollClose() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <KpiCard icon={DollarSign} label={isRTL ? 'موظفين' : 'Employees'} value={totals.employees} color="#1B3347" />
-        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي' : 'Gross'} value={`${Math.round(totals.gross / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#4A7AAB" />
-        <KpiCard icon={Minus} label={isRTL ? 'خصومات' : 'Deductions'} value={`${Math.round(totals.deductions / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#EF4444" />
-        <KpiCard icon={CheckCircle2} label={isRTL ? 'صافي' : 'Net'} value={`${Math.round(totals.net / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#10B981" />
+        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي' : 'Gross'} value={`${Math.round(totals.gross / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#2F6BD3" />
+        <KpiCard icon={Minus} label={isRTL ? 'خصومات' : 'Deductions'} value={`${Math.round(totals.deductions / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#D6403B" />
+        <KpiCard icon={CheckCircle2} label={isRTL ? 'صافي' : 'Net'} value={`${Math.round(totals.net / 1000)}k`} sub={isRTL ? 'ج.م' : 'EGP'} color="#158A57" />
       </div>
 
       {/* Progress + actions */}

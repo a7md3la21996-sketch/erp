@@ -53,26 +53,26 @@ const printCSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.6; }
   .print-page { max-width: 210mm; margin: 0 auto; padding: 15mm; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #4A7AAB; padding-bottom: 16px; margin-bottom: 24px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2F6BD3; padding-bottom: 16px; margin-bottom: 24px; }
   .header-logo { max-height: 60px; max-width: 140px; object-fit: contain; }
   .company-info { text-align: right; }
   .company-info.ltr { text-align: left; }
   .company-name { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
   .company-detail { font-size: 11px; color: #64748b; }
-  .doc-title { font-size: 22px; font-weight: 700; color: #4A7AAB; margin-bottom: 16px; text-align: center; }
+  .doc-title { font-size: 22px; font-weight: 700; color: #2F6BD3; margin-bottom: 16px; text-align: center; }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
   .info-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
   .info-value { font-size: 13px; font-weight: 600; color: #1e293b; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-  th { background: #4A7AAB; color: white; padding: 10px 14px; font-size: 12px; font-weight: 600; text-align: left; }
+  th { background: #2F6BD3; color: white; padding: 10px 14px; font-size: 12px; font-weight: 600; text-align: left; }
   td { padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
   tr:nth-child(even) td { background: #f8fafc; }
   .totals-section { margin-top: 8px; display: flex; justify-content: flex-end; }
   .totals-box { width: 260px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
   .total-row { display: flex; justify-content: space-between; padding: 8px 14px; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
   .total-row:last-child { border-bottom: none; }
-  .total-row.grand { background: #4A7AAB; color: white; font-weight: 700; font-size: 14px; }
+  .total-row.grand { background: #2F6BD3; color: white; font-weight: 700; font-size: 14px; }
   .footer { margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
   .footer-left { font-size: 10px; color: #94a3b8; }
   .qr-placeholder { width: 80px; height: 80px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #94a3b8; text-align: center; }
@@ -82,7 +82,7 @@ const printCSS = `
   .rtl .company-info { text-align: left; }
   .rtl .totals-section { justify-content: flex-start; }
   .contact-card { text-align: center; }
-  .contact-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #2B4C6F, #4A7AAB); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin: 0 auto 16px; }
+  .contact-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #2B4C6F, #2F6BD3); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin: 0 auto 16px; }
   .contact-name { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
   .contact-role { font-size: 13px; color: #64748b; margin-bottom: 20px; }
   .contact-details { text-align: left; max-width: 400px; margin: 0 auto; }
@@ -428,7 +428,7 @@ export function generatePayslipHTML(item, employee, runMeta, companyInfo, lang) 
   const row = (label, amount, isDeduction = false) => `
     <div class="detail-row">
       <span class="detail-label">${label}</span>
-      <span class="detail-value" style="color:${isDeduction ? '#EF4444' : '#1e293b'}">
+      <span class="detail-value" style="color:${isDeduction ? '#D6403B' : '#1e293b'}">
         ${isDeduction ? '-' : ''}${fmtNum(amount)} ${isAr ? 'ج.م' : 'EGP'}
       </span>
     </div>`;
@@ -461,7 +461,7 @@ export function generatePayslipHTML(item, employee, runMeta, companyInfo, lang) 
         <div class="info-label">${isAr ? 'المكتسبات' : 'Earnings'}</div>
         <div class="contact-details ${isAr ? 'rtl-details' : ''}" style="margin-top:6px">
           ${earnings.length > 0 ? earnings.map(r => row(isAr ? r.label_ar : r.label_en, r.amount)).join('') : `<div class="detail-row"><span style="color:#94a3b8">${isAr ? 'لا يوجد' : 'None'}</span></div>`}
-          <div class="detail-row" style="border-top:2px solid #4A7AAB;font-weight:700">
+          <div class="detail-row" style="border-top:2px solid #2F6BD3;font-weight:700">
             <span class="detail-label">${isAr ? 'إجمالي المكتسبات' : 'Total Earnings'}</span>
             <span class="detail-value">${fmtNum(totalEarnings)} ${isAr ? 'ج.م' : 'EGP'}</span>
           </div>
@@ -471,9 +471,9 @@ export function generatePayslipHTML(item, employee, runMeta, companyInfo, lang) 
         <div class="info-label">${isAr ? 'الخصومات' : 'Deductions'}</div>
         <div class="contact-details ${isAr ? 'rtl-details' : ''}" style="margin-top:6px">
           ${deductions.length > 0 ? deductions.map(r => row(isAr ? r.label_ar : r.label_en, r.amount, true)).join('') : `<div class="detail-row"><span style="color:#94a3b8">${isAr ? 'لا يوجد' : 'None'}</span></div>`}
-          <div class="detail-row" style="border-top:2px solid #EF4444;font-weight:700">
+          <div class="detail-row" style="border-top:2px solid #D6403B;font-weight:700">
             <span class="detail-label">${isAr ? 'إجمالي الخصومات' : 'Total Deductions'}</span>
-            <span class="detail-value" style="color:#EF4444">-${fmtNum(totalDeductions)} ${isAr ? 'ج.م' : 'EGP'}</span>
+            <span class="detail-value" style="color:#D6403B">-${fmtNum(totalDeductions)} ${isAr ? 'ج.م' : 'EGP'}</span>
           </div>
         </div>
       </div>

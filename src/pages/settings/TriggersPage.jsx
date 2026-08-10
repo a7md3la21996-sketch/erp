@@ -22,7 +22,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 16px',
       }}>
-        <Zap size={28} color="#4A7AAB" />
+        <Zap size={28} color="#2F6BD3" />
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
         {isRTL ? 'لا توجد مشغلات تلقائية' : 'No Triggers Yet'}
@@ -33,7 +33,7 @@ function EmptyState({ isRTL, isDark, onAdd }) {
       <button onClick={onAdd} style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+        background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
       }}>
         <Plus size={15} />
         {isRTL ? 'إضافة مشغل' : 'Add Trigger'}
@@ -93,7 +93,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
   const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 };
 
   const sectionTitle = (text) => (
-    <div style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB', marginBottom: 8, marginTop: 16 }}>{text}</div>
+    <div style={{ fontSize: 12, fontWeight: 700, color: '#2F6BD3', marginBottom: 8, marginTop: 16 }}>{text}</div>
   );
 
   return (
@@ -120,7 +120,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
           padding: '16px 20px', borderBottom: `1px solid ${isDark ? '#1e3a5f' : '#e2e8f0'}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={18} color="#4A7AAB" />
+            <Zap size={18} color="#2F6BD3" />
             <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
               {isEdit ? (isRTL ? 'تعديل مشغل' : 'Edit Trigger') : (isRTL ? 'إضافة مشغل جديد' : 'Add New Trigger')}
             </span>
@@ -163,7 +163,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <button onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
               {form.enabled
-                ? <ToggleRight size={28} color="#4A7AAB" />
+                ? <ToggleRight size={28} color="#2F6BD3" />
                 : <ToggleLeft size={28} color={isDark ? '#475569' : '#94a3b8'} />
               }
             </button>
@@ -192,14 +192,14 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
                 <input value={cond.value} onChange={e => updateCondition(i, 'value', e.target.value)}
                   placeholder={isRTL ? 'القيمة' : 'Value'} style={{ ...inputStyle, flex: 1 }} />
               )}
-              <button onClick={() => removeCondition(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4, flexShrink: 0 }}>
+              <button onClick={() => removeCondition(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 4, flexShrink: 0 }}>
                 <X size={14} />
               </button>
             </div>
           ))}
           <button onClick={addCondition} style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
-            color: '#4A7AAB', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
+            color: '#2F6BD3', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
           }}>
             <Plus size={13} /> {isRTL ? 'إضافة شرط' : 'Add Condition'}
           </button>
@@ -218,7 +218,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
                     <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
                   ))}
                 </select>
-                <button onClick={() => removeAction(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4, flexShrink: 0 }}>
+                <button onClick={() => removeAction(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 4, flexShrink: 0 }}>
                   <X size={14} />
                 </button>
               </div>
@@ -280,7 +280,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
           ))}
           <button onClick={addAction} style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12,
-            color: '#4A7AAB', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
+            color: '#2F6BD3', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
           }}>
             <Plus size={13} /> {isRTL ? 'إضافة إجراء' : 'Add Action'}
           </button>
@@ -301,7 +301,7 @@ function TriggerModal({ trigger, onClose, onSave, isRTL, isDark }) {
           </button>
           <button onClick={() => canSave && onSave(form)} disabled={!canSave} style={{
             padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: canSave ? '#4A7AAB' : (isDark ? '#1e3a5f' : '#e2e8f0'),
+            background: canSave ? '#2F6BD3' : (isDark ? '#1e3a5f' : '#e2e8f0'),
             color: canSave ? '#fff' : (isDark ? '#475569' : '#94a3b8'),
             border: 'none', cursor: canSave ? 'pointer' : 'not-allowed',
           }}>
@@ -333,7 +333,7 @@ function DeleteModal({ trigger, onClose, onConfirm, isRTL, isDark }) {
           width: 48, height: 48, borderRadius: '50%', margin: '0 auto 16px',
           background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Trash2 size={22} color="#ef4444" />
+          <Trash2 size={22} color="#D6403B" />
         </div>
         <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
           {isRTL ? 'حذف المشغل؟' : 'Delete Trigger?'}
@@ -352,7 +352,7 @@ function DeleteModal({ trigger, onClose, onConfirm, isRTL, isDark }) {
           </button>
           <button onClick={() => onConfirm(trigger)} style={{
             padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer',
+            background: '#D6403B', color: '#fff', border: 'none', cursor: 'pointer',
           }}>
             {isRTL ? 'حذف' : 'Delete'}
           </button>
@@ -468,7 +468,7 @@ export default function TriggersPage() {
             width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
           }}>
-            <Zap size={20} color="#4A7AAB" />
+            <Zap size={20} color="#2F6BD3" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -482,7 +482,7 @@ export default function TriggersPage() {
         <button onClick={() => { setEditTarget(null); setShowModal(true); }} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-          background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 600,
+          background: '#2F6BD3', color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           <Plus size={15} />
           {isRTL ? 'إضافة مشغل' : 'Add Trigger'}
@@ -535,7 +535,7 @@ export default function TriggersPage() {
                         <span style={{
                           display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
                           background: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)',
-                          color: '#4A7AAB',
+                          color: '#2F6BD3',
                         }}>
                           {isRTL ? ENTITY_TYPES[trigger.entity]?.ar : ENTITY_TYPES[trigger.entity]?.en}
                         </span>
@@ -550,7 +550,7 @@ export default function TriggersPage() {
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           width: 24, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700,
                           background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)',
-                          color: '#4A7AAB',
+                          color: '#2F6BD3',
                         }}>
                           {(trigger.conditions || []).length}
                         </span>
@@ -560,7 +560,7 @@ export default function TriggersPage() {
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           width: 24, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700,
                           background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)',
-                          color: '#4A7AAB',
+                          color: '#2F6BD3',
                         }}>
                           {(trigger.actions || []).length}
                         </span>
@@ -570,10 +570,10 @@ export default function TriggersPage() {
                           background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6,
                         }}>
                           {isEnabled
-                            ? <ToggleRight size={22} color="#10b981" />
+                            ? <ToggleRight size={22} color="#158A57" />
                             : <ToggleLeft size={22} color={isDark ? '#475569' : '#94a3b8'} />
                           }
-                          <span style={{ fontSize: 11, fontWeight: 600, color: isEnabled ? '#10b981' : (isDark ? '#475569' : '#94a3b8') }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: isEnabled ? '#158A57' : (isDark ? '#475569' : '#94a3b8') }}>
                             {isEnabled ? (isRTL ? 'مفعّل' : 'On') : (isRTL ? 'معطّل' : 'Off')}
                           </span>
                         </button>
@@ -587,7 +587,7 @@ export default function TriggersPage() {
                             width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)',
-                            color: '#4A7AAB',
+                            color: '#2F6BD3',
                           }}>
                             <Pencil size={14} />
                           </button>
@@ -595,7 +595,7 @@ export default function TriggersPage() {
                             width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
-                            color: '#ef4444',
+                            color: '#D6403B',
                           }}>
                             <Trash2 size={14} />
                           </button>

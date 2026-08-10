@@ -66,7 +66,7 @@ export default function PrintPreview({ html, title, onClose }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Printer size={18} style={{ color: '#4A7AAB' }} />
+          <Printer size={18} style={{ color: '#2F6BD3' }} />
           <span style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
             {title || (isRTL ? 'معاينة الطباعة' : 'Print Preview')}
           </span>
@@ -103,7 +103,7 @@ export default function PrintPreview({ html, title, onClose }) {
               padding: '6px 16px',
               borderRadius: 8,
               border: 'none',
-              background: '#4A7AAB',
+              background: '#2F6BD3',
               color: 'white',
               cursor: 'pointer',
               fontSize: 12,

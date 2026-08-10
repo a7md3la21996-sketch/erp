@@ -1,11 +1,29 @@
 // ── Deals Service — bridge between CRM Opportunities and Operations ──
 import supabase from '../lib/supabase';
-import { logCreate } from './auditService';
+import { logCreate, logUpdate } from './auditService';
 import { reportError } from '../utils/errorReporter';
-import { addToSyncQueue } from './syncService';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import { requireAnyPerm } from '../utils/permissionGuard';
 import { P } from '../config/roles';
+
+// The actual columns on the `deals` table. Deal builders below copy fields off
+// a contact/opportunity (source, campaign_name) and support a multi-unit `units`
+// array — none of which exist as deals columns, so PostgREST rejects the whole
+// insert with "Could not find the 'campaign_name' column ... in the schema
+// cache". Whitelisting to real columns drops any stray field (current or
+// future) instead of failing the write.
+const DEAL_COLUMNS = new Set([
+  'agent_ar', 'agent_en', 'assigned_to', 'client_ar', 'client_budget', 'client_en',
+  'contact_id', 'created_at', 'deal_number', 'deal_value', 'developer_ar', 'developer_en',
+  'documents', 'down_payment', 'id', 'installments_count', 'notes', 'opportunity_id',
+  'phone', 'project_ar', 'project_en', 'project_id', 'status', 'unit_code',
+  'unit_type_ar', 'unit_type_en', 'updated_at',
+]);
+function pickDealColumns(obj) {
+  const out = {};
+  for (const k of Object.keys(obj || {})) if (DEAL_COLUMNS.has(k)) out[k] = obj[k];
+  return out;
+}
 
 // ── Team cache ────────────────────────────────────────────────────────────
 const _teamCache = { key: null, names: null, ts: 0 };
@@ -27,12 +45,17 @@ async function getTeamMemberNames(role, teamId) {
 /**
  * Get deals filtered by role
  */
-export async function getWonDeals({ role, userId, teamId, userName, contactId } = {}) {
+export async function getWonDeals({ role, userId, teamId, userName, contactId, agentNames } = {}) {
   try {
+    // CRM/sales deals are distinguished from Operations' manual deals by
+    // their CRM linkage: a sales deal has an opportunity_id (legacy, opp-based)
+    // OR a contact_id (Phase B: deals created straight from a lead, no opp).
+    // Operations' manual deals (OperationsPage AddDealModal) have NEITHER, so
+    // they stay excluded here.
     let query = supabase
       .from('deals')
       .select('*')
-      .not('opportunity_id', 'is', null)
+      .or('opportunity_id.not.is.null,contact_id.not.is.null')
       .order('created_at', { ascending: false })
       .range(0, 499);
 
@@ -40,12 +63,22 @@ export async function getWonDeals({ role, userId, teamId, userName, contactId } 
       query = query.eq('contact_id', contactId);
     }
 
-    if (role === 'sales_agent' && userName) {
-      query = query.or(`agent_en.eq.${userName},agent_ar.eq.${userName}`);
+    // Caller can supply an explicit name set (e.g. the dashboard resolves team
+    // membership with the SAME helper the rest of its panels use, so deal
+    // numbers stay consistent with lead numbers). Otherwise fall back to the
+    // role-based scoping below.
+    // Quote each value so names containing a comma / parenthesis / dot don't
+    // corrupt the PostgREST or() grammar (that produced 400s).
+    const qv = (n) => `"${String(n).replace(/"/g, '')}"`;
+    if (Array.isArray(agentNames) && agentNames.length) {
+      const or = agentNames.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
+      query = query.or(or);
+    } else if (role === 'sales_agent' && userName) {
+      query = query.or(`agent_en.eq.${qv(userName)},agent_ar.eq.${qv(userName)}`);
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
       const names = await getTeamMemberNames(role, teamId);
       if (names.length) {
-        const or = names.map(n => `agent_en.eq.${n},agent_ar.eq.${n}`).join(',');
+        const or = names.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
         query = query.or(or);
       }
     }
@@ -137,7 +170,7 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
   try {
     const { data, error } = await supabase
       .from('deals')
-      .insert([stripInternalFields({ ...dealData, created_at: new Date().toISOString() })])
+      .insert([pickDealColumns(stripInternalFields({ ...dealData, created_at: new Date().toISOString() }))])
       .select('*')
       .single();
     if (error) throw error;
@@ -147,6 +180,115 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
     reportError('dealsService', 'createDealFromOpportunity', err);
     throw err;
   }
+}
+
+/**
+ * Phase B — create a deal STRAIGHT from a contact/lead (no opportunity record).
+ * Mirrors createDealFromOpportunity but sources its data from the contact plus
+ * the closing wizard's extraFields; opportunity_id stays null. Deal-specific
+ * fields (units, developer, down payment, installments, deal value) come from
+ * extraFields because the contact doesn't carry them.
+ *
+ * Returns { deal, created } — `created:false` means a deal already existed for
+ * this contact and the existing one is returned (so callers don't show a false
+ * "deal created" message or re-trigger status writes).
+ */
+export async function createDealFromContact(contact, extraFields = {}, existingDeals = []) {
+  // Same gate as the opportunity path: closing a deal is a sales action.
+  requireAnyPerm([P.OPPS_EDIT, P.OPPS_EDIT_OWN], 'Not allowed to create deals');
+  const c = contact || {};
+
+  // A lead can legitimately have MULTIPLE deals (multiple reservations /
+  // contracts — one per unit). Callers that want a NEW deal each time pass
+  // allowDuplicate; the default keeps the old one-deal guard for legacy callers.
+  if (!extraFields.allowDuplicate) {
+    try {
+      const { data: existingDeal } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('contact_id', c.id)
+        .is('opportunity_id', null)
+        .limit(1);
+      if (existingDeal?.[0]) return { deal: existingDeal[0], created: false };
+    } catch (err) {
+      reportError('dealsService', 'createDealFromContact:dupCheck', err);
+    }
+  }
+
+  const agentName = extraFields.agent_name || c.assigned_to_name || '—';
+  const dealData = {
+    deal_number: await nextDealNumber(existingDeals),
+    opportunity_id: null,
+    contact_id: c.id || null,
+    // Own the deal by the lead's owner id so scoped deal counts (e.g. the
+    // dashboard Source Performance "Deals" column, which filters on
+    // deals.assigned_to) include drawer-created deals. Was left null.
+    assigned_to: extraFields.assigned_to || c.assigned_to || null,
+    project_id: extraFields.project_id || null,
+    client_ar: c.full_name || '—',
+    client_en: c.full_name || '—',
+    phone: c.phone || '',
+    source: c.source || '',
+    campaign_name: c.campaign_name || '',
+    agent_ar: extraFields.agent_ar || agentName,
+    agent_en: extraFields.agent_en || agentName,
+    project_ar: extraFields.project_ar || extraFields.project || '',
+    project_en: extraFields.project_en || extraFields.project || '',
+    developer_ar: extraFields.developer_ar || '',
+    developer_en: extraFields.developer_en || '',
+    unit_code: extraFields.unit_code || '',
+    unit_type_ar: extraFields.unit_type_ar || '',
+    unit_type_en: extraFields.unit_type_en || '',
+    units: extraFields.units || (extraFields.unit_code ? [{ unit_code: extraFields.unit_code, unit_type_ar: extraFields.unit_type_ar || '', unit_type_en: extraFields.unit_type_en || '' }] : []),
+    deal_value: extraFields.deal_value || extraFields.budget || 0,
+    client_budget: extraFields.budget || extraFields.deal_value || 0,
+    down_payment: extraFields.down_payment || 0,
+    installments_count: extraFields.installments_count || 0,
+    // Deal-events model: caller can set the milestone status directly
+    // (reserved / contracted / won / lost). Defaults to new_deal.
+    status: extraFields.status || 'new_deal',
+    documents: {
+      national_id: false,
+      reservation_form: false,
+      down_payment_receipt: false,
+      contract: false,
+      developer_receipt: false,
+    },
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('deals')
+      .insert([pickDealColumns(stripInternalFields({ ...dealData, created_at: new Date().toISOString() }))])
+      .select('*')
+      .single();
+    if (error) throw error;
+    logCreate('deal', data.id, data);
+    return { deal: data, created: true };
+  } catch (err) {
+    reportError('dealsService', 'createDealFromContact', err);
+    throw err;
+  }
+}
+
+/**
+ * Deal-events model: advance ONE specific deal to a new status (+ optionally
+ * update money fields the caller supplied). A lead can have several deals
+ * (one per unit), so we target a deal by id, never "the lead's deal".
+ */
+export async function advanceDeal(dealId, status, extraFields = {}) {
+  requireAnyPerm([P.OPPS_EDIT, P.OPPS_EDIT_OWN], 'Not allowed to update a deal');
+  const patch = { status, updated_at: new Date().toISOString() };
+  if (extraFields.deal_value != null && extraFields.deal_value !== '') patch.deal_value = Number(extraFields.deal_value) || 0;
+  if (extraFields.down_payment != null && extraFields.down_payment !== '') patch.down_payment = Number(extraFields.down_payment) || 0;
+  if (extraFields.unit_code) patch.unit_code = extraFields.unit_code;
+  if (extraFields.notes) patch.notes = extraFields.notes;
+  try {
+    const { data, error } = await supabase.from('deals').update(patch).eq('id', dealId).select('*').single();
+    if (error) throw error;
+    logUpdate('deal', data.id, { id: dealId }, data);
+    return { deal: data };
+  } catch (err) { reportError('dealsService', 'advanceDeal', err); throw err; }
 }
 
 /**

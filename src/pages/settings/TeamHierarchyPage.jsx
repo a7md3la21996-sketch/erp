@@ -19,15 +19,15 @@ const ROLE_ICONS = {
 };
 
 const ROLE_COLORS = {
-  admin: '#EF4444',
-  sales_director: '#8B5CF6',
-  sales_manager: '#4A7AAB',
-  team_leader: '#F59E0B',
+  admin: '#D6403B',
+  sales_director: '#5A63C4',
+  sales_manager: '#2F6BD3',
+  team_leader: '#C9860A',
   sales_agent: '#6B8DB5',
-  operations: '#6366F1',
-  hr: '#14B8A6',
-  marketing: '#EC4899',
-  finance: '#F97316',
+  operations: '#5A63C4',
+  hr: '#12897E',
+  marketing: '#C14D7E',
+  finance: '#DD6327',
 };
 
 const ROLE_LABELS = {
@@ -374,7 +374,7 @@ export default function TeamHierarchyPage() {
   const rootDepts = tree.root || [];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       <div className="flex justify-between items-center mb-5">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">

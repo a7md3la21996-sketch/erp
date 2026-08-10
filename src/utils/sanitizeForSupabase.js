@@ -41,7 +41,7 @@ const KNOWN_COLUMNS = {
     'company', 'job_title', 'department', 'gender', 'nationality',
     'birth_date',
     // categorization
-    'source', 'contact_type', 'contact_status', 'platform',
+    'source', 'contact_type', 'contact_status', 'platform', 'lead_category',
     'campaign_name', 'campaign_id', 'campaign_interactions',
     // sales
     'temperature', 'lead_score', 'budget_min', 'budget_max',
@@ -59,6 +59,12 @@ const KNOWN_COLUMNS = {
     // payload, so contact_status='disqualified' arrived without a reason
     // and PostgREST hit the dq_requires_reason check constraint.
     'disqualify_reason', 'disqualify_note', 'disqualify_at',
+    // follow-up on the contact (Phase 0/1 live) — writes were being SILENTLY
+    // DROPPED because these real columns were missing from this list.
+    'next_follow_up_at', 'next_follow_up_note',
+    // feedback + auto-temperature + recycling (all real columns, were dropped)
+    'last_feedback', 'last_feedback_by', 'last_feedback_at',
+    'temperature_auto', 'cold_status', 'blacklist_reason', 'referred_by',
     // misc
     'fingerprint_id', 'metadata',
     // legacy stub columns kept to absorb writes from old bundles —

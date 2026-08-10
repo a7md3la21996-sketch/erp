@@ -12,3 +12,10 @@ scripts/clean-*.mjs
 scripts/backups/
 .vercel
 supabase/.temp/
+
+# Data-ops scripts hold hardcoded service-role keys + customer-data dumps — never commit
+scripts/
+# Sensitive data exports (payroll, backups)
+/*.csv
+# Claude local config / session data
+.claude/

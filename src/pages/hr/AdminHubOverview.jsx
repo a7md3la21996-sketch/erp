@@ -94,10 +94,10 @@ export default function AdminHubOverview({ isRTL, lang }) {
         label_en: docStats.expiringSoon > 0
           ? `${docStats.expiringSoon} documents expiring within 30 days`
           : `${disciplinaryStats.openCount} open disciplinary cases`,
-        color: '#F59E0B',
+        color: '#C9860A',
         icon: AlertTriangle,
       }
-    : { label_ar: 'كل شيء على ما يرام', label_en: 'All clear', color: '#10B981', icon: CheckCircle2 };
+    : { label_ar: 'كل شيء على ما يرام', label_en: 'All clear', color: '#158A57', icon: CheckCircle2 };
   const StatusIcon = status.icon;
 
   return (
@@ -144,21 +144,21 @@ export default function AdminHubOverview({ isRTL, lang }) {
           label={isRTL ? 'تنتهي قريباً' : 'Expiring Soon'}
           value={docStats.expiringSoon}
           sub={isRTL ? 'خلال 30 يوم' : 'Next 30 days'}
-          color="#F59E0B"
+          color="#C9860A"
         />
         <KpiCard
           icon={Briefcase}
           label={isRTL ? 'عقود نشطة' : 'Active Contracts'}
           value={contractStats.activeCount}
           sub={`${contractStats.total} ${isRTL ? 'إجمالي' : 'total'}`}
-          color="#4A7AAB"
+          color="#2F6BD3"
         />
         <KpiCard
           icon={Shield}
           label={isRTL ? 'حالات تأديبية' : 'Open Cases'}
           value={disciplinaryStats.openCount}
           sub={disciplinaryStats.highCount > 0 ? `${disciplinaryStats.highCount} ${isRTL ? 'خطورة عالية' : 'high severity'}` : (isRTL ? 'لا حالات حرجة' : 'No critical')}
-          color={disciplinaryStats.openCount > 0 ? '#EF4444' : '#10B981'}
+          color={disciplinaryStats.openCount > 0 ? '#D6403B' : '#158A57'}
         />
       </div>
 
@@ -187,7 +187,7 @@ export default function AdminHubOverview({ isRTL, lang }) {
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
                 {isRTL ? 'عدد الأصول' : 'Asset Count'}
               </p>
-              <p className="m-0 text-lg font-bold" style={{ color: '#4A7AAB' }}>
+              <p className="m-0 text-lg font-bold" style={{ color: '#2F6BD3' }}>
                 {assetStats.total}
               </p>
             </div>
@@ -220,7 +220,7 @@ export default function AdminHubOverview({ isRTL, lang }) {
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
                 {isRTL ? 'إجمالي الحالات' : 'Total Cases'}
               </p>
-              <p className="m-0 text-lg font-bold" style={{ color: '#4A7AAB' }}>
+              <p className="m-0 text-lg font-bold" style={{ color: '#2F6BD3' }}>
                 {disciplinaryStats.total}
               </p>
             </div>

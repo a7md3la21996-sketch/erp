@@ -64,8 +64,8 @@ function normalizeRecord(row, deptMap) {
 
 const STATUS_CONFIG = {
   in_progress: { ar: 'قيد التنفيذ', en: 'In Progress', color: '#6B8DB5' },
-  completed:   { ar: 'مكتمل',      en: 'Completed',   color: '#4A7AAB' },
-  not_started: { ar: 'لم يبدأ',     en: 'Not Started', color: '#EF4444' },
+  completed:   { ar: 'مكتمل',      en: 'Completed',   color: '#2F6BD3' },
+  not_started: { ar: 'لم يبدأ',     en: 'Not Started', color: '#D6403B' },
 };
 
 /* ─── Helper: compute progress ─── */
@@ -288,7 +288,7 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
       {/* ─── Header ─── */}
       <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -314,7 +314,7 @@ export default function OnboardingPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={UserPlus}     label={lang === 'ar' ? 'إجمالي التهيئة' : 'Total Onboarding'}      value={totalCount}       color="#1B3347" />
         <KpiCard icon={Clock}        label={lang === 'ar' ? 'قيد التنفيذ' : 'In Progress'}              value={inProgressCount}   color="#6B8DB5" />
-        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'مكتمل' : 'Completed'}                      value={completedCount}    color="#4A7AAB" />
+        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'مكتمل' : 'Completed'}                      value={completedCount}    color="#2F6BD3" />
         <KpiCard icon={Timer}        label={lang === 'ar' ? 'متوسط مدة الإكمال' : 'Avg Completion Time'} value={`${avgCompletionDays} ${lang === 'ar' ? 'يوم' : 'days'}`} color="#1B3347" />
       </div>
 
@@ -332,7 +332,7 @@ export default function OnboardingPage() {
         {paged.length === 0 ? (
           <div className="text-center py-16 px-5">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-              <UserCheck size={24} color="#4A7AAB" />
+              <UserCheck size={24} color="#2F6BD3" />
             </div>
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
               {lang === 'ar' ? 'لا يوجد موظفون في التهيئة' : 'No Onboarding Employees'}
@@ -527,7 +527,7 @@ function OnboardingCard({ ob, isExpanded, isRTL, lang, isDark, onToggle, onCheck
               className="h-full rounded-full transition-[width] duration-500"
               style={{
                 width: pct + '%',
-                background: pct === 100 ? '#4A7AAB' : pct >= 50 ? '#6B8DB5' : statusCfg.color,
+                background: pct === 100 ? '#2F6BD3' : pct >= 50 ? '#6B8DB5' : statusCfg.color,
               }}
             />
           </div>
@@ -561,7 +561,7 @@ function OnboardingCard({ ob, isExpanded, isRTL, lang, isDark, onToggle, onCheck
                   <div className={`flex items-start gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="mt-0.5 shrink-0">
                       {checked
-                        ? <CheckSquare size={16} color="#4A7AAB" />
+                        ? <CheckSquare size={16} color="#2F6BD3" />
                         : <Square size={16} className="text-content-muted dark:text-content-muted-dark" />
                       }
                     </div>

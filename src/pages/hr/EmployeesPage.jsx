@@ -16,7 +16,7 @@ import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, Pa
 
 
 /* ─── Icon Button ─── */
-function IconBtn({ icon: Icon, onClick, color = '#4A7AAB', title }) {
+function IconBtn({ icon: Icon, onClick, color = '#2F6BD3', title }) {
   return (
     <button
       title={title}
@@ -30,7 +30,7 @@ function IconBtn({ icon: Icon, onClick, color = '#4A7AAB', title }) {
 }
 
 /* ─── Badge (dynamic color) ─── */
-function DynBadge({ label, color = '#4A7AAB' }) {
+function DynBadge({ label, color = '#2F6BD3' }) {
   return (
     <span
       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
@@ -275,7 +275,7 @@ export default function EmployeesPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [search, smartFilters]);
 
-  const statusColor = s => s === 'active' ? '#4A7AAB' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
+  const statusColor = s => s === 'active' ? '#2F6BD3' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
   const statusLabel = s => ({ active: lang === 'ar' ? 'نشط' : 'Active', on_leave: lang === 'ar' ? 'إجازة' : 'On Leave', inactive: lang === 'ar' ? 'غير نشط' : 'Inactive' }[s] || s);
 
   if (loading) return (
@@ -285,7 +285,7 @@ export default function EmployeesPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
 
       {/* ── Page Header ── */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -321,15 +321,15 @@ export default function EmployeesPage() {
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={(employees || []).length} color="#1B3347" />
-        <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'             : 'Active'}           value={active.length}         color="#4A7AAB" />
+        <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'             : 'Active'}           value={active.length}         color="#2F6BD3" />
         <KpiCard icon={Clock}     label={lang === 'ar' ? 'فترة تجربة'      : 'Probation'}        value={probation.length}      color="#6B8DB5" />
-        <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={expiring.length} color="#EF4444" />
+        <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={expiring.length} color="#D6403B" />
       </div>
 
       {/* ── Alert Banner ── */}
       {expiring.length > 0 && (
         <div className={`bg-red-500/[0.07] border border-red-500/25 rounded-xl px-4 py-3 mb-4 flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <AlertTriangle size={16} color="#EF4444" />
+          <AlertTriangle size={16} color="#D6403B" />
           <span className="text-xs text-red-500 font-medium">
             {lang === 'ar' ? `${expiring.length} عقد ينتهي خلال 30 يوم` : `${expiring.length} contract(s) expiring within 30 days`}
             {expiring.map(e => (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar).join('، ')}
@@ -421,8 +421,8 @@ export default function EmployeesPage() {
               const dept   = (departments || []).find(d => d.id === emp.department);
               const deptName = dept ? (isRTL ? dept.name_ar : dept.name_en) : '—';
               const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
-              const avatarColors = ['#1B3347','#2B4C6F','#4A7AAB','#6B8DB5','#8BA8C8'];
-              const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#4A7AAB';
+              const avatarColors = ['#1B3347','#2B4C6F','#2F6BD3','#6B8DB5','#8BA8C8'];
+              const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#2F6BD3';
 
               return (
                 <Tr key={emp.id} onClick={() => navigate(`/hr/employee/${emp.id}`)} className="cursor-pointer">
@@ -459,7 +459,7 @@ export default function EmployeesPage() {
                     </div>
                   </Td>
                   <Td>
-                    <DynBadge label={emp.employment_type === 'full_time' ? (lang === 'ar' ? 'دوام كامل' : 'Full Time') : emp.employment_type === 'probation' ? (lang === 'ar' ? 'تجربة' : 'Probation') : (lang === 'ar' ? 'جزئي' : 'Part Time')} color={emp.employment_type === 'probation' ? '#6B8DB5' : '#4A7AAB'} />
+                    <DynBadge label={emp.employment_type === 'full_time' ? (lang === 'ar' ? 'دوام كامل' : 'Full Time') : emp.employment_type === 'probation' ? (lang === 'ar' ? 'تجربة' : 'Probation') : (lang === 'ar' ? 'جزئي' : 'Part Time')} color={emp.employment_type === 'probation' ? '#6B8DB5' : '#2F6BD3'} />
                   </Td>
                   {canViewSalary && (
                     <Td className="font-bold">
@@ -483,9 +483,9 @@ export default function EmployeesPage() {
                       <IconBtn icon={Edit2}   onClick={() => setEditTarget(emp)} title={lang === 'ar' ? 'تعديل' : 'Edit'} />
                       <IconBtn icon={FileText} onClick={() => {}} title={lang === 'ar' ? 'Payslip' : 'Payslip'} color="#6B8DB5" />
                       {emp.is_active !== false ? (
-                        <IconBtn icon={Trash2} onClick={() => setTerminateTarget(emp)} title={lang === 'ar' ? 'إنهاء خدمة' : 'Terminate'} color="#EF4444" />
+                        <IconBtn icon={Trash2} onClick={() => setTerminateTarget(emp)} title={lang === 'ar' ? 'إنهاء خدمة' : 'Terminate'} color="#D6403B" />
                       ) : (
-                        <IconBtn icon={UserCheck} onClick={() => handleReinstate(emp)} title={lang === 'ar' ? 'إعادة تعيين' : 'Reinstate'} color="#22C55E" />
+                        <IconBtn icon={UserCheck} onClick={() => handleReinstate(emp)} title={lang === 'ar' ? 'إعادة تعيين' : 'Reinstate'} color="#158A57" />
                       )}
                     </div>
                   </Td>
@@ -507,7 +507,7 @@ export default function EmployeesPage() {
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-            <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
+            <Users size={28} color="#2F6BD3" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
           <p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>

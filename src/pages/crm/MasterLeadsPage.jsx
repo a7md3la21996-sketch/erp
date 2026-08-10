@@ -22,11 +22,11 @@ import supabase from '../../lib/supabase';
 import { PhoneCell } from './contacts/constants';
 
 const STATUS_COLORS = {
-  new:             '#4A7AAB',
-  contacted:       '#F59E0B',
-  following:       '#10B981',
-  has_opportunity: '#059669',
-  disqualified:    '#EF4444',
+  new:             '#2F6BD3',
+  contacted:       '#C9860A',
+  following:       '#158A57',
+  has_opportunity: '#117049',
+  disqualified:    '#D6403B',
 };
 const STATUS_LABELS = {
   new:             { ar: 'جديد',       en: 'New' },

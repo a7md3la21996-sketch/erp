@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drawer V4 — Balanced</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: { DEFAULT:'#0a0a0a', muted:'#737373', soft:'#a3a3a3', faint:'#d4d4d4' },
+          line: { DEFAULT:'#ededed', strong:'#e5e5e5' },
+          brand: { 50:'#eef4fb', 100:'#dde9f5', 500:'#4A7AAB', 600:'#3b6794', 700:'#2c4f72' },
+        },
+        fontFamily: { sans: ['Cairo', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Cairo', sans-serif; background: #fafafa; color: #0a0a0a; -webkit-font-smoothing: antialiased; }
+  .scroll-area::-webkit-scrollbar { width: 0; }
+  .hairline { border-color: #ededed; }
+  button { transition: opacity 0.15s, background 0.15s, transform 0.15s; }
+  button:active { opacity: 0.8; transform: scale(0.98); }
+  .ghost-btn { color: #525252; }
+  .ghost-btn:hover { background: #f5f5f5; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 999px; display: inline-block; }
+  /* subtle elevation for action buttons */
+  .soft-btn { box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+</style>
+</head>
+<body class="min-h-screen p-0 md:p-6">
+
+<!-- Toolbar -->
+<div class="max-w-[420px] mx-auto mb-3 px-4 md:px-0 hidden md:flex items-center justify-between">
+  <h1 class="text-sm font-semibold text-ink">Drawer V4 · Balanced</h1>
+  <button onclick="document.documentElement.dir=document.documentElement.dir==='rtl'?'ltr':'rtl'" class="text-[11px] px-2.5 py-1 rounded-md ghost-btn font-semibold border border-line">RTL/LTR</button>
+</div>
+
+<!-- Drawer -->
+<div class="max-w-[420px] mx-auto bg-white md:rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden border border-line" style="height: 100vh; max-height: 880px;">
+
+  <!-- ═══ HERO ═══ -->
+  <div class="sticky top-0 z-30 bg-white border-b hairline">
+
+    <!-- Top nav row -->
+    <div class="flex items-center justify-between px-3 pt-2.5">
+      <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="flex items-center gap-0.5">
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-full ghost-btn flex items-center justify-center">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Identity -->
+    <div class="px-4 pt-2 pb-3">
+      <div class="flex items-baseline gap-2">
+        <h2 class="text-xl font-bold text-ink leading-tight">خالد محمد علي</h2>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">VIP</span>
+      </div>
+      <p class="text-[12px] text-ink-muted mt-1">+20 100 ••• 4567 · القاهرة الجديدة</p>
+    </div>
+
+    <!-- Status / Temp / Score chips (small, subtle color, tappable) -->
+    <div class="px-4 pb-3 flex items-center gap-1.5 flex-wrap">
+      <button class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+        <span class="chip-dot bg-emerald-500"></span>
+        متابعة
+      </button>
+      <button class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700 hover:bg-red-100">
+        <span class="chip-dot bg-red-500"></span>
+        ساخن
+      </button>
+      <button class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-700">
+        <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 22 12 17.5 5.8 22l2.4-8.1L2 9.4h7.6z"/></svg>
+        75
+      </button>
+      <span class="ms-auto text-[10px] text-ink-soft">من ٣ أيام</span>
+    </div>
+
+    <!-- Action bar (subtle color, soft elevation) -->
+    <div class="px-3 pb-3 grid grid-cols-4 gap-1.5">
+      <button class="soft-btn flex flex-col items-center gap-1 py-2.5 rounded-xl bg-blue-500 text-white">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        <span class="text-[10px] font-bold">اتصال</span>
+      </button>
+      <button class="soft-btn flex flex-col items-center gap-1 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+        <span class="text-[10px] font-bold">واتساب</span>
+      </button>
+      <button class="soft-btn flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+        <span class="text-[10px] font-bold">موعد</span>
+      </button>
+      <button class="soft-btn flex flex-col items-center gap-1 py-2.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        <span class="text-[10px] font-bold">ملاحظة</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STREAM ═══ -->
+  <div class="scroll-area overflow-y-auto bg-neutral-50/40" style="height: calc(100% - 240px);">
+
+    <!-- TOC tabs -->
+    <div class="sticky top-0 z-20 bg-white border-b hairline px-4 py-2">
+      <div class="flex gap-4 overflow-x-auto text-[12px]">
+        <a href="#timeline" class="text-ink font-bold border-b-2 border-ink pb-1.5 -mb-1.5 shrink-0">الأحداث · ١٢</a>
+        <a href="#opps" class="text-ink-muted hover:text-ink font-semibold pb-1.5 shrink-0">فرص · ١</a>
+        <a href="#info" class="text-ink-muted hover:text-ink font-semibold pb-1.5 shrink-0">المعلومات</a>
+        <a href="#docs" class="text-ink-muted hover:text-ink font-semibold pb-1.5 shrink-0">مستندات · ٣</a>
+        <a href="#history" class="text-ink-muted hover:text-ink font-semibold pb-1.5 shrink-0">السجل</a>
+      </div>
+    </div>
+
+    <!-- Composer (inline, simple) -->
+    <div class="bg-white border-b hairline px-4 py-3 flex items-center gap-2">
+      <input type="text" placeholder="إيه اللي عملته؟" class="flex-1 bg-transparent text-[13px] placeholder:text-ink-soft outline-none" />
+      <button class="text-[11px] font-bold text-brand-600 px-2 py-1 rounded-md hover:bg-brand-50">سجّل</button>
+    </div>
+
+    <!-- ═══ TIMELINE ═══ -->
+    <section id="timeline" class="bg-white px-4 py-4 border-b hairline">
+      <!-- Day group: Today -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">النهاردة</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#3b82f6" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">اتصال</b> · ٥ دقائق</div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"مهتم بشقة ٣ غرف بحديقة، جاي يتفرج الجمعة"</div>
+            <div class="text-[10px] text-ink-soft mt-1">من ساعتين</div>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#d97706" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">ملاحظة</b></div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"عايز يقابل المهندس قبل العاينة"</div>
+            <div class="text-[10px] text-ink-soft mt-1">من ٤ ساعات</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day group: Yesterday -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">امبارح</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="#10b981" viewBox="0 0 24 24"><path d="M17.6 6.32A8.78 8.78 0 0011.5 4 8.84 8.84 0 003.43 16.41L3 21l4.7-1.4a8.79 8.79 0 003.8.86 8.84 8.84 0 008.84-8.84 8.78 8.78 0 00-2.74-6.3z"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">واتساب</b> · من العميل</div>
+            <div class="text-[11.5px] text-ink-muted mt-0.5">"ابعتلي بروشور المشروع لو سمحت"</div>
+            <div class="text-[10px] text-ink-soft mt-1">٤:٢٠ م</div>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#737373" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">الحالة</b> · جديد ← متابعة</div>
+            <div class="text-[10px] text-ink-soft mt-1">١:١٠ م</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day group: Earlier -->
+      <div class="text-[10px] font-bold text-ink-soft mb-2.5 uppercase tracking-wider">الأسبوع اللي فات</div>
+      <div class="space-y-3 mb-4">
+        <div class="flex items-start gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0 mt-0.5">
+            <svg width="12" height="12" fill="none" stroke="#737373" stroke-width="2.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[13px] text-ink leading-relaxed"><b class="font-bold">تم تعيينه ليك</b></div>
+            <div class="text-[10px] text-ink-soft mt-1">السبت · ٩:٠٠ ص</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="text-[12px] text-ink-muted font-semibold hover:text-ink">عرض كل الـ ١٢ حدث</button>
+    </section>
+
+    <!-- ═══ OPPORTUNITIES ═══ -->
+    <section id="opps" class="bg-white px-4 py-4 border-b hairline">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">فرص · ١</h3>
+        <button class="text-[12px] text-brand-600 font-bold hover:bg-brand-50 px-2 py-1 rounded-md">+ فرصة</button>
+      </div>
+      <button class="w-full text-start hover:bg-neutral-50 -mx-2 px-2 py-2 rounded-lg">
+        <div class="flex items-baseline justify-between gap-2 mb-1">
+          <span class="text-[14px] font-bold text-ink truncate">كمبوند الزهور · ٣ غرف</span>
+          <span class="text-[13px] font-bold text-ink shrink-0">٣.٢ﻡ</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[11px] text-ink-muted">
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold">تأهيل</span>
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-semibold">ساخن</span>
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold">عالي</span>
+        </div>
+      </button>
+    </section>
+
+    <!-- ═══ INFO ═══ -->
+    <section id="info" class="bg-white px-4 py-4 border-b hairline">
+      <h3 class="text-[12px] font-bold text-ink-soft uppercase tracking-wider mb-3">المعلومات</h3>
+      <div class="space-y-2.5 text-[13px]">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-ink-muted">الميزانية</span>
+          <span class="text-ink font-semibold">٣ - ٤ مليون ج.م</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-ink-muted">الموقع</span>
+          <span class="text-ink font-semibold">القاهرة الجديدة</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-ink-muted">المصدر</span>
+          <span class="text-ink font-semibold flex items-center gap-1.5">
+            <span class="chip-dot" style="background:#1877F2"></span>
+            فيسبوك
+          </span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-ink-muted">الكامبين</span>
+          <span class="text-ink font-semibold">صيف ٢٠٢٦ — العاصمة</span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-ink-muted">السيلز</span>
+          <span class="text-ink font-semibold">أحمد علاء</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Docs / History -->
+    <section id="docs" class="bg-white px-4 py-3 border-b hairline">
+      <button class="w-full flex items-center justify-between text-start">
+        <span class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">مستندات · ٣</span>
+        <svg class="text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </section>
+
+    <section id="history" class="bg-white px-4 py-3 border-b hairline mb-8">
+      <button class="w-full flex items-center justify-between text-start">
+        <span class="text-[12px] font-bold text-ink-soft uppercase tracking-wider">السجل</span>
+        <svg class="text-ink-soft" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </section>
+
+  </div>
+</div>
+
+<!-- Notes -->
+<div class="max-w-[420px] mx-auto mt-4 px-4 md:px-0 text-[11px] text-ink-muted leading-relaxed hidden md:block">
+  <div class="bg-white p-3 rounded-xl border border-line">
+    <b class="text-ink">V4 — التوازن:</b>
+    <ul class="mt-1 space-y-0.5">
+      <li>• Hero هادي زي V3 (بدون avatar/journey/stats)</li>
+      <li>• ٤ أزرار بألوان soft tints (مش gradients) — اتصال أزرق ثقيل، الباقي ناعم</li>
+      <li>• Status / Temp / Score chips صغيرة بألوان ناعمة (V1 vibes)</li>
+      <li>• Composer (إيه اللي عملته؟) ثابت تحت الـ tabs</li>
+      <li>• Timeline بأيقونات صغيرة ملوّنة في boxes رمادية ناعمة + أيام مفصولة</li>
+      <li>• Opportunity row فيه tags صغيرة (مش card كامل)</li>
+      <li>• Info كنص بسيط بفواصل خط رفيع</li>
+      <li>• مفيش AI suggestion / sparkline / journey bar / stats strip</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

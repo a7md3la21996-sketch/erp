@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { Flame, Wind, Snowflake, Thermometer } from 'lucide-react';
+import { hexToRgbaBg } from '../../../utils/configHelpers';
 
 // ── Shared PropTypes ─────────────────────────────────────────────────────
 export const contactPropType = PropTypes.shape({
@@ -33,48 +34,48 @@ export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return 
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [
-    { id: 'qualification',        label_ar: 'تأهيل',          label_en: 'Qualification',    color: '#4A7AAB' },
-    { id: 'site_visit_scheduled', label_ar: 'موعد معاينة',    label_en: 'Visit Scheduled',  color: '#4A7AAB' },
+    { id: 'qualification',        label_ar: 'تأهيل',          label_en: 'Qualification',    color: '#2F6BD3' },
+    { id: 'site_visit_scheduled', label_ar: 'موعد معاينة',    label_en: 'Visit Scheduled',  color: '#2F6BD3' },
     { id: 'site_visited',         label_ar: 'تمت المعاينة',   label_en: 'Site Visited',     color: '#2B4C6F' },
     { id: 'proposal',             label_ar: 'عرض سعر',        label_en: 'Proposal',         color: '#2B4C6F' },
     { id: 'negotiation',          label_ar: 'تفاوض',          label_en: 'Negotiation',      color: '#1B3347' },
     { id: 'reserved',             label_ar: 'محجوز',          label_en: 'Reserved',         color: '#1B3347' },
-    { id: 'contracted',           label_ar: 'تعاقد',          label_en: 'Contracted',       color: '#10B981' },
-    { id: 'closed_won',           label_ar: 'تم الإغلاق',     label_en: 'Closed Won',       color: '#10B981' },
-    { id: 'closed_lost',          label_ar: 'خسارة',          label_en: 'Closed Lost',      color: '#EF4444' },
+    { id: 'contracted',           label_ar: 'تعاقد',          label_en: 'Contracted',       color: '#158A57' },
+    { id: 'closed_won',           label_ar: 'تم الإغلاق',     label_en: 'Closed Won',       color: '#158A57' },
+    { id: 'closed_lost',          label_ar: 'خسارة',          label_en: 'Closed Lost',      color: '#D6403B' },
   ],
   hr: [
-    { id: 'applied',              label_ar: 'تقديم',          label_en: 'Applied',          color: '#4A7AAB' },
-    { id: 'screening',            label_ar: 'فرز',            label_en: 'Screening',        color: '#4A7AAB' },
+    { id: 'applied',              label_ar: 'تقديم',          label_en: 'Applied',          color: '#2F6BD3' },
+    { id: 'screening',            label_ar: 'فرز',            label_en: 'Screening',        color: '#2F6BD3' },
     { id: 'interview_1',          label_ar: 'مقابلة أولى',    label_en: '1st Interview',    color: '#2B4C6F' },
     { id: 'interview_2',          label_ar: 'مقابلة ثانية',   label_en: '2nd Interview',    color: '#2B4C6F' },
     { id: 'assessment',           label_ar: 'تقييم',          label_en: 'Assessment',       color: '#1B3347' },
     { id: 'offer',                label_ar: 'عرض',            label_en: 'Offer',            color: '#1B3347' },
-    { id: 'closed_won',           label_ar: 'قبول',           label_en: 'Accepted',         color: '#10B981' },
-    { id: 'closed_lost',          label_ar: 'رفض',            label_en: 'Rejected',         color: '#EF4444' },
+    { id: 'closed_won',           label_ar: 'قبول',           label_en: 'Accepted',         color: '#158A57' },
+    { id: 'closed_lost',          label_ar: 'رفض',            label_en: 'Rejected',         color: '#D6403B' },
   ],
   marketing: [
-    { id: 'new',                  label_ar: 'جديد',           label_en: 'New',              color: '#4A7AAB' },
-    { id: 'qualified',            label_ar: 'مؤهل',           label_en: 'Qualified',        color: '#4A7AAB' },
+    { id: 'new',                  label_ar: 'جديد',           label_en: 'New',              color: '#2F6BD3' },
+    { id: 'qualified',            label_ar: 'مؤهل',           label_en: 'Qualified',        color: '#2F6BD3' },
     { id: 'nurturing',            label_ar: 'رعاية',          label_en: 'Nurturing',        color: '#2B4C6F' },
-    { id: 'converted',            label_ar: 'محول للمبيعات',  label_en: 'Converted to Sales', color: '#10B981' },
-    { id: 'closed_lost',          label_ar: 'غير مهتم',       label_en: 'Not Interested',   color: '#EF4444' },
+    { id: 'converted',            label_ar: 'محول للمبيعات',  label_en: 'Converted to Sales', color: '#158A57' },
+    { id: 'closed_lost',          label_ar: 'غير مهتم',       label_en: 'Not Interested',   color: '#D6403B' },
   ],
   operations: [
-    { id: 'request',              label_ar: 'طلب',            label_en: 'Request',          color: '#4A7AAB' },
-    { id: 'evaluation',           label_ar: 'تقييم',          label_en: 'Evaluation',       color: '#4A7AAB' },
+    { id: 'request',              label_ar: 'طلب',            label_en: 'Request',          color: '#2F6BD3' },
+    { id: 'evaluation',           label_ar: 'تقييم',          label_en: 'Evaluation',       color: '#2F6BD3' },
     { id: 'negotiation',          label_ar: 'تفاوض',          label_en: 'Negotiation',      color: '#2B4C6F' },
     { id: 'agreement',            label_ar: 'اتفاق',          label_en: 'Agreement',        color: '#1B3347' },
     { id: 'execution',            label_ar: 'تنفيذ',          label_en: 'Execution',        color: '#1B3347' },
-    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#10B981' },
-    { id: 'closed_lost',          label_ar: 'ملغي',           label_en: 'Cancelled',        color: '#EF4444' },
+    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#158A57' },
+    { id: 'closed_lost',          label_ar: 'ملغي',           label_en: 'Cancelled',        color: '#D6403B' },
   ],
   finance: [
-    { id: 'pending',              label_ar: 'معلق',           label_en: 'Pending',          color: '#4A7AAB' },
+    { id: 'pending',              label_ar: 'معلق',           label_en: 'Pending',          color: '#2F6BD3' },
     { id: 'under_review',         label_ar: 'مراجعة',         label_en: 'Under Review',     color: '#2B4C6F' },
     { id: 'approved',             label_ar: 'موافق عليه',     label_en: 'Approved',         color: '#1B3347' },
-    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#10B981' },
-    { id: 'closed_lost',          label_ar: 'مرفوض',          label_en: 'Rejected',         color: '#EF4444' },
+    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#158A57' },
+    { id: 'closed_lost',          label_ar: 'مرفوض',          label_en: 'Rejected',         color: '#D6403B' },
   ],
 };
 // Allow SystemConfig to override stages at runtime
@@ -84,6 +85,36 @@ export const getDeptStages = (dept) => {
   if (_configStages && _configStages[dept]?.length) return _configStages[dept];
   return DEPT_STAGES[dept] || DEPT_STAGES.sales;
 };
+
+// Allow SystemConfig to override / ADD contact TYPE entries at runtime, so a
+// type renamed or created in Settings → Contact Types renders its label/color
+// everywhere TYPE[key] is read (badges, dropdowns). MERGE (not replace): keys
+// the config doesn't list (e.g. built-in 'cold') keep working. Mirrors the
+// setConfigStages pattern; called from SystemConfigContext on load + realtime.
+export function setConfigTypes(types) {
+  if (!Array.isArray(types) || !types.length) return;
+  types.forEach((t) => {
+    if (!t?.key) return;
+    TYPE[t.key] = {
+      label: t.label_ar,
+      labelEn: t.label_en,
+      color: t.color,
+      bg: t.bg || hexToRgbaBg(t.color || '#6B8DB5'),
+    };
+  });
+}
+
+// Same idea for sources: overlay labels and add new sources so a freshly-added
+// source shows its label instead of the raw key.
+export function setConfigSources(sources) {
+  if (!Array.isArray(sources) || !sources.length) return;
+  sources.forEach((s) => {
+    if (!s?.key) return;
+    SOURCE_LABELS[s.key] = s.label_ar;
+    SOURCE_EN[s.key] = s.label_en;
+    if (s.platform) SOURCE_PLATFORM[s.key] = s.platform;
+  });
+}
 
 /**
  * Stage gates: required activity types before entering a stage.
@@ -103,24 +134,24 @@ export const deptStageLabel = (stageId, dept, isRTL) => {
 export const COLD_LABELS = { not_contacted: { ar: 'لم يُتصل به', en: 'Not Contacted' }, no_answer: { ar: 'لا يرد', en: 'No Answer' }, not_interested: { ar: 'غير مهتم', en: 'Not Interested' }, interested: { ar: 'مهتم', en: 'Interested' }, wrong_number: { ar: 'رقم خاطئ', en: 'Wrong Number' }, call_back_later: { ar: 'اتصل لاحقاً', en: 'Call Back Later' } };
 export const coldLabel = (key, isRTL) => { const s = COLD_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 export const TEMP = {
-  hot:  { label: 'Hot', labelAr: 'حار',  color: '#EF4444', bg: 'rgba(239,68,68,0.10)',  Icon: Flame },
-  warm: { label: 'Warm', labelAr: 'دافئ', color: '#F97316', bg: 'rgba(249,115,22,0.10)', Icon: Thermometer },
+  hot:  { label: 'Hot', labelAr: 'حار',  color: '#D6403B', bg: 'rgba(239,68,68,0.10)',  Icon: Flame },
+  warm: { label: 'Warm', labelAr: 'دافئ', color: '#DD6327', bg: 'rgba(249,115,22,0.10)', Icon: Thermometer },
   cool: { label: 'Cool', labelAr: 'فاتر', color: '#8BA8C8', bg: 'rgba(139,168,200,0.10)', Icon: Wind },
-  cold: { label: 'Cold', labelAr: 'بارد', color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  Icon: Snowflake },
+  cold: { label: 'Cold', labelAr: 'بارد', color: '#2F6BD3', bg: 'rgba(74,122,171,0.10)',  Icon: Snowflake },
 };
 export const TYPE = {
-  lead:         { label: 'ليد',          labelEn: 'Lead',          color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
-  nurturing:    { label: 'متابعة',      labelEn: 'Nurturing',     color: '#7C3AED', bg: 'rgba(124,58,237,0.12)'  },
-  converted:    { label: 'محول',         labelEn: 'Converted',     color: '#059669', bg: 'rgba(5,150,105,0.12)'   },
-  customer:     { label: 'عميل حالي',    labelEn: 'Customer',      color: '#10B981', bg: 'rgba(16,185,129,0.12)'  },
-  repeat_buyer: { label: 'عميل متكرر',   labelEn: 'Repeat Buyer',  color: '#0D9488', bg: 'rgba(13,148,136,0.12)'  },
-  vip:          { label: 'VIP',          labelEn: 'VIP',           color: '#DC2626', bg: 'rgba(220,38,38,0.12)'   },
-  referrer:     { label: 'مُرشّح',       labelEn: 'Referrer',      color: '#D97706', bg: 'rgba(217,119,6,0.12)'   },
+  lead:         { label: 'ليد',          labelEn: 'Lead',          color: '#2F6BD3', bg: 'rgba(74,122,171,0.12)'  },
+  nurturing:    { label: 'متابعة',      labelEn: 'Nurturing',     color: '#4951A8', bg: 'rgba(124,58,237,0.12)'  },
+  converted:    { label: 'محول',         labelEn: 'Converted',     color: '#117049', bg: 'rgba(5,150,105,0.12)'   },
+  customer:     { label: 'عميل حالي',    labelEn: 'Customer',      color: '#158A57', bg: 'rgba(16,185,129,0.12)'  },
+  repeat_buyer: { label: 'عميل متكرر',   labelEn: 'Repeat Buyer',  color: '#0E6F66', bg: 'rgba(13,148,136,0.12)'  },
+  vip:          { label: 'VIP',          labelEn: 'VIP',           color: '#B93531', bg: 'rgba(220,38,38,0.12)'   },
+  referrer:     { label: 'مُرشّح',       labelEn: 'Referrer',      color: '#A66E08', bg: 'rgba(217,119,6,0.12)'   },
   cold:         { label: 'كولد كول',     labelEn: 'Cold Call',     color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
-  supplier:     { label: 'مورد',         labelEn: 'Supplier',      color: '#0F766E', bg: 'rgba(15,118,110,0.12)'  },
-  developer:    { label: 'مطور',         labelEn: 'Developer',     color: '#B45309', bg: 'rgba(180,83,9,0.12)'    },
+  supplier:     { label: 'مورد',         labelEn: 'Supplier',      color: '#0B5A53', bg: 'rgba(15,118,110,0.12)'  },
+  developer:    { label: 'مطور',         labelEn: 'Developer',     color: '#855806', bg: 'rgba(180,83,9,0.12)'    },
   applicant:    { label: 'متقدم',        labelEn: 'Applicant',     color: '#6B21A8', bg: 'rgba(107,33,168,0.12)'  },
-  partner:      { label: 'شريك',         labelEn: 'Partner',       color: '#1E40AF', bg: 'rgba(30,64,175,0.12)'   },
+  partner:      { label: 'شريك',         labelEn: 'Partner',       color: '#1E3E77', bg: 'rgba(30,64,175,0.12)'   },
 };
 
 // ── MOCK DATA (empty - real data comes from Supabase) ─────────────────────
@@ -162,7 +193,7 @@ export const agentInitials = (name) => {
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase();
 };
-export const AVATAR_COLORS = ['#2B4C6F','#4A7AAB','#065F46','#92400E','#1E40AF','#6B21A8','#B45309','#0F766E'];
+export const AVATAR_COLORS = ['#2B4C6F','#2F6BD3','#065F46','#6D4805','#1E3E77','#6B21A8','#855806','#0B5A53'];
 export const avatarColor = (id) => {
   if (!id) return AVATAR_COLORS[0];
   const num = typeof id === 'number' ? id : [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0);
@@ -332,7 +363,7 @@ export function Chip({ label, color, bg, size = 'sm' }) {
 
 export function ScorePill({ score }) {
   const s = score ?? 0;
-  const color = s >= 75 ? '#4A7AAB' : s >= 50 ? '#6B8DB5' : s >= 25 ? '#8BA8C8' : '#EF4444';
+  const color = s >= 75 ? '#2F6BD3' : s >= 50 ? '#6B8DB5' : s >= 25 ? '#8BA8C8' : '#D6403B';
   return (
     <div className="flex items-center gap-1.5 min-w-[70px]">
       {/* dir="ltr" forces fill direction even in RTL — without it the bar
@@ -364,19 +395,27 @@ export function NextActionBadge({ nextFollowup, isRTL, onClick }) {
       </button>
     );
   }
-  const DAY = 86400000;
+  const DAY = 86400000, HOUR = 3600000, MIN = 60000;
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
   const startMs = startOfToday.getTime();
   const dueDayMs = nf.next_due ? new Date(nf.next_due).setHours(0, 0, 0, 0) : null;
   let cls, label;
-  if (nf.overdue_count > 0 && dueDayMs != null) {
-    const days = Math.round((startMs - dueDayMs) / DAY);
+  if (nf.overdue_count > 0 && nf.next_due) {
+    // How long it's ACTUALLY been overdue (real elapsed time, not day
+    // boundaries) so a follow-up an hour late reads "Overdue (1h)" instead of
+    // a bare "Overdue" — days for ≥1 day, hours under that, minutes under an hour.
+    const diff = Date.now() - new Date(nf.next_due).getTime();
     cls = 'bg-red-500/[0.1] text-red-600 dark:text-red-400 border border-red-500/30';
-    // days < 1 = due earlier *today* (overdue by hours, not days) — don't
-    // mislabel it "(1d)"; show bare "Overdue".
-    label = days >= 1
-      ? (isRTL ? `متأخرة (${days}ي)` : `Overdue (${days}d)`)
-      : (isRTL ? 'متأخرة' : 'Overdue');
+    if (diff >= DAY) {
+      const days = Math.floor(diff / DAY);
+      label = isRTL ? `متأخرة (${days}ي)` : `Overdue (${days}d)`;
+    } else if (diff >= HOUR) {
+      const hrs = Math.floor(diff / HOUR);
+      label = isRTL ? `متأخرة (${hrs}س)` : `Overdue (${hrs}h)`;
+    } else {
+      const mins = Math.max(1, Math.floor(diff / MIN));
+      label = isRTL ? `متأخرة (${mins}د)` : `Overdue (${mins}m)`;
+    }
   } else if (dueDayMs != null && dueDayMs === startMs) {
     cls = 'bg-amber-500/[0.1] text-amber-600 dark:text-amber-400 border border-amber-500/30';
     label = isRTL ? 'النهاردة' : 'Today';

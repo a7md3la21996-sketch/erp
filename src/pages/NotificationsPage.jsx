@@ -61,10 +61,10 @@ const PRIORITY_LABELS = {
 };
 
 const PRIORITY_COLORS = {
-  low: '#22c55e',
-  medium: '#3b82f6',
-  high: '#f97316',
-  urgent: '#ef4444',
+  low: '#158A57',
+  medium: '#2F6BD3',
+  high: '#DD6327',
+  urgent: '#D6403B',
 };
 
 const PER_PAGE = 25;
@@ -270,7 +270,7 @@ export default function NotificationsPage() {
             alignItems: 'center', justifyContent: 'center',
             background: 'rgba(99,102,241,0.1)',
           }}>
-            <Bell size={20} color="#6366f1" />
+            <Bell size={20} color="#5A63C4" />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: textPrimary }}>
@@ -288,9 +288,9 @@ export default function NotificationsPage() {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
               fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
-              border: `1px solid ${activeView === 'settings' ? '#6366f1' : inputBorder}`,
+              border: `1px solid ${activeView === 'settings' ? '#5A63C4' : inputBorder}`,
               background: activeView === 'settings' ? 'rgba(99,102,241,0.1)' : 'transparent',
-              color: activeView === 'settings' ? '#6366f1' : textSecondary,
+              color: activeView === 'settings' ? '#5A63C4' : textSecondary,
             }}
           >
             <Settings size={15} />
@@ -305,7 +305,7 @@ export default function NotificationsPage() {
                 fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
                 border: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'}`,
                 background: 'transparent',
-                color: '#ef4444',
+                color: '#D6403B',
               }}
             >
               <Trash2 size={15} />
@@ -359,7 +359,7 @@ export default function NotificationsPage() {
                   {/* Toggle */}
                   <div style={{
                     width: 38, height: 22, borderRadius: 11, position: 'relative',
-                    background: enabled ? '#6366f1' : (isDark ? '#334155' : '#cbd5e1'),
+                    background: enabled ? '#5A63C4' : (isDark ? '#334155' : '#cbd5e1'),
                     transition: 'background 0.2s',
                   }}>
                     <div style={{
@@ -431,7 +431,7 @@ export default function NotificationsPage() {
                     padding: '7px 14px', border: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: filterRead === opt.key ? 600 : 400,
                     fontFamily: 'inherit',
-                    background: filterRead === opt.key ? '#6366f1' : inputBg,
+                    background: filterRead === opt.key ? '#5A63C4' : inputBg,
                     color: filterRead === opt.key ? '#fff' : textSecondary,
                   }}>
                   {isRTL ? opt.ar : opt.en}
@@ -466,7 +466,7 @@ export default function NotificationsPage() {
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
                   fontSize: 12, fontWeight: 500, fontFamily: 'inherit',
-                  border: '1px solid rgba(239,68,68,0.2)', background: 'transparent', color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.2)', background: 'transparent', color: '#D6403B',
                 }}>
                 <Trash2 size={14} />
                 {isRTL ? 'حذف' : 'Delete'}
@@ -496,7 +496,7 @@ export default function NotificationsPage() {
                 <input type="checkbox"
                   checked={selectedIds.size === notifications.length && notifications.length > 0}
                   onChange={toggleSelectAll}
-                  style={{ accentColor: '#6366f1', width: 15, height: 15, cursor: 'pointer' }}
+                  style={{ accentColor: '#5A63C4', width: 15, height: 15, cursor: 'pointer' }}
                 />
                 {isRTL ? 'تحديد الكل' : 'Select All'}
               </label>
@@ -505,7 +505,7 @@ export default function NotificationsPage() {
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
                   fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
-                  border: 'none', background: 'transparent', color: '#6366f1',
+                  border: 'none', background: 'transparent', color: '#5A63C4',
                 }}>
                 <CheckCheck size={13} />
                 {isRTL ? 'قراءة الكل' : 'Mark All Read'}
@@ -539,7 +539,7 @@ export default function NotificationsPage() {
                   {/* Checkbox */}
                   <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(n.id)}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ accentColor: '#6366f1', width: 15, height: 15, marginTop: 4, cursor: 'pointer', flexShrink: 0 }}
+                    style={{ accentColor: '#5A63C4', width: 15, height: 15, marginTop: 4, cursor: 'pointer', flexShrink: 0 }}
                   />
 
                   {/* Icon */}
@@ -574,7 +574,7 @@ export default function NotificationsPage() {
                       <span style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>
                         {titleText}
                       </span>
-                      {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />}
+                      {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#5A63C4', flexShrink: 0 }} />}
                       <span style={{
                         fontSize: 10, fontWeight: 600, color: nColor,
                         background: nColor + '15', padding: '2px 8px', borderRadius: 4,
@@ -622,7 +622,7 @@ export default function NotificationsPage() {
                         style={{
                           width: 28, height: 28, borderRadius: 6, display: 'flex',
                           alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
-                          border: `1px solid ${inputBorder}`, background: inputBg, color: '#6366f1',
+                          border: `1px solid ${inputBorder}`, background: inputBg, color: '#5A63C4',
                         }}>
                         <Check size={13} />
                       </button>
@@ -633,7 +633,7 @@ export default function NotificationsPage() {
                         width: 28, height: 28, borderRadius: 6, display: 'flex',
                         alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
                         border: 'none', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
-                        color: '#ef4444',
+                        color: '#D6403B',
                       }}>
                       <Trash2 size={13} />
                     </button>

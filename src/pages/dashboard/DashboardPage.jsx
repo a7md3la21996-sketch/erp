@@ -40,7 +40,7 @@ const DATE_RANGE_OPTIONS = [
   { value: 'this_year',     label_ar: 'هذا العام',     label_en: 'This Year' },
 ];
 const EXPENSE_CATS = [{ name_ar: 'رواتب', name_en: 'Salaries', value: 180000, pct: 56 }, { name_ar: 'إعلانات', name_en: 'Marketing', value: 80000, pct: 25 }, { name_ar: 'إيجار', name_en: 'Rent', value: 35000, pct: 11 }, { name_ar: 'أخرى', name_en: 'Other', value: 25000, pct: 8 }];
-const BRAND = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#A8BFD5'];
+const BRAND = ['#1B3347', '#2B4C6F', '#2F6BD3', '#6B8DB5', '#8BA8C8', '#A8BFD5'];
 
 function buildHRStats(attendance) {
   const presentDays = attendance.filter(r => r.check_in && !r.absent);
@@ -71,11 +71,11 @@ function ChartTooltip({ active, payload, label, isDark, isRTL }) {
 }
 
 const REMINDER_TYPES = {
-  call:     { ar: 'مكالمة',    en: 'Call',       color: '#10B981', Icon: Phone },
+  call:     { ar: 'مكالمة',    en: 'Call',       color: '#158A57', Icon: Phone },
   whatsapp: { ar: 'واتساب',   en: 'WhatsApp',    color: '#25D366', Icon: MessageCircle },
-  visit:    { ar: 'زيارة موقع',en: 'Site Visit',  color: '#4A7AAB', Icon: MapPin },
-  meeting:  { ar: 'اجتماع',   en: 'Meeting',     color: '#8B5CF6', Icon: Users },
-  email:    { ar: 'بريد',     en: 'Email',       color: '#F59E0B', Icon: Mail },
+  visit:    { ar: 'زيارة موقع',en: 'Site Visit',  color: '#2F6BD3', Icon: MapPin },
+  meeting:  { ar: 'اجتماع',   en: 'Meeting',     color: '#5A63C4', Icon: Users },
+  email:    { ar: 'بريد',     en: 'Email',       color: '#C9860A', Icon: Mail },
 };
 
 function TodayRecurringTasks({ lang, isRTL, isDark }) {
@@ -142,7 +142,7 @@ function TodayRecurringTasks({ lang, isRTL, isDark }) {
       ) : (
         <div className="flex flex-col gap-2">
           {pending.slice(0, 5).map((inst) => {
-            const priColor = PRIORITY_OPTIONS[inst.priority]?.color || '#4A7AAB';
+            const priColor = PRIORITY_OPTIONS[inst.priority]?.color || '#2F6BD3';
             return (
               <div key={inst.id} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: priColor + '18' }}>
@@ -166,7 +166,7 @@ function TodayRecurringTasks({ lang, isRTL, isDark }) {
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <button onClick={() => handleComplete(inst.id)} style={{
                     display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 7,
-                    border: 'none', background: '#10B98118', color: '#10B981', fontSize: 11,
+                    border: 'none', background: '#158A5718', color: '#158A57', fontSize: 11,
                     fontWeight: 600, cursor: 'pointer',
                   }}>
                     <Check size={12} /> {lang === 'ar' ? 'تم' : 'Done'}
@@ -357,7 +357,7 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
           flexDirection: isRTL ? 'row-reverse' : 'row',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <Settings size={18} color="#4A7AAB" />
+            <Settings size={18} color="#2F6BD3" />
             <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
               {lang === 'ar' ? 'تخصيص الويدجت' : 'Customize Widgets'}
             </span>
@@ -397,7 +397,7 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
             style={{
               padding: '6px 14px', borderRadius: 8, border: 'none',
               fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: activeCategory === 'all' ? '#4A7AAB' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+              background: activeCategory === 'all' ? '#2F6BD3' : (isDark ? '#ffffff0a' : '#f1f5f9'),
               color: activeCategory === 'all' ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
               transition: 'all 0.15s',
             }}
@@ -411,7 +411,7 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
               style={{
                 padding: '6px 14px', borderRadius: 8, border: 'none',
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: activeCategory === cat.id ? '#4A7AAB' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+                background: activeCategory === cat.id ? '#2F6BD3' : (isDark ? '#ffffff0a' : '#f1f5f9'),
                 color: activeCategory === cat.id ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
                 transition: 'all 0.15s',
               }}
@@ -436,8 +436,8 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
                 padding: '12px 16px',
                 borderRadius: 10,
                 background: isDark
-                  ? (item.visible ? '#4A7AAB12' : '#ffffff06')
-                  : (item.visible ? '#4A7AAB08' : '#f8fafc'),
+                  ? (item.visible ? '#2F6BD312' : '#ffffff06')
+                  : (item.visible ? '#2F6BD308' : '#f8fafc'),
                 border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
                 marginBottom: 8,
                 flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -494,10 +494,10 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
                         key={s.value}
                         style={{
                           padding: '2px 8px', borderRadius: 5,
-                          border: '1px solid ' + (item.size === s.value ? '#4A7AAB' : (isDark ? '#ffffff15' : '#e2e8f0')),
+                          border: '1px solid ' + (item.size === s.value ? '#2F6BD3' : (isDark ? '#ffffff15' : '#e2e8f0')),
                           fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                          background: item.size === s.value ? '#4A7AAB22' : 'transparent',
-                          color: item.size === s.value ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                          background: item.size === s.value ? '#2F6BD322' : 'transparent',
+                          color: item.size === s.value ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                         }}
                         onClick={() => changeSize(item.widgetId, s.value)}
                       >
@@ -511,14 +511,14 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
                 <button
                   onClick={() => toggleVisibility(item.widgetId)}
                   style={{
-                    background: item.visible ? '#4A7AAB22' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+                    background: item.visible ? '#2F6BD322' : (isDark ? '#ffffff0a' : '#f1f5f9'),
                     border: 'none',
                     borderRadius: 8,
                     padding: '6px 8px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    color: item.visible ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                    color: item.visible ? '#2F6BD3' : (isDark ? '#94a3b8' : '#64748b'),
                   }}
                   title={item.visible ? (lang === 'ar' ? 'إخفاء' : 'Hide') : (lang === 'ar' ? 'إظهار' : 'Show')}
                 >
@@ -621,7 +621,9 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
         const isSalesAgent = profile?.role === 'sales_agent';
         let contactsQ = supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'following').lt('last_activity_at', weekAgo);
         let tasksQ = supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO);
-        let oppsQ = supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")');
+        // Opportunities retired — count OPEN deals (pipeline) instead. Deals
+        // have no temperature, so this is now "open deals" not "hot open opps".
+        let oppsQ = supabase.from('deals').select('id', { count: 'exact', head: true }).in('status', ['new_deal', 'reserved', 'contracted']);
         if (isSalesAgent && profile?.id) {
           // Single-assignment after Phase 1: filter by assigned_to UUID
           // (which RLS uses anyway) instead of the legacy
@@ -638,12 +640,12 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
         // a red accent; warnings (stale leads) follow; info (hot opps) sits
         // last because it's a "good thing to do" not "must fix now".
         const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
-        if (overdue > 0) a.push({ severity: 1, icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
+        if (overdue > 0) a.push({ severity: 1, icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#D6403B', link: '/tasks' });
         const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
-        if (stale > 0) a.push({ severity: 2, icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
+        if (stale > 0) a.push({ severity: 2, icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#C9860A', link: '/contacts' });
         const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
-        if (hot > 0) a.push({ severity: 3, icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
-        if (a.length === 0) a.push({ severity: 4, icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
+        if (hot > 0) a.push({ severity: 3, icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#158A57', link: '/sales/deals' });
+        if (a.length === 0) a.push({ severity: 4, icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#158A57' });
         a.sort((x, y) => x.severity - y.severity);
         setAlerts(a);
       } catch {}
@@ -742,17 +744,17 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   }, [userId]);
 
   const sections = [
-    { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: stats.followups, color: '#4A7AAB', link: '/tasks' },
-    { icon: AlertTriangle, label: lang === 'ar' ? 'مهام متأخرة' : 'Overdue Tasks', count: stats.overdue, color: stats.overdue > 0 ? '#EF4444' : '#10B981', link: '/tasks' },
+    { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: stats.followups, color: '#2F6BD3', link: '/tasks' },
+    { icon: AlertTriangle, label: lang === 'ar' ? 'مهام متأخرة' : 'Overdue Tasks', count: stats.overdue, color: stats.overdue > 0 ? '#D6403B' : '#158A57', link: '/tasks' },
     { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#2B4C6F', link: '/contacts' },
-    { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#F59E0B', link: '/contacts' },
+    { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#C9860A', link: '/contacts' },
   ];
 
   const quickActions = [
-    { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/contacts', color: '#10B981' },
-    { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/contacts?action=add', color: '#4A7AAB' },
-    { icon: Target, label: lang === 'ar' ? 'المهام' : 'Tasks', link: '/tasks', color: '#F59E0B' },
-    { icon: Activity, label: lang === 'ar' ? 'الفرص' : 'Opportunities', link: '/crm/opportunities', color: '#2B4C6F' },
+    { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/contacts', color: '#158A57' },
+    { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/contacts?action=add', color: '#2F6BD3' },
+    { icon: Target, label: lang === 'ar' ? 'المهام' : 'Tasks', link: '/tasks', color: '#C9860A' },
+    { icon: Activity, label: lang === 'ar' ? 'الفرص' : 'Opportunities', link: '/sales/deals', color: '#2B4C6F' },
   ];
 
   return (
@@ -824,11 +826,11 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
           </p>
           <div className="space-y-1.5">
             {todayTasksList.map(t => {
-              const priColors = { high: '#EF4444', medium: '#F59E0B', low: '#6B8DB5' };
+              const priColors = { high: '#D6403B', medium: '#C9860A', low: '#6B8DB5' };
               return (
                 <div key={t.id} onClick={() => navigate('/tasks')}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark cursor-pointer hover:border-brand-500/30 transition-colors"
-                  style={{ borderInlineStart: `3px solid ${priColors[t.priority] || '#4A7AAB'}` }}>
+                  style={{ borderInlineStart: `3px solid ${priColors[t.priority] || '#2F6BD3'}` }}>
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.title}</p>
                     {t.contact_name && <p className="m-0 text-[10px] text-brand-500">{t.contact_name}</p>}
@@ -1199,9 +1201,9 @@ export default function DashboardPage() {
     const cutoff = Date.now() - 30 * 86400000;
     const map = {};
     for (const o of rawOpps) {
-      if (!o?.stage || o.stage === 'closed_won' || o.stage === 'closed_lost') continue;
+      if (!o?.status || o.status === 'won' || o.status === 'lost') continue;
       const last = o.last_activity_at ? new Date(o.last_activity_at).getTime() : new Date(o.created_at || 0).getTime();
-      if (last && last < cutoff) map[o.stage] = (map[o.stage] || 0) + 1;
+      if (last && last < cutoff) map[o.status] = (map[o.status] || 0) + 1;
     }
     return map;
   }, [rawOpps]);
@@ -1219,7 +1221,7 @@ export default function DashboardPage() {
 
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
-  const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
+  const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#2F6BD3', onClick }) => (
     <Card className={`relative overflow-hidden px-5 py-5 ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200' : ''}`} onClick={onClick}>
       {/* Subtle full-card tint instead of a hard side stripe — reads cleaner
           and gives the grid a calmer visual rhythm. */}
@@ -1262,11 +1264,11 @@ export default function DashboardPage() {
           // 5 KPIs sit in a single row on lg+ to avoid the orphan card that the
           // old 4-col grid produced. Tablet falls back to 3, mobile to 2.
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-            <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
-            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={activeOppsDelta || (lang === 'ar' ? 'vs الفترة السابقة' : 'vs previous period')} trendUp={!activeOppsDelta || !activeOppsDelta.startsWith('-')} color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
-            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={dealsDelta || (crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined)} trendUp={!dealsDelta || !dealsDelta.startsWith('-')} color="#6B8DB5" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'closed_won' } })} />
-            <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
-            <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => !['closed_won','closed_lost'].includes(o.stage)).reduce((s, o) => s + (o.budget || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
+            <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#2F6BD3" onClick={() => navigate('/crm/contacts')} />
+            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={activeOppsDelta || (lang === 'ar' ? 'vs الفترة السابقة' : 'vs previous period')} trendUp={!activeOppsDelta || !activeOppsDelta.startsWith('-')} color="#2B4C6F" onClick={() => navigate('/sales/deals', { state: { initialStage: 'active' } })} />
+            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={dealsDelta || (crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined)} trendUp={!dealsDelta || !dealsDelta.startsWith('-')} color="#6B8DB5" onClick={() => navigate('/sales/deals', { state: { initialStage: 'closed_won' } })} />
+            <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#2F6BD3" onClick={() => navigate('/finance')} />
+            <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => ['new_deal','reserved','contracted'].includes(o.status)).reduce((s, o) => s + (o.deal_value || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/sales/deals', { state: { initialStage: 'active' } })} />
           </div>
         );
 
@@ -1276,14 +1278,14 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             {taskStats && (
               <>
-                <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/tasks')} />
-                <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/tasks')} />
+                <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#C9860A" onClick={() => navigate('/tasks')} />
+                <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#D6403B' : '#158A57'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/tasks')} />
               </>
             )}
             {activityStats && (
-              <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#2B4C6F" trendUp onClick={() => navigate('/crm/opportunities')} />
+              <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#2B4C6F" trendUp onClick={() => navigate('/sales/deals')} />
             )}
-            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#4A7AAB" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#2F6BD3" onClick={() => navigate('/sales/deals')} />
           </div>
         );
 
@@ -1296,7 +1298,7 @@ export default function DashboardPage() {
               <div className="text-center py-8">
                 <TrendingUp size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
                 <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات إيرادات حتى الآن' : 'No revenue data yet'}</p>
-                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                <Link to="/sales/deals" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
                   {lang === 'ar' ? 'افتح الفرص' : 'Open opportunities'}
                   <ArrowUpRight size={11} />
                 </Link>
@@ -1304,12 +1306,12 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
+                  <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2F6BD3" stopOpacity={0.25} /><stop offset="95%" stopColor="#2F6BD3" stopOpacity={0} /></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
                   <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
                   <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ stroke: isDark ? 'rgba(74,122,171,0.3)' : 'rgba(74,122,171,0.2)', strokeWidth: 1 }} />
-                  <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 6, stroke: '#4A7AAB', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
+                  <Area type="monotone" dataKey="value" stroke="#2F6BD3" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#2F6BD3', r: 3 }} activeDot={{ r: 6, stroke: '#2F6BD3', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -1329,7 +1331,7 @@ export default function DashboardPage() {
               <div className="text-center py-8">
                 <Activity size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
                 <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا فرص في الأنابيب حتى الآن' : 'No pipeline data yet'}</p>
-                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                <Link to="/sales/deals" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
                   {lang === 'ar' ? 'أنشئ فرصة' : 'Create opportunity'}
                   <ArrowUpRight size={11} />
                 </Link>
@@ -1338,7 +1340,7 @@ export default function DashboardPage() {
               <>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
-                    onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
+                    onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/sales/deals', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
                     <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -1385,7 +1387,7 @@ export default function DashboardPage() {
               <div className="text-center py-6">
                 <Trophy size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
                 <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات مبيعات حتى الآن' : 'No sales data yet'}</p>
-                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                <Link to="/sales/deals" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
                   {lang === 'ar' ? 'افتح الفرص' : 'Open opportunities'}
                   <ArrowUpRight size={11} />
                 </Link>
@@ -1401,7 +1403,7 @@ export default function DashboardPage() {
                           <span className="text-xs font-semibold text-content dark:text-content-dark">{safeChild(lang === 'ar' ? s.name_ar : s.name_en)}</span>
                           <span className="text-xs text-brand-500 font-bold">{((s.revenue || 0) / 1000).toFixed(0)}K</span>
                         </div>
-                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: (s.pct || 0) + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
+                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: (s.pct || 0) + '%', background: i === 0 ? '#2F6BD3' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
                       </div>
                       <span className="text-[10px] text-content-muted dark:text-content-muted-dark min-w-[26px] text-center">{s.pct || 0}%</span>
                     </div>
@@ -1415,7 +1417,7 @@ export default function DashboardPage() {
                       : <a href="/settings/system" className="text-[10px] text-brand-500 hover:underline cursor-pointer" style={{ textDecoration: 'none' }}>{lang === 'ar' ? 'حدد التارجت ←' : 'Set target →'}</a>
                     }
                   </div>
-                  <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: (targetPct || 0) + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
+                  <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: (targetPct || 0) + '%', background: 'linear-gradient(90deg, #2B4C6F, #2F6BD3)' }} /></div>
                   <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((filteredCrm.revenue || 0) / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{salesTarget > 0 ? ((salesTarget / 1000).toFixed(0) + 'K EGP') : (lang === 'ar' ? 'غير محدد' : 'Not set')}</span></div>
                 </div>
               </>
@@ -1430,7 +1432,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
               <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" onClick={() => navigate('/hr/employees')} className="cursor-pointer hover:shadow-md transition-shadow" />
               <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" onClick={() => navigate('/hr/attendance')} className="cursor-pointer hover:shadow-md transition-shadow" />
-              <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" onClick={() => navigate('/hr/recruitment')} className="cursor-pointer hover:shadow-md transition-shadow" />
+              <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#2F6BD3" onClick={() => navigate('/hr/recruitment')} className="cursor-pointer hover:shadow-md transition-shadow" />
               <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" onClick={() => navigate('/hr/self-service')} className="cursor-pointer hover:shadow-md transition-shadow" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1442,14 +1444,14 @@ export default function DashboardPage() {
                     <XAxis type="number" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey={lang === 'ar' ? 'name_ar' : 'name_en'} tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
                     <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#4A7AAB" />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#2F6BD3" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
               <Box>
                 <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'تنبيهات HR' : 'HR Alerts'} sub={lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention'} />
                 <div className="flex flex-col gap-2">
-                  {[{ I: AlertTriangle, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bgClass: 'bg-brand-400/10', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#4A7AAB', bgClass: 'bg-brand-500/[0.08]', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${a.bgClass} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><AI size={14} color={a.color} /><span className="text-xs font-medium" style={{ color: a.color }}>{a.label}</span></div>; })}
+                  {[{ I: AlertTriangle, color: '#D6403B', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bgClass: 'bg-brand-400/10', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#D6403B', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#2F6BD3', bgClass: 'bg-brand-500/[0.08]', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${a.bgClass} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><AI size={14} color={a.color} /><span className="text-xs font-medium" style={{ color: a.color }}>{a.label}</span></div>; })}
                   {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div className="text-center py-4"><p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
                 </div>
               </Box>
@@ -1462,7 +1464,7 @@ export default function DashboardPage() {
         const salesEmps = MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role));
         const topPerformers = dashTeamPerf?.topPerformers || [];
         const teamPct = dashTeamPerf?.teamPct || 0;
-        const teamColor = teamPct >= 80 ? '#10B981' : teamPct >= 50 ? '#F59E0B' : '#EF4444';
+        const teamColor = teamPct >= 80 ? '#158A57' : teamPct >= 50 ? '#C9860A' : '#D6403B';
         return (
           <div>
             <CardTitle icon={Target} title={lang === 'ar' ? 'أداء الفريق — KPI' : 'Team Performance — KPI'} sub={lang === 'ar' ? 'تحقيق أهداف الشهر الحالي' : 'Current month target achievement'} />
@@ -1479,7 +1481,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col gap-2.5">
               {topPerformers.map((p, i) => {
-                const pColor = p.overallPct >= 80 ? '#10B981' : p.overallPct >= 50 ? '#F59E0B' : '#EF4444';
+                const pColor = p.overallPct >= 80 ? '#158A57' : p.overallPct >= 50 ? '#C9860A' : '#D6403B';
                 return (
                   <div key={p.employee.id} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#FFD700' + '22' : i === 1 ? '#C0C0C0' + '22' : '#CD7F32' + '22', border: '2px solid ' + (i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32') }}>
@@ -1521,7 +1523,7 @@ export default function DashboardPage() {
             <CardTitle icon={BarChart2} title={lang === 'ar' ? 'إحصائيات سريعة' : 'Quick Stats'} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { label: lang === 'ar' ? 'جهات الاتصال' : 'Contacts', value: crm.totalLeads, color: '#4A7AAB' },
+                { label: lang === 'ar' ? 'جهات الاتصال' : 'Contacts', value: crm.totalLeads, color: '#2F6BD3' },
                 { label: lang === 'ar' ? 'الفرص النشطة' : 'Active Opps', value: filteredCrm.activeOpps, color: '#2B4C6F' },
                 { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Closed Deals', value: filteredCrm.closedDeals, color: '#6B8DB5' },
               ].map((item, i) => (
@@ -1549,7 +1551,7 @@ export default function DashboardPage() {
           <div>
             <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'موافقات معلقة' : 'Pending Approvals'} />
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: '#4A7AAB', lineHeight: 1 }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: '#2F6BD3', lineHeight: 1 }}>
                 {safeChild(hr.pendingLeaves)}
               </div>
               <p style={{ margin: '8px 0 0', fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
@@ -1566,9 +1568,9 @@ export default function DashboardPage() {
             <CardTitle icon={CalendarCheck} title={lang === 'ar' ? 'ملخص الإجازات' : 'Leave Summary'} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { label: lang === 'ar' ? 'معلقة' : 'Pending', value: hr.pendingLeaves, color: '#F59E0B' },
-                { label: lang === 'ar' ? 'غائب اليوم' : 'Absent Today', value: hr.absentCount, color: '#EF4444' },
-                { label: lang === 'ar' ? 'معدل الحضور' : 'Attendance', value: hr.attendanceRate + '%', color: '#10B981' },
+                { label: lang === 'ar' ? 'معلقة' : 'Pending', value: hr.pendingLeaves, color: '#C9860A' },
+                { label: lang === 'ar' ? 'غائب اليوم' : 'Absent Today', value: hr.absentCount, color: '#D6403B' },
+                { label: lang === 'ar' ? 'معدل الحضور' : 'Attendance', value: hr.attendanceRate + '%', color: '#158A57' },
               ].map((item, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -1593,7 +1595,7 @@ export default function DashboardPage() {
           <div>
             <CardTitle icon={MessageCircle} title={lang === 'ar' ? 'آخر التعليقات' : 'Recent Comments'} />
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <MessageCircle size={32} style={{ color: '#4A7AAB', opacity: 0.3, margin: '0 auto 8px' }} />
+              <MessageCircle size={32} style={{ color: '#2F6BD3', opacity: 0.3, margin: '0 auto 8px' }} />
               <p style={{ margin: 0, fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 {lang === 'ar' ? 'لا تعليقات جديدة' : 'No new comments'}
               </p>
@@ -1608,8 +1610,8 @@ export default function DashboardPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#4A7AAB1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Volume2 size={16} color="#4A7AAB" />
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#2F6BD31e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Volume2 size={16} color="#2F6BD3" />
                 </div>
                 <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -1617,7 +1619,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <Link to="/announcements" style={{ fontSize: 12, color: '#4A7AAB', textDecoration: 'none', fontWeight: 600 }}>
+              <Link to="/announcements" style={{ fontSize: 12, color: '#2F6BD3', textDecoration: 'none', fontWeight: 600 }}>
                 {lang === 'ar' ? 'عرض الكل' : 'View All'}
               </Link>
             </div>
@@ -1641,9 +1643,9 @@ export default function DashboardPage() {
                     }}
                   >
                     {!read && (
-                      <div style={{ position: 'absolute', top: 8, [isRTL ? 'left' : 'right']: 8, width: 7, height: 7, borderRadius: '50%', background: '#4A7AAB' }} />
+                      <div style={{ position: 'absolute', top: 8, [isRTL ? 'left' : 'right']: 8, width: 7, height: 7, borderRadius: '50%', background: '#2F6BD3' }} />
                     )}
-                    {ann.pinned && <Pin size={12} color="#4A7AAB" style={{ marginTop: 3, flexShrink: 0 }} />}
+                    {ann.pinned && <Pin size={12} color="#2F6BD3" style={{ marginTop: 3, flexShrink: 0 }} />}
                     <div style={{ flex: 1, minWidth: 0, textAlign: isRTL ? 'right' : 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 2 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{safeChild(title)}</span>
@@ -1678,8 +1680,8 @@ export default function DashboardPage() {
                 gap: 10,
                 flexDirection: isRTL ? 'row-reverse' : 'row',
               }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#4A7AAB1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={16} color="#4A7AAB" />
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#2F6BD31e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={16} color="#2F6BD3" />
                 </div>
                 <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
@@ -1690,7 +1692,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <Link to="/heatmap" style={{ fontSize: 12, color: '#4A7AAB', textDecoration: 'none', fontWeight: 600 }}>
+              <Link to="/heatmap" style={{ fontSize: 12, color: '#2F6BD3', textDecoration: 'none', fontWeight: 600 }}>
                 {lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}
               </Link>
             </div>
@@ -1763,7 +1765,7 @@ export default function DashboardPage() {
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
 
   return (
-    <div className="px-4 py-5 md:px-8 md:py-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-5 md:px-8 md:py-7 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Hero banner — slim greeting strip. The KPI chips duplicated the
           card row below, so they're gone. Just role + date + the target
           progress as a single inline indicator (more useful than three
@@ -1823,7 +1825,7 @@ export default function DashboardPage() {
         if (gs.total === 0) return null;
         const isOnTrack = gs.avgProgress >= 70;
         const isAtRisk = gs.avgProgress >= 40 && gs.avgProgress < 70;
-        const pColor = isOnTrack ? '#10B981' : isAtRisk ? '#F59E0B' : '#EF4444';
+        const pColor = isOnTrack ? '#158A57' : isAtRisk ? '#C9860A' : '#D6403B';
         return (
           <button
             onClick={() => navigate('/hr/goals')}

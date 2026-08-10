@@ -96,7 +96,7 @@ export default function DocumentsSection({ entity, entityId, entityName }) {
   const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
   const borderColor = isDark ? 'rgba(74,122,171,0.15)' : 'rgba(0,0,0,0.08)';
-  const accent = '#4A7AAB';
+  const accent = '#2F6BD3';
 
   return (
     <div>
@@ -135,7 +135,7 @@ export default function DocumentsSection({ entity, entityId, entityName }) {
           {/* Document Name */}
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: textSecondary, marginBottom: 4 }}>
-              {isRTL ? 'اسم المستند' : 'Document Name'} <span style={{ color: '#EF4444' }}>*</span>
+              {isRTL ? 'اسم المستند' : 'Document Name'} <span style={{ color: '#D6403B' }}>*</span>
             </label>
             <input
               type="text"
@@ -318,8 +318,8 @@ export default function DocumentsSection({ entity, entityId, entityName }) {
                           onClick={() => handleDelete(doc.id)}
                           style={{
                             padding: '3px 8px', borderRadius: 6,
-                            border: '1px solid #EF4444', background: '#EF444418',
-                            color: '#EF4444', fontSize: 10, fontWeight: 600,
+                            border: '1px solid #D6403B', background: '#D6403B18',
+                            color: '#D6403B', fontSize: 10, fontWeight: 600,
                             cursor: 'pointer', fontFamily: 'inherit',
                           }}
                         >
