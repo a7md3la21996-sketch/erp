@@ -4,7 +4,7 @@ import { LayoutDashboard, BookUser, Target, ClipboardList, MoreHorizontal } from
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/dashboard', icon: LayoutDashboard, label_ar: 'الرئيسية', label_en: 'Home' },
-  { id: 'contacts', path: '/contacts', icon: BookUser, label_ar: 'الليدز', label_en: 'Leads' },
+  { id: 'contacts', path: '/leads', icon: BookUser, label_ar: 'الليدز', label_en: 'Leads' },
   { id: 'deals', path: '/sales/deals', icon: Target, label_ar: 'الصفقات', label_en: 'Deals' },
   { id: 'tasks', path: '/tasks', icon: ClipboardList, label_ar: 'المهام', label_en: 'Tasks' },
 ];

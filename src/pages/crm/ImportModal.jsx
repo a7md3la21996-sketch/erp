@@ -283,14 +283,6 @@ const validateEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
 };
 
-// Department / Source / Contact type options for auto-fill defaults
-const DEPARTMENT_OPTIONS = [
-  { value: 'sales', en: 'Sales', ar: 'المبيعات' },
-  { value: 'marketing', en: 'Marketing', ar: 'التسويق' },
-  { value: 'support', en: 'Support', ar: 'الدعم' },
-  { value: 'operations', en: 'Operations', ar: 'العمليات' },
-  { value: 'hr', en: 'HR', ar: 'الموارد البشرية' },
-];
 
 const SOURCE_OPTIONS = [
   { value: 'facebook', en: 'Facebook', ar: 'فيسبوك' },
@@ -336,10 +328,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
     rejectNoPhone: true,
     rejectNoName: false,
     rejectNoEmail: false,
-    autoFillDepartment: false,
     autoFillSource: false,
     autoFillContactType: false,
-    defaultDepartment: 'sales',
     defaultSource: 'other',
     defaultContactType: 'lead',
   });
@@ -515,11 +505,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       }
       cleanedRow.email = emailResult.cleaned;
 
-      // Auto-fill defaults
-      if (validationRules.autoFillDepartment && !cleanedRow.department) {
-        cleanedRow.department = validationRules.defaultDepartment;
-        details.department = { original: '', cleaned: validationRules.defaultDepartment, status: 'corrected' };
-      }
+      // Auto-fill defaults (department is always forced to 'sales' at insert)
       if (validationRules.autoFillSource && !cleanedRow.source) {
         cleanedRow.source = validationRules.defaultSource;
         details.source = { original: '', cleaned: validationRules.defaultSource, status: 'corrected' };
@@ -687,7 +673,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         contact_type: TYPE_MAP[cleanedRow.contact_type] || cleanedRow.contact_type || 'lead',
         contact_status: STATUS_MAP[cleanedRow.contact_status] || cleanedRow.contact_status || 'new',
         temperature: RATING_MAP[cleanedRow.temperature] || cleanedRow.temperature || 'warm',
-        department: cleanedRow.department || 'sales',
+        department: 'sales', // Sales CRM — imported leads are always sales (file's department column ignored)
         platform: SOURCE_PLATFORM[cleanedRow.source] || 'other',
         gender: GENDER_MAP[cleanedRow.gender] || cleanedRow.gender || null,
         interested_in_type: PROPERTY_MAP[cleanedRow.interested_in_type] || cleanedRow.interested_in_type || null,
@@ -1379,59 +1365,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                     label={isRTL ? 'رفض الصفوف بدون ايميل صحيح' : 'Reject rows without valid email'}
                   />
 
-                  {/* Auto-fill department */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 0',
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', fontWeight: 500 }}>
-                        {isRTL ? 'ملء القسم تلقائيا' : 'Auto-fill empty department'}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {validationRules.autoFillDepartment && (
-                        <select
-                          value={validationRules.defaultDepartment}
-                          onChange={(e) => setValidationRules(p => ({ ...p, defaultDepartment: e.target.value }))}
-                          style={{
-                            fontSize: 11,
-                            padding: '4px 8px',
-                            borderRadius: 6,
-                            border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`,
-                            background: isDark ? '#1a2332' : '#fff',
-                            color: isDark ? '#e2e8f0' : '#1e293b',
-                            outline: 'none',
-                          }}
-                        >
-                          {DEPARTMENT_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>
-                          ))}
-                        </select>
-                      )}
-                      <div
-                        onClick={() => setValidationRules(p => ({ ...p, autoFillDepartment: !p.autoFillDepartment }))}
-                        style={{
-                          width: 36,
-                          height: 20,
-                          borderRadius: 10,
-                          background: validationRules.autoFillDepartment ? '#2F6BD3' : (isDark ? '#334155' : '#cbd5e1'),
-                          cursor: 'pointer',
-                          position: 'relative',
-                          transition: 'background 0.2s',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div style={{
-                          width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                          position: 'absolute', top: 2, left: validationRules.autoFillDepartment ? 18 : 2,
-                          transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                        }} />
-                      </div>
-                    </div>
-                  </div>
+                  {/* Department picker removed — this is the Sales CRM import, so
+                      every imported lead is department='sales' (forced at insert). */}
 
                   {/* Auto-fill source */}
                   <div style={{

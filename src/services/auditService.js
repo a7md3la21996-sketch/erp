@@ -137,6 +137,22 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
     return clean;
   }
 
+  // Guard entity_id — it feeds the audit_logs entity_id index and per-entity
+  // lookups (`WHERE entity_id = $1`), which only make sense for a SINGLE entity.
+  // Bulk actions (bulk_reassign, bulk_delete, batch_call, auto_distribute, …)
+  // used to cram a comma-joined id-LIST in here. That (a) bloated the index past
+  // the btree 8191-byte per-row limit — forcing a hash index — and (b) never
+  // matches a single-uuid lookup anyway. So if we get a list-shaped or oversized
+  // value, move the ids into new_data.affected_ids and keep entity_id NULL (a
+  // bulk action targets no single entity). A lone uuid (36 chars) is untouched.
+  let finalEntityId = entityId;
+  let finalNewData = newData;
+  if (typeof entityId === 'string' && (entityId.includes(',') || entityId.length > 64)) {
+    const affectedIds = entityId.split(',').map(s => s.trim()).filter(Boolean);
+    finalNewData = { ...(newData && typeof newData === 'object' ? newData : {}), affected_ids: affectedIds, affected_count: affectedIds.length };
+    finalEntityId = null;
+  }
+
   // Save to Supabase
   try {
     let userId = null;
@@ -156,10 +172,10 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
       user_name: userName || null,
       action,
       entity,
-      entity_id: entityId,
+      entity_id: finalEntityId,
       entity_name: entityName,
       old_data: stripSensitive(oldData),
-      new_data: stripSensitive(newData),
+      new_data: stripSensitive(finalNewData),
       changes,
       description,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,

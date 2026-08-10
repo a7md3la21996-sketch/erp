@@ -672,7 +672,7 @@ export default function ActivitiesPage() {
                   <div className={`flex items-center gap-3 flex-wrap mb-1 text-[12px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     {(act.entity_name || act.contact_id) && (
                       <span className={`flex items-center gap-1 font-semibold ${act.contact_id && act.contact_id !== 'null' ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content dark:text-content-dark'}`}
-                        onClick={act.contact_id && act.contact_id !== 'null' ? (e) => { e.stopPropagation(); navigate(`/contacts?highlight=${act.contact_id}`); } : undefined}
+                        onClick={act.contact_id && act.contact_id !== 'null' ? (e) => { e.stopPropagation(); navigate(`/leads?highlight=${act.contact_id}`); } : undefined}
                       >
                         <Link2 size={11} />
                         {act.entity_name || (isRTL ? 'عميل' : 'Contact')}

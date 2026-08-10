@@ -1552,7 +1552,7 @@ export default function TasksPage() {
                       })()}
                       {task.contact_name && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/contacts?highlight=${task.contact_id}` : `/contacts?q=${encodeURIComponent(task.contact_name)}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/leads?highlight=${task.contact_id}` : `/leads?q=${encodeURIComponent(task.contact_name)}`); }}
                           className="text-xs text-emerald-500 flex items-center gap-[3px] bg-transparent border-none cursor-pointer hover:underline p-0 font-inherit font-medium"
                         >
                           <Phone size={10} /> {task.contact_name}

@@ -237,7 +237,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
           <CheckCircle size={32} className="text-brand-500 opacity-40 mb-2 mx-auto" />
           <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mb-3">{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
           <div className="flex gap-2 justify-center">
-            <Link to="/contacts" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
+            <Link to="/leads" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
               {lang === 'ar' ? 'اتصل بليدز جديدة' : 'Call new leads'}
             </Link>
             <Link to="/tasks" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
@@ -264,7 +264,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
             );
           })}
           {reminders.length > 5 && (
-            <Link to="/contacts" className="mt-1 mb-0 text-xs text-brand-500 font-semibold text-center block hover:underline">
+            <Link to="/leads" className="mt-1 mb-0 text-xs text-brand-500 font-semibold text-center block hover:underline">
               {lang === 'ar' ? '+ ' + (reminders.length - 5) + ' متابعات أخرى — عرض الكل' : '+ ' + (reminders.length - 5) + ' more — View All'}
             </Link>
           )}
@@ -642,7 +642,7 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
         const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
         if (overdue > 0) a.push({ severity: 1, icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#D6403B', link: '/tasks' });
         const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
-        if (stale > 0) a.push({ severity: 2, icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#C9860A', link: '/contacts' });
+        if (stale > 0) a.push({ severity: 2, icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#C9860A', link: '/leads' });
         const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
         if (hot > 0) a.push({ severity: 3, icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#158A57', link: '/sales/deals' });
         if (a.length === 0) a.push({ severity: 4, icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#158A57' });
@@ -746,13 +746,13 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   const sections = [
     { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: stats.followups, color: '#2F6BD3', link: '/tasks' },
     { icon: AlertTriangle, label: lang === 'ar' ? 'مهام متأخرة' : 'Overdue Tasks', count: stats.overdue, color: stats.overdue > 0 ? '#D6403B' : '#158A57', link: '/tasks' },
-    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#2B4C6F', link: '/contacts' },
-    { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#C9860A', link: '/contacts' },
+    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#2B4C6F', link: '/leads' },
+    { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#C9860A', link: '/leads' },
   ];
 
   const quickActions = [
-    { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/contacts', color: '#158A57' },
-    { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/contacts?action=add', color: '#2F6BD3' },
+    { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/leads', color: '#158A57' },
+    { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/leads?action=add', color: '#2F6BD3' },
     { icon: Target, label: lang === 'ar' ? 'المهام' : 'Tasks', link: '/tasks', color: '#C9860A' },
     { icon: Activity, label: lang === 'ar' ? 'الفرص' : 'Opportunities', link: '/sales/deals', color: '#2B4C6F' },
   ];
@@ -921,7 +921,7 @@ function ActionableLeadsWidget({ lang, isRTL, profile, navigate }) {
             return (
               <div key={l.id} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] hover:bg-brand-500/[0.06] transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
-                  onClick={() => navigate(`/contacts?highlight=${l.id}`)}
+                  onClick={() => navigate(`/leads?highlight=${l.id}`)}
                   className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0"
                 >
                   <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{l.full_name || (lang === 'ar' ? 'بدون اسم' : 'No name')}</p>

@@ -1002,8 +1002,8 @@ export default function ContactsPage() {
   };
 
   const exportCSVList = (list) => {
-    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Platform','Company','Created'];
-    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.platform || '', c.company || '', c.created_at || '']);
+    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Platform','Company','Created'];
+    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.platform || '', c.company || '', c.created_at || '']);
     // Neutralize spreadsheet formula injection: a cell starting with = + - @
     // (or a leading tab/CR) is evaluated as a formula by Excel/Sheets, so a
     // contact named `=cmd|...` would execute on open. Prefix with ' to force text.
@@ -1280,7 +1280,7 @@ export default function ContactsPage() {
       // Honour the Global Filter (department / agent) so the chip counts match
       // the filtered list — exactly like loadStats does for the status chips.
       // RLS already scopes a sales_agent to their own leads.
-      const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
+      const deptFilter = activeDept; // Sales CRM — locked to 'sales'
       const agentNameFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
       const { data, error } = await supabase.rpc('get_lead_category_counts', {
         p_dept: deptFilter,
@@ -1357,7 +1357,6 @@ export default function ContactsPage() {
       const myTempFilter = smartFilters.find(f => f.field === 'my_temperature' && SELECT_OPS.includes(f.operator));
       const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && SELECT_OPS.includes(f.operator));
       const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && SELECT_OPS.includes(f.operator));
-      const deptSmartFilter = smartFilters.find(f => f.field === 'department' && f.operator === 'is');
       // Server-side text/date filters
       const nameFilter = smartFilters.find(f => f.field === 'full_name' && f.value);
       const emailFilter = smartFilters.find(f => f.field === 'email' && f.value);
@@ -1401,7 +1400,7 @@ export default function ContactsPage() {
             ) : undefined),
           showBlacklisted: showBlacklisted || undefined,
           unassigned: showUnassigned || undefined,
-          department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
+          department: activeDept, // Sales CRM — locked to 'sales' (department not switchable here)
           assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : (gfScopeNames || undefined)),
           assigned_to_name_op: agentSmartFilter?.operator,
           assigned_to_name_not: (agentSmartFilter?.operator === 'is_not' || agentSmartFilter?.operator === 'not_in') ? true : undefined,
@@ -1680,7 +1679,7 @@ export default function ContactsPage() {
   const [stats, setStats] = useState({ total: 0, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 });
   const loadStats = useCallback(async () => {
     try {
-      const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
+      const deptFilter = activeDept; // Sales CRM — locked to 'sales'
       // Resolve agent filter to UUID (RPC takes uuid, not name)
       const agentNameFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
       let agentIdFilter = null;
@@ -1826,7 +1825,7 @@ export default function ContactsPage() {
       // Always exclude deleted from bulk selection — can't operate on deleted records
       query = query.eq('is_deleted', false);
       if (showUnassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.');
-      const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
+      const deptFilter = activeDept; // Sales CRM — locked to 'sales'
       if (deptFilter) query = query.eq('department', deptFilter);
       const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
       if (agentFilter) query = query.eq('assigned_to_name', agentFilter);

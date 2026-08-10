@@ -190,7 +190,7 @@ export default function MasterProfilePage() {
           return (
             <Link
               key={r.id}
-              to={`/contacts?highlight=${r.id}`}
+              to={`/leads?highlight=${r.id}`}
               className="block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center justify-between gap-3 flex-wrap">

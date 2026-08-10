@@ -135,7 +135,7 @@ export default function MasterLeadsPage() {
   // (?highlight=<id> auto-opens that contact's drawer on load).
   // Used as the href on the owner-name link so middle-click, ⌘-click,
   // and right-click → 'Open in new tab' all work natively.
-  const leadHref = (copyId) => `/contacts?highlight=${copyId}`;
+  const leadHref = (copyId) => `/leads?highlight=${copyId}`;
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
