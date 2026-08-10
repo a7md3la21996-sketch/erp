@@ -118,7 +118,7 @@ export const GLOBAL_IDS = ['dashboard', 'activities', 'developers', 'workspace',
 // Extra route prefixes a module owns beyond its own path + children paths (some
 // pages live under a different URL than their group, e.g. Leads at /contacts).
 export const MODULE_EXTRA_PATHS = {
-  crm: ['/crm', '/contacts'],
+  crm: ['/crm', '/leads', '/contacts'],
   'real-estate': ['/real-estate'],
   sales: ['/sales', '/approvals'],
   operations: ['/operations'],
