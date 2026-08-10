@@ -9,13 +9,13 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
-  // CRM unified into ONE entry that opens the CRM Dashboard directly (no
-  // submenu). From the dashboard you reach everything: Leads (the "Total Leads"
-  // KPI + lens cards → /contacts), Master Leads (header button → /crm/master-leads),
-  // and the hidden Opportunities / Lead-Distribution deep-links. All child routes
-  // still live in App.jsx. To restore the old submenu, replace this single entry
-  // with the commented group below.
-  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
+  // CRM as a scoped module: the card lands on the CRM Dashboard, and its side
+  // menu exposes Leads (/leads). Master Leads / Opportunities / Lead-Distribution
+  // deep-links still live in App.jsx and the dashboard lens cards.
+  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CRM_DASHBOARD_PREVIEW, children: [
+    { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
+    { id: 'leads', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/leads', permission: P.CONTACTS_VIEW_OWN },
+  ]},
   // OLD CRM submenu (rollback reference):
   // { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
   //   { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
