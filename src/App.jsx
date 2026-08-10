@@ -1,6 +1,6 @@
 import { Component, Suspense, useEffect, useState } from 'react';
 import lazyRetry from './utils/lazyRetry';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -192,6 +192,17 @@ function AuthRedirect() {
   return <LoginPage />;
 }
 
+// The Leads page moved from /contacts to /leads. Keep /contacts working for old
+// links/bookmarks by redirecting while PRESERVING the query string (e.g. the
+// ?highlight= deep-links that open a specific lead's drawer).
+function ContactsToLeadsRedirect() {
+  // Preserve the query string AND location.state — the CRM dashboard navigates
+  // here with { state: { drillDown } } (Top-Performer / source drill-down), and
+  // deep-links carry ?highlight=/?action=/?q= that open a lead or a modal.
+  const { search, hash, state } = useLocation();
+  return <Navigate to={`/leads${search}${hash}`} state={state} replace />;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -224,7 +235,8 @@ export default function App() {
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
                 <Route path="/home" element={<Guarded><LauncherPage /></Guarded>} />
                 <Route path="/dashboard" element={<Guarded><DashboardPage /></Guarded>} />
-                <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
+                <Route path="/leads" element={<Guarded><ContactsPage /></Guarded>} />
+                <Route path="/contacts" element={<ContactsToLeadsRedirect />} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />

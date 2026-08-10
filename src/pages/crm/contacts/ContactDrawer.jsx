@@ -287,7 +287,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       type: 'contact',
       name: contact.full_name_en || contact.full_name || contact.full_name_ar || '',
       nameAr: contact.full_name_ar || contact.full_name || '',
-      path: `/contacts?highlight=${contact.id}`,
+      path: `/leads?highlight=${contact.id}`,
     });
     setIsFav(result.added);
   };
@@ -298,7 +298,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     if (contact.id && contact.id !== lastViewedId.current) {
       lastViewedId.current = contact.id;
       logView({ entityType: 'contact', entityId: contact.id, entityName: contact.full_name, viewer: profile });
-      addRecentItem({ type: 'contact', id: contact.id, name: contact.full_name, path: '/contacts?highlight=' + contact.id, extra: { company: contact.company, type: contact.contact_type } });
+      addRecentItem({ type: 'contact', id: contact.id, name: contact.full_name, path: '/leads?highlight=' + contact.id, extra: { company: contact.company, type: contact.contact_type } });
     }
   }, [contact.id, profile]);
 

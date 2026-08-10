@@ -7,15 +7,6 @@ import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import supabase from '../../lib/supabase';
 
-const DEPARTMENTS = [
-  { value: 'all', ar: 'كل الأقسام', en: 'All Departments' },
-  { value: 'sales', ar: 'المبيعات', en: 'Sales' },
-  { value: 'marketing', ar: 'التسويق', en: 'Marketing' },
-  { value: 'hr', ar: 'HR', en: 'HR' },
-  { value: 'finance', ar: 'المالية', en: 'Finance' },
-  { value: 'operations', ar: 'العمليات', en: 'Operations' },
-];
-
 // Module-scope so its identity is STABLE across renders. Defining it inside the
 // component made it a new component type every render, so React unmounted and
 // remounted the <select> elements on every state change — which destroyed the
@@ -34,7 +25,7 @@ export default function GlobalFilterBar() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const { profile } = useAuth();
-  const { department, setDepartment, managerId, setManagerId, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
+  const { managerId, setManagerId, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
 
   const [open, setOpen] = useState(false);
   const [agents, setAgents] = useState([]);
@@ -145,11 +136,9 @@ export default function GlobalFilterBar() {
             )}
           </div>
 
-          <Field label={isRTL ? 'القسم' : 'Department'}>
-            <select value={department} onChange={e => { setDepartment(e.target.value); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-              {DEPARTMENTS.map(d => <option key={d.value} value={d.value}>{isRTL ? d.ar : d.en}</option>)}
-            </select>
-          </Field>
+          {/* Department selector removed — the system is a single-department
+              (Sales) CRM, so filtering by department is no longer meaningful.
+              `department` stays 'all' in the context. */}
 
           {managers.length > 0 && (
             <Field label={isRTL ? 'المدير' : 'Manager'}>

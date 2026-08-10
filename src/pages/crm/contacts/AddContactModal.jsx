@@ -193,7 +193,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
     contact_type: '', source: 'facebook', platform: 'meta', campaign_name: '',
     budget_min: '', budget_max: '', preferred_location: '',
-    interested_in_type: '', notes: '', department: '',
+    interested_in_type: '', notes: '', department: 'sales',
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
     countryCode: '+20',
     country: 'EG',
@@ -205,6 +205,13 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Department is fixed to 'sales' (Sales CRM add-lead) — default the type to the
+  // first sales lead type once the type config is available.
+  useEffect(() => {
+    const t = (DEPT_TYPES.sales || [])[0];
+    if (t) setForm(f => (f.contact_type ? f : { ...f, contact_type: t }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactTypes]);
   const savingRef = useRef(false); // sync guard against double-submit (state updates are async)
   const [savedContact, setSavedContact] = useState(null);
   const [errors, setErrors] = useState({});
@@ -263,11 +270,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     if (phone.startsWith('09')) return lookup('IQ');
     return null;
   };
-  const setDept = (dept) => {
-    const types = DEPT_TYPES[dept] || [];
-    setForm(f => ({ ...f, department: dept, contact_type: types[0] || '' }));
-  };
-  const availableTypes = DEPT_TYPES[form.department] || [];
+  const availableTypes = DEPT_TYPES.sales || [];
 
   const checkPhoneNumber = (phone) => {
     if (!phone || !validatePhone(phone)) return;
@@ -294,12 +297,12 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const handleSave = async () => {
     if (savingRef.current) return; // prevent double-submit (sync check — state updates are async)
     const errs = {};
-    if (!form.department) errs.department = isRTL ? 'يرجى اختيار القسم' : 'Please select a department';
+    // department is fixed to 'sales' (Sales CRM) — no picker, so no validation
     if (!form.contact_type) errs.contact_type = isRTL ? 'يرجى اختيار نوع العميل' : 'Please select lead type';
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!fullPhone || !validatePhone(fullPhone)) errs.phone = isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number';
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format';
-    if (Object.keys(errs).length) { setErrors(errs); if (errs.department || errs.contact_type || errs.phone) setStep(1); return; }
+    if (Object.keys(errs).length) { setErrors(errs); if (errs.contact_type || errs.phone) setStep(1); return; }
     setErrors({});
     const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCountryCodes[i] || form.countryCode)));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
@@ -408,23 +411,12 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               )}
 
-              {/* القسم والنوع */}
-              <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
-                <Select value={form.department} onChange={e => { setDept(e.target.value); setErrors(p => ({ ...p, department: '' })); }} style={errors.department ? { border: '1.5px solid #D6403B' } : {}}>
-                  <option value="">{isRTL ? 'اختر القسم...' : 'Select department...'}</option>
-                  <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
-                  <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
-                  <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
-                  <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
-                  <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-                </Select>
-                {errors.department && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.department}</span>}
-              </div>
+              {/* Type — this is the Sales CRM add-lead form, so the department is
+                  fixed to 'sales' (no department picker) and only sales lead types
+                  are offered. */}
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'النوع' : 'Type'} <span className="text-red-500">*</span></label>
-                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department} style={errors.contact_type ? { border: '1.5px solid #D6403B' } : {}}>
-                  {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
+                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} style={errors.contact_type ? { border: '1.5px solid #D6403B' } : {}}>
                   {availableTypes.map(t => { const ct = (contactTypes || []).find(c => c.key === t); return <option key={t} value={t}>{ct ? (isRTL ? ct.label_ar : ct.label_en) : t}</option>; })}
                 </Select>
                 {errors.contact_type && <span style={{ color: '#D6403B', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact_type}</span>}
@@ -584,49 +576,10 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               )}
               </>)}
-              {form.department !== 'sales' && (<>
-              <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
-                <Input placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
-                <Input placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
-              </div>
-              </>)}
 
             </div>
           ) : (
             <div className="modal-grid grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {form.department !== 'sales' && (
-                <>
-                <div>
-                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنس' : 'Gender'}</label>
-                  <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
-                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                    <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
-                    <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنسية' : 'Nationality'}</label>
-                  <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
-                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                    <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
-                    <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
-                    <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
-                    <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
-                    <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
-                    <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
-                    <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
-                  </Select>
-                </div>
-                <div className="col-span-full">
-                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
-                  <Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
-                </div>
-                </>
-              )}
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
@@ -676,7 +629,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
           <div className="flex gap-2.5">
             {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
-              ? (() => { const canNext = form.department && form.contact_type && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
+              ? (() => { const canNext = form.contact_type && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
               : <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
             }
           </div>

@@ -48,7 +48,7 @@ const ENTITY_CONFIG = {
     color: '#2F6BD3',
     label: { ar: 'جهات الاتصال', en: 'Contacts' },
     labelSingle: { ar: 'جهة اتصال', en: 'Contact' },
-    path: '/contacts',
+    path: '/leads',
   },
   opportunity: {
     icon: Target,
@@ -468,7 +468,7 @@ export default function GlobalSearch({ onClose }) {
     if (item.type === 'page') {
       navigate(item.path);
     } else if (item.type === 'contact') {
-      navigate(`/contacts?highlight=${item.data?.id}`);
+      navigate(`/leads?highlight=${item.data?.id}`);
     } else if (cfg) {
       navigate(cfg.path);
     }

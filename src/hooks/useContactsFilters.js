@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { applySmartFilters } from '../components/ui';
 import { SOURCE_LABELS, SOURCE_EN, COUNTRY_CODES } from '../pages/crm/contacts/constants';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { getDeptView, ALL_DEPT_VIEW } from '../config/departmentViews';
+import { getDeptView } from '../config/departmentViews';
 import { withAgentView, profileName } from '../utils/contactView';
 
 const detectCountry = (phone) => {
@@ -31,8 +31,12 @@ const COUNTRY_OPTIONS = COUNTRY_CODES
 
 export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1, allAgentNames, profile }) {
   const globalFilter = useGlobalFilter();
-  const activeDept = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
-  const deptView = activeDept ? getDeptView(activeDept) : ALL_DEPT_VIEW;
+  // This page IS the Sales CRM lead list — scoped to the sales department at the
+  // root, not a universal all-departments contacts aggregator. The department is
+  // locked to 'sales'; the Global Filter's department dimension no longer swaps
+  // the view (team/agent/date scoping still applies).
+  const activeDept = 'sales';
+  const deptView = getDeptView('sales');
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   useEffect(() => {

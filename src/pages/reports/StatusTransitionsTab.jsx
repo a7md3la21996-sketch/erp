@@ -203,7 +203,7 @@ export default function StatusTransitionsTab({ lang, isRTL }) {
               <tr><td colSpan={4} className="text-center py-10 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد تحويلات في هذه الفترة' : 'No transitions in this range'}</td></tr>
             ) : rows.map((r, i) => (
               <tr key={i}
-                onClick={() => r.contact_id && navigate(`/contacts?highlight=${r.contact_id}`)}
+                onClick={() => r.contact_id && navigate(`/leads?highlight=${r.contact_id}`)}
                 className="border-t border-edge/50 dark:border-edge-dark/50 hover:bg-surface-bg dark:hover:bg-brand-500/[0.04] cursor-pointer">
                 <td className="px-4 py-2.5 text-xs font-semibold text-brand-500 hover:underline">{r.lead_name || '—'}</td>
                 <td className="px-4 py-2.5">

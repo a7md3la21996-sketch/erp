@@ -188,7 +188,7 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
               </p>
               <div
                 className={`flex items-center gap-2 ${activity.contact_id && activity.contact_id !== 'null' ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content dark:text-content-dark'}`}
-                onClick={activity.contact_id && activity.contact_id !== 'null' ? () => { onClose(); navigate(`/contacts?highlight=${activity.contact_id}`); } : undefined}
+                onClick={activity.contact_id && activity.contact_id !== 'null' ? () => { onClose(); navigate(`/leads?highlight=${activity.contact_id}`); } : undefined}
               >
                 <Link2 size={14} />
                 <span className="text-sm font-semibold">{activity.entity_name}</span>

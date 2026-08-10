@@ -1,7 +1,8 @@
 /**
- * Department-specific view configurations for ContactsPage.
- * Each department sees different columns, filters, sort options, and actions
- * while sharing the same underlying ContactsPage component.
+ * View configuration for the Sales CRM Leads page (ContactsPage).
+ * The system is a single-department (Sales) CRM, so only the sales view exists.
+ * (Legacy hr/finance/marketing/operations views + ALL_DEPT_VIEW were removed
+ * once the Leads page was locked to the sales department.)
  */
 
 export const DEPT_VIEWS = {
@@ -29,88 +30,9 @@ export const DEPT_VIEWS = {
     // Default sort
     defaultSort: 'last_activity',
   },
-
-  hr: {
-    label_ar: 'الموارد البشرية',
-    label_en: 'HR',
-    columns: ['contact', 'phone', 'job_title', 'contact_status', 'source_date', 'next_action', 'actions'],
-    smartFilterIds: [
-      'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', '_country', 'assigned_to_name',
-    ],
-    contactTypes: ['applicant'],
-    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
-    sortIds: ['created', 'name', 'last_activity'],
-    menuActions: ['edit', 'reminder', 'delete'],
-    rowActions: ['call', 'whatsapp', 'pin'],
-    defaultSort: 'created',
-  },
-
-  finance: {
-    label_ar: 'المالية',
-    label_en: 'Finance',
-    columns: ['contact', 'phone', 'company', 'contact_status', 'source_date', 'next_action', 'actions'],
-    smartFilterIds: [
-      'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', '_country', 'assigned_to_name',
-    ],
-    contactTypes: ['supplier', 'partner'],
-    statusOptions: ['new', 'following', 'has_opportunity', 'contacted'],
-    sortIds: ['created', 'name', 'last_activity'],
-    menuActions: ['edit', 'reminder', 'export', 'delete'],
-    rowActions: ['call', 'whatsapp', 'pin'],
-    defaultSort: 'created',
-  },
-
-  marketing: {
-    label_ar: 'التسويق',
-    label_en: 'Marketing',
-    columns: ['contact', 'phone', 'source_date', 'lead_score', 'last_feedback', 'next_action', 'actions'],
-    smartFilterIds: [
-      'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
-      '_campaign_count', '_meeting',
-    ],
-    contactTypes: ['lead', 'cold'],
-    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
-    sortIds: ['created', 'created_asc', 'next_follow_up', 'next_follow_up_desc', 'last_activity', 'updated', 'score', 'name'],
-    menuActions: ['edit', 'logCall', 'reminder', 'export'],
-    rowActions: ['call', 'whatsapp', 'quickAction', 'pin'],
-    defaultSort: 'last_activity',
-  },
-
-  operations: {
-    label_ar: 'العمليات',
-    label_en: 'Operations',
-    columns: ['contact', 'phone', 'company', 'assigned_to', 'contact_status', 'source_date', 'next_action', 'actions'],
-    smartFilterIds: [
-      'prefix', 'contact_type', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', '_country', 'assigned_to_name',
-    ],
-    contactTypes: ['partner', 'supplier'],
-    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
-    sortIds: ['created', 'name', 'last_activity'],
-    menuActions: ['edit', 'logCall', 'reminder', 'export', 'delete'],
-    rowActions: ['call', 'whatsapp', 'quickAction', 'pin'],
-    defaultSort: 'created',
-  },
 };
 
-/** Get the active department view config. Falls back to sales. */
-export function getDeptView(dept) {
-  return DEPT_VIEWS[dept] || DEPT_VIEWS.sales;
+/** Get the active department view config. Always the sales view. */
+export function getDeptView() {
+  return DEPT_VIEWS.sales;
 }
-
-/** Default view when no department is selected (shows everything) */
-export const ALL_DEPT_VIEW = {
-  label_ar: 'الكل',
-  label_en: 'All',
-  columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'],
-  smartFilterIds: null, // null = show all
-  contactTypes: null,   // null = show all
-  statusOptions: null,
-  sortIds: null,
-  menuActions: null,
-  rowActions: null,
-  defaultSort: 'created',
-};

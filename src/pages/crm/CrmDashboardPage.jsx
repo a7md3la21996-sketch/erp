@@ -191,7 +191,7 @@ export default function CrmDashboardPage() {
       scopeParam = `agents=${encodeURIComponent(viewScope.memberNames.join('|'))}`;
     }
     const parts = [qs, scopeParam].filter(Boolean);
-    return parts.length ? `/contacts?${parts.join('&')}` : '/contacts';
+    return parts.length ? `/leads?${parts.join('&')}` : '/leads';
   };
 
   // Add Lead straight from the dashboard (the same modal the Leads page uses).
@@ -205,8 +205,8 @@ export default function CrmDashboardPage() {
   // The scope "view as" selector stays in-page (it's a dropdown, not a button).
   usePageActions([
     { id: 'add-lead', icon: Plus, labelAr: 'عميل جديد', labelEn: 'Add Lead', primary: true, onClick: () => setShowAddLead(true) },
-    { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', onClick: () => navigate('/contacts?action=import') },
-    { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', onClick: () => navigate('/contacts?action=export') },
+    { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', onClick: () => navigate('/leads?action=import') },
+    { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', onClick: () => navigate('/leads?action=export') },
     { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
     { id: 'refresh', icon: RefreshCw, labelAr: 'تحديث', labelEn: 'Refresh', onClick: () => setRefreshKey(k => k + 1) },
   ], [isRTL]);
@@ -673,7 +673,7 @@ export default function CrmDashboardPage() {
     e.preventDefault();
     const trimmed = searchInput.trim();
     if (!trimmed) return;
-    navigate(`/contacts?q=${encodeURIComponent(trimmed)}`);
+    navigate(`/leads?q=${encodeURIComponent(trimmed)}`);
   };
 
   // Section-tab visibility helper — applies on every screen size now.
@@ -956,7 +956,7 @@ export default function CrmDashboardPage() {
               sub={isRTL ? '0-7 أيام' : '0–7 days'}
               count={agingBuckets.fresh}
               tone="emerald"
-              to={`/contacts?from=${isoDaysAgo(7)}`}
+              to={`/leads?from=${isoDaysAgo(7)}`}
               title={isRTL ? 'عملاء أُضيفوا خلال آخر 7 أيام' : 'Leads created in the last 7 days'}
             />
             <AgingBucket
@@ -964,7 +964,7 @@ export default function CrmDashboardPage() {
               sub={isRTL ? '7-30 يوم' : '7–30 days'}
               count={agingBuckets.aging}
               tone="amber"
-              to={`/contacts?from=${isoDaysAgo(30)}&to=${isoDaysAgo(7)}`}
+              to={`/leads?from=${isoDaysAgo(30)}&to=${isoDaysAgo(7)}`}
               title={isRTL ? 'عملاء بين 7 و 30 يوم' : 'Leads between 7 and 30 days old'}
             />
             <AgingBucket
@@ -972,7 +972,7 @@ export default function CrmDashboardPage() {
               sub={isRTL ? '30+ يوم' : '30+ days'}
               count={agingBuckets.old}
               tone="red"
-              to={`/contacts?to=${isoDaysAgo(30)}`}
+              to={`/leads?to=${isoDaysAgo(30)}`}
               title={isRTL ? 'عملاء أقدم من 30 يوم بدون إغلاق' : 'Leads older than 30 days, not closed'}
             />
           </div>
@@ -989,7 +989,7 @@ export default function CrmDashboardPage() {
               label={isRTL ? 'عملاء' : 'Leads'}
               value={funnelData.leads}
               tone="brand"
-              to={`/contacts?from=${isoMonthStart()}`}
+              to={`/leads?from=${isoMonthStart()}`}
               title={isRTL ? 'عملاء جدد منذ بداية الشهر' : 'New leads since the start of the month'}
             />
             <FunnelStep
@@ -1033,7 +1033,7 @@ export default function CrmDashboardPage() {
               primary: t.title,
               secondary: t.contact_name || (isRTL ? 'بدون عميل' : 'No contact'),
               meta: t.priority,
-              to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
+              to: t.contact_id ? `/leads?highlight=${t.contact_id}` : '/tasks',
             })}
             emptyMessage={isRTL ? 'لا توجد مهام اليوم — استمتع!' : 'No tasks today — enjoy!'}
           />
@@ -1044,7 +1044,7 @@ export default function CrmDashboardPage() {
               primary: t.title,
               secondary: t.due_date ? formatDate(t.due_date) : null,
               meta: t.priority,
-              to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
+              to: t.contact_id ? `/leads?highlight=${t.contact_id}` : '/tasks',
               flag: 'red',
             })}
             emptyMessage={isRTL ? 'لا توجد مهام متأخرة' : 'Nothing overdue'}
@@ -1056,7 +1056,7 @@ export default function CrmDashboardPage() {
               primary: c.full_name || c.phone,
               secondary: c.last_activity_at ? `${daysSince(c.last_activity_at)} ${isRTL ? 'يوم' : 'd ago'}` : (isRTL ? 'لا يوجد نشاط' : 'No activity'),
               meta: c.contact_status,
-              to: `/contacts?highlight=${c.id}`,
+              to: `/leads?highlight=${c.id}`,
             })}
             emptyMessage={isRTL ? 'كل العملاء تتم متابعتهم' : 'Every lead is being followed up'}
           />
@@ -1075,7 +1075,7 @@ export default function CrmDashboardPage() {
               primary: t.title,
               secondary: [t.contact_name, t.due_date ? formatDate(t.due_date) : null].filter(Boolean).join(' • '),
               meta: t.priority,
-              to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
+              to: t.contact_id ? `/leads?highlight=${t.contact_id}` : '/tasks',
             })}
             emptyMessage={isRTL ? 'لا يوجد قادم' : 'Nothing upcoming'}
           />
@@ -1179,7 +1179,7 @@ export default function CrmDashboardPage() {
               return (
                 <li key={a.id}>
                   {a.contact_id
-                    ? <Link to={`/contacts?highlight=${a.contact_id}`} className="no-underline block">{node}</Link>
+                    ? <Link to={`/leads?highlight=${a.contact_id}`} className="no-underline block">{node}</Link>
                     : node}
                 </li>
               );
@@ -1215,7 +1215,7 @@ export default function CrmDashboardPage() {
                       key={p.id}
                       className={`border-b border-edge/30 dark:border-edge-dark/30 ${canDrill ? 'cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark' : ''}`}
                       onClick={canDrill
-                        ? () => navigate('/contacts', { state: { drillDown: { field: 'assigned_to_name', value: p.name } } })
+                        ? () => navigate('/leads', { state: { drillDown: { field: 'assigned_to_name', value: p.name } } })
                         : undefined}
                       title={canDrill ? (isRTL ? `عرض عملاء ${p.name}` : `View leads assigned to ${p.name}`) : undefined}
                     >
@@ -1281,7 +1281,7 @@ export default function CrmDashboardPage() {
                   <tr
                     key={s.source}
                     className="border-b border-edge/30 dark:border-edge-dark/30 cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark"
-                    onClick={() => navigate('/contacts', { state: { drillDown: { field: 'source', value: s.source } } })}
+                    onClick={() => navigate('/leads', { state: { drillDown: { field: 'source', value: s.source } } })}
                     title={isRTL ? `عرض عملاء من مصدر ${s.source}` : `View leads from ${s.source}`}
                   >
                     <td className="py-2 px-3 font-medium text-content dark:text-content-dark">{humanizeKey(s.source)}</td>
@@ -1976,7 +1976,7 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
           <div key={l.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-bg dark:hover:bg-white/[0.04] transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
             <span className="w-4 text-center text-[11px] font-bold text-content-muted/70 dark:text-content-muted-dark/70 shrink-0 tabular-nums">{i + 1}</span>
             <span className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-[11px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-300">{leadInitials(l.full_name)}</span>
-            <button onClick={() => navigate(`/contacts?highlight=${l.id}`)} className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0">
+            <button onClick={() => navigate(`/leads?highlight=${l.id}`)} className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0">
               <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark truncate">{l.full_name || (isRTL ? 'بدون اسم' : 'No name')}</p>
               <span className="inline-flex items-center gap-1.5 mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: hot ? '#DD6327' : '#158A57', backgroundColor: hot ? 'rgba(221,99,39,.11)' : 'rgba(21,138,87,.10)' }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hot ? '#DD6327' : '#158A57' }} />
@@ -1985,7 +1985,7 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
             </button>
             {l.phone && <span className="hidden md:inline text-[11px] text-content-muted dark:text-content-muted-dark tabular-nums shrink-0 opacity-80" dir="ltr">{l.phone}</span>}
             <span className="flex gap-1.5 shrink-0">
-              <button onClick={() => navigate(`/contacts?quicklog=${l.id}`)} title={isRTL ? 'سجّل نشاط' : 'Log activity'} className="w-8 h-8 rounded-lg flex items-center justify-center border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:bg-brand-500 hover:text-white hover:border-brand-500 transition-colors cursor-pointer"><Zap size={13} /></button>
+              <button onClick={() => navigate(`/leads?quicklog=${l.id}`)} title={isRTL ? 'سجّل نشاط' : 'Log activity'} className="w-8 h-8 rounded-lg flex items-center justify-center border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:bg-brand-500 hover:text-white hover:border-brand-500 transition-colors cursor-pointer"><Zap size={13} /></button>
               {tel && (<>
                 <a href={`tel:${tel}`} title={isRTL ? 'اتصل' : 'Call'} className="w-8 h-8 rounded-lg flex items-center justify-center border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-colors no-underline"><Phone size={13} /></a>
                 <a href={`https://wa.me/${tel.replace(/^\+/, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="w-8 h-8 rounded-lg flex items-center justify-center border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors no-underline"><MessageCircle size={13} /></a>
@@ -2044,7 +2044,7 @@ function NeedACallWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
         return (
           <div key={l.id} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-bg dark:hover:bg-white/[0.04] transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
             <span className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-[11px] font-bold bg-amber-500/12 text-amber-600 dark:text-amber-400">{leadInitials(l.full_name)}</span>
-            <button onClick={() => navigate(`/contacts?highlight=${l.id}`)} className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0">
+            <button onClick={() => navigate(`/leads?highlight=${l.id}`)} className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0">
               <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark truncate">{l.full_name || (isRTL ? 'بدون اسم' : 'No name')}</p>
               <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{days == null ? (isRTL ? 'لا نشاط مسجّل' : 'No activity recorded') : (isRTL ? `آخر نشاط من ${days} يوم` : `${days}d since last activity`)}</p>
             </button>

@@ -66,7 +66,7 @@ function analyzeInactiveContacts(contacts, activities) {
         description_en: `Last activity was ${days} days ago. Consider reaching out.`,
         action_label_ar: 'عرض العميل',
         action_label_en: 'View Contact',
-        action_path: '/contacts',
+        action_path: '/leads',
         entity: 'contact',
         entity_id: c.id,
       }));
@@ -148,7 +148,7 @@ function analyzeHotLeads(contacts, activities) {
         description_en: `Contact marked "hot" with no activity for ${days === Infinity ? '?' : days} days.`,
         action_label_ar: 'متابعة العميل',
         action_label_en: 'Follow Up',
-        action_path: '/contacts',
+        action_path: '/leads',
         entity: 'contact',
         entity_id: c.id,
       }));
@@ -229,7 +229,7 @@ function analyzeNoFollowUp(contacts, activities) {
         description_en: `Recent activity exists but no next follow-up date is set.`,
         action_label_ar: 'جدولة متابعة',
         action_label_en: 'Schedule Follow-up',
-        action_path: '/contacts',
+        action_path: '/leads',
         entity: 'contact',
         entity_id: c.id,
       }));

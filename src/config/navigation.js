@@ -19,7 +19,7 @@ export const NAV_ITEMS = [
   // OLD CRM submenu (rollback reference):
   // { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
   //   { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
-  //   { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
+  //   { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/leads', permission: P.CONTACTS_VIEW_OWN },
   //   { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
   //   { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
   //   { id: 'master-leads', label: { ar: 'Master Leads', en: 'Master Leads' }, path: '/crm/master-leads', permission: P.POOL_SETTINGS },

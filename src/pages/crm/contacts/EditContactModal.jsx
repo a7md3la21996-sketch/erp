@@ -233,22 +233,13 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
             </div>
           </div>
 
-          {/* النوع والقسم */}
+          {/* Type + Lead Category — department picker removed (Sales CRM: every
+              lead is department='sales', kept as-is on save). */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
               <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                 {typeOptions.map(t => <option key={t} value={t}>{getTypeLabel(t)}</option>)}
-              </Select>
-            </div>
-            <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القسم' : 'Department'}</label>
-              <Select value={form.department} onChange={e => set('department', e.target.value)}>
-                <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
-                <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
-                <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
-                <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
-                <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
               </Select>
             </div>
             <div>
