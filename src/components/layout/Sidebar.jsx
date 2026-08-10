@@ -3,8 +3,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { NAV_ITEMS, ROLE_NAV_GROUPS } from '../../config/navigation';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings } from 'lucide-react';
+import { NAV_ITEMS, ROLE_NAV_GROUPS, MODULE_IDS, GLOBAL_IDS, findModuleId } from '../../config/navigation';
+import { P } from '../../config/roles';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 import { getEmailStats } from '../../services/emailService';
@@ -131,6 +132,21 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     if (roleGroups && !roleGroups.includes(item.id)) return false;
     return true;
   });
+  // Module scoping: derive the active workspace from the URL. Inside a module the
+  // sidebar shows ONLY that module; on the home launcher / global pages it shows
+  // the cross-cutting items. This keeps each world focused (no clutter).
+  const activeModuleId = findModuleId(location.pathname);
+  const moduleItem = visibleItems.find(i => i.id === activeModuleId && MODULE_IDS.includes(i.id));
+  const inModule = !!moduleItem;
+  const navList = inModule ? [moduleItem] : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
+  // Cross-cutting shortcuts pinned in the footer — reachable from any workspace.
+  const globalQuick = [
+    { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'الرئيسية', en: 'Home' }, perm: P.DASHBOARD },
+    { id: 'g-tasks', to: '/tasks', Icon: CheckSquare, label: { ar: 'المهام', en: 'Tasks' }, perm: P.TASKS_VIEW_OWN },
+    { id: 'g-notif', to: '/notifications', Icon: Bell, label: { ar: 'الإشعارات', en: 'Notifications' }, perm: P.DASHBOARD, badge: annUnread },
+    { id: 'g-chat', to: '/chat', Icon: MessageSquare, label: { ar: 'المحادثات', en: 'Chat' }, perm: P.CHAT_USE, badge: emailUnread },
+    { id: 'g-help', to: '/help', Icon: HelpCircle, label: { ar: 'المساعدة', en: 'Help' }, perm: P.DASHBOARD },
+  ].filter(g => hasPermission(g.perm));
   const hasChild = (item, childId) => item.children?.some(c => c.id === childId);
   const getBadgeCount = (item) => {
     let count = 0;
@@ -246,7 +262,19 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               }} />
             </div>
           )}
-          {visibleItems.map(item => {
+          {/* Back to the workspace launcher (only while inside a module) */}
+          {inModule && (
+            <Link
+              to="/home"
+              onClick={handleNavClick}
+              title={!(!collapsed || mobileOpen) ? (isRTL ? 'كل المساحات' : 'All workspaces') : undefined}
+              className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} ${(!collapsed || mobileOpen) ? '' : 'justify-center'} gap-2.5 py-2 px-3 mb-2 rounded-lg no-underline text-[12.5px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+            >
+              <LayoutGrid size={17} className="shrink-0" />
+              {(!collapsed || mobileOpen) && <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>}
+            </Link>
+          )}
+          {navList.map(item => {
             const Icon = item.icon;
             const hasChildren = item.children?.length > 0;
             const isOpen = openMenus[item.id] || isParentActive(item);
@@ -359,6 +387,29 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
           flexShrink: 0,
         }}>
+          {/* Global shortcuts — always reachable from any workspace */}
+          {globalQuick.length > 0 && (
+            <div className={`flex ${collapsed ? 'flex-col items-center' : 'items-center justify-between'} gap-1 mb-2 pb-2 border-b border-edge dark:border-edge-dark`}>
+              {globalQuick.map(g => {
+                const gActive = location.pathname === g.to || location.pathname.startsWith(g.to + '/');
+                return (
+                  <Link
+                    key={g.id}
+                    to={g.to}
+                    onClick={handleNavClick}
+                    title={g.label[lang]}
+                    aria-label={g.label[lang]}
+                    className={`relative flex items-center justify-center w-9 h-9 rounded-lg no-underline transition-colors ${gActive ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                  >
+                    <g.Icon size={18} />
+                    {g.badge > 0 && (
+                      <span style={{ position: 'absolute', top: 2, [isRTL ? 'left' : 'right']: 2, minWidth: 8, height: 8, borderRadius: 8, background: '#D6403B' }} />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
           {/* Settings shortcut */}
           <Link
             to="/settings"

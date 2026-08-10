@@ -102,6 +102,64 @@ export const NAV_ITEMS = [
   ]},
 ];
 
+// ── Module-scoped navigation ────────────────────────────────────────────────
+// The app is organised as focused "workspaces". The home launcher (/home) shows
+// these as entry cards, and the sidebar scopes to ONE module at a time (derived
+// from the URL) so you only ever see what belongs to the world you're in.
+//
+// MODULE_IDS  = top-level groups that act as full workspaces (shown as cards +
+//               the sidebar scopes to them).
+// GLOBAL_IDS  = cross-cutting things reachable from anywhere (dashboard, tasks,
+//               chat, help…). They never "capture" the sidebar; they stay in the
+//               global list / footer.
+export const MODULE_IDS = ['crm', 'real-estate', 'sales', 'operations', 'marketing', 'hr', 'finance', 'reports'];
+export const GLOBAL_IDS = ['dashboard', 'activities', 'developers', 'workspace', 'communication', 'help-center', 'changelog'];
+
+// Extra route prefixes a module owns beyond its own path + children paths (some
+// pages live under a different URL than their group, e.g. Leads at /contacts).
+export const MODULE_EXTRA_PATHS = {
+  crm: ['/crm', '/contacts'],
+  'real-estate': ['/real-estate'],
+  sales: ['/sales', '/approvals'],
+  operations: ['/operations'],
+  marketing: ['/marketing'],
+  hr: ['/hr', '/manager'],
+  finance: ['/finance'],
+  reports: ['/reports'],
+};
+
+// Every path a top-level item owns (own path + children + declared extras).
+function ownedPaths(item) {
+  const paths = [];
+  if (item.path) paths.push(item.path);
+  (item.children || []).forEach(c => { if (c.path) paths.push(c.path); });
+  (MODULE_EXTRA_PATHS[item.id] || []).forEach(p => paths.push(p));
+  return paths;
+}
+
+// Which top-level module does a pathname belong to? Longest-prefix wins so
+// /real-estate/developers resolves to 'developers' over 'real-estate'.
+export function findModuleId(pathname) {
+  let bestId = null, bestLen = -1;
+  for (const item of NAV_ITEMS) {
+    for (const p of ownedPaths(item)) {
+      if ((pathname === p || pathname.startsWith(p + '/')) && p.length > bestLen) {
+        bestLen = p.length;
+        bestId = item.id;
+      }
+    }
+  }
+  return bestId;
+}
+
+// The route a module card opens: the group's own page, else its first
+// permitted child.
+export function moduleLandingPath(item, hasPermission) {
+  if (item.path) return item.path;
+  const child = (item.children || []).find(c => c.path && (!c.permission || !hasPermission || hasPermission(c.permission)));
+  return child ? child.path : '/home';
+}
+
 /**
  * Role-based sidebar: only show these nav group IDs for each role.
  * If a role is not listed, all permitted items are shown (admin default).
