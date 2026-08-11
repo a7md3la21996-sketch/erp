@@ -16,7 +16,6 @@ import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportBut
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { useToast } from '../contexts/ToastContext';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import ActivityDrawer from './ActivityDrawer';
 import ContactSearch from './crm/opportunities/ContactSearch';
 
@@ -231,100 +230,50 @@ export default function ActivitiesPage() {
     search: search || undefined,
   }), [profile?.role, profile?.id, profile?.team_id, serverFilters, globalFilter?.department, globalFilter?.agentName, search]);
 
-  const loadActivities = useCallback(async (pg) => {
+  const loadActivities = useCallback(async (pg, opts = {}) => {
     if (!profile?.id) return; // Don't load without profile
-    setLoading(true);
+    // opts.quiet = background refresh (the 30s tick): don't touch the loading UI
+    // so the table doesn't dim/flash; just swap the data in place.
+    if (!opts.quiet) setLoading(true);
     try {
       const currentPage = pg || page || 1;
       const result = await fetchActivities({ ...baseQueryArgs, page: currentPage, pageSize });
       setActivities(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch {
-      setActivities([]);
+      if (!opts.quiet) setActivities([]);
     } finally {
-      setLoading(false);
+      if (!opts.quiet) setLoading(false);
       setHasLoadedOnce(true);
     }
   }, [page, pageSize, profile?.id, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadActivities(); }, [profile, loadActivities]);
 
-  // Realtime — view-aware. The generic applyRealtimePayload prepended every
-  // INSERT regardless of role/filter, so sales_agent would see other agents'
-  // rows pop in and admins on a typed filter would see off-type rows. We hold
-  // current filters in a ref so the subscription identity stays stable (no
-  // re-subscribe on every chip toggle).
-  const rtRef = useRef({});
-  rtRef.current = { profile, serverFilters, globalFilter, search };
-
-  useRealtimeSubscription('activities', useCallback((payload) => {
-    if (!payload?.eventType) return;
-    const { profile: p, serverFilters: sf, globalFilter: gf, search: sx } = rtRef.current;
-
-    // Predicate: does this row belong in the current view?
-    const matchesView = (row) => {
-      if (!row) return false;
-      // Sales agent only ever sees their own activities (RLS enforces it
-      // server-side, but realtime publications can leak so guard here too).
-      if (p?.role === 'sales_agent' && p?.id && row.user_id !== p.id) return false;
-      if (sf?.type && row.type !== sf.type) return false;
-      if (sf?.dept && row.dept !== sf.dept) return false;
-      if (sf?.result && row.result !== sf.result) return false;
-      if (sf?.agentId && row.user_id !== sf.agentId) return false;
-      if (gf?.department && gf.department !== 'all' && row.dept !== gf.department) return false;
-      if (sf?.dateFrom) {
-        const created = row.created_at ? new Date(row.created_at).getTime() : 0;
-        const from = new Date(sf.dateFrom).getTime();
-        if (created < from) return false;
-      }
-      if (sf?.dateTo) {
-        const created = row.created_at ? new Date(row.created_at).getTime() : 0;
-        const to = new Date(sf.dateTo).getTime();
-        if (created > to) return false;
-      }
-      if (sx) {
-        // Notes search is the only client-side text dimension; cheap check.
-        const q = sx.toLowerCase();
-        const hit = (row.notes || '').toLowerCase().includes(q)
-          || (row.entity_name || '').toLowerCase().includes(q);
-        if (!hit) return false;
-      }
-      return true;
+  // Quiet periodic refresh — replaces a realtime firehose. Subscribing to
+  // postgres_changes on `activities` (the highest-write table — every call/
+  // whatsapp/status logs a row) streamed EVERY org-wide activity to the tab;
+  // matchesView filtered them, but a broad admin/manager view still prepended
+  // matched INSERTs without bound, growing memory until the tab white-screened
+  // (a plain F5 fixed it). Instead re-fetch the CURRENT page every 30s while the
+  // tab is visible (bounded, respects the active filters/scope via the loader
+  // ref), plus once on regaining focus, paused while hidden.
+  const loadActivitiesRef = useRef(loadActivities);
+  loadActivitiesRef.current = loadActivities;
+  useEffect(() => {
+    let timer = null;
+    const refresh = () => loadActivitiesRef.current(undefined, { quiet: true });
+    const tick = () => { if (document.visibilityState === 'visible') refresh(); };
+    const start = () => { if (!timer) timer = setInterval(tick, 30000); };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { refresh(); start(); }
+      else stop();
     };
-
-    setActivities(prev => {
-      if (payload.eventType === 'DELETE') return prev.filter(a => a.id !== payload.old?.id);
-      if (payload.eventType === 'INSERT') {
-        if (!matchesView(payload.new)) return prev;
-        if (prev.some(a => a.id === payload.new.id)) return prev;
-        return [payload.new, ...prev];
-      }
-      if (payload.eventType === 'UPDATE') {
-        const exists = prev.some(a => a.id === payload.new?.id);
-        if (exists) return prev.map(a => a.id === payload.new.id ? { ...a, ...payload.new } : a);
-        return matchesView(payload.new) ? [payload.new, ...prev] : prev;
-      }
-      return prev;
-    });
-
-    // Realtime payload has no entity_name (the batch contact-name resolve
-    // runs only post-fetch in activitiesService). Hydrate it inline so the
-    // newly-prepended row shows the real lead name instead of "Contact".
-    if (payload.eventType === 'INSERT'
-        && payload.new?.entity_type === 'contact'
-        && payload.new?.entity_id
-        && !payload.new?.entity_name) {
-      supabase
-        .from('contacts')
-        .select('full_name')
-        .eq('id', payload.new.entity_id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (!data?.full_name) return;
-          setActivities(prev => prev.map(a => a.id === payload.new.id ? { ...a, entity_name: data.full_name } : a));
-        });
-    }
-  }, []));
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+  }, []);
 
   // Stats — from server, narrowed by the SAME filters as the list so the
   // KPIs and the visible rows always agree. topType is computed client-side

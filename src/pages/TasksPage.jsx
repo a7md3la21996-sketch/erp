@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useDebouncedSearch from '../hooks/useDebouncedSearch';
@@ -985,8 +984,10 @@ export default function TasksPage() {
     };
   }, [profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.department, globalFilter?.agentName, statusFilter, priorityFilter, dateFilter, agentFilter]);
 
-  const loadTasks = useCallback(async (pg) => {
-    setLoading(true);
+  const loadTasks = useCallback(async (pg, opts = {}) => {
+    // opts.quiet = background refresh (the 30s tick): don't touch the loading UI
+    // so the list doesn't flash "Loading…"; just swap the data in place.
+    if (!opts.quiet) setLoading(true);
     try {
       const currentPage = pg || page || 1;
       const result = await fetchTasks({ ...baseQueryArgs, page: currentPage, pageSize, sortBy });
@@ -994,68 +995,38 @@ export default function TasksPage() {
       setTotalCount(result?.count || 0);
     } catch (err) {
       console.error('Tasks load error:', err);
-      setTasks([]);
+      if (!opts.quiet) setTasks([]);
     } finally {
-      setLoading(false);
+      if (!opts.quiet) setLoading(false);
       setHasLoadedOnce(true);
     }
   }, [page, pageSize, sortBy, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
 
-  // Realtime — payload predicates live in refs so the subscription doesn't
-  // re-subscribe on every filter change (which would leak channels). Refs
-  // hold the latest filter values; the callback reads from them at fire time.
-  const filterRefs = useRef({});
-  filterRefs.current = { profile, statusFilter, priorityFilter, agentFilter, dateFilter };
-  useRealtimeSubscription('tasks', useCallback((payload) => {
-    if (!payload?.eventType) return;
-    const { profile: p, statusFilter: sf, priorityFilter: pf, agentFilter: af, dateFilter: df } = filterRefs.current;
-
-    // Predicate: does this row belong in the current view?
-    const matchesView = (row) => {
-      if (!row) return false;
-      // Role scope — sales_agent only ever sees their own tasks. RLS already
-      // enforces this server-side, but realtime payloads can leak rows the
-      // viewer wasn't supposed to receive if the publication isn't filtered.
-      if (p?.role === 'sales_agent' && p?.id && row.assigned_to !== p.id) return false;
-      if (sf && sf !== 'all' && row.status !== sf) return false;
-      if (pf && pf !== 'all' && row.priority !== pf) return false;
-      // agentFilter is a NAME (matches assignedToOptions), so compare against
-      // the row's denormalized name. Imperfect (drift) but matches how the
-      // initial fetch filtered.
-      if (af && af !== 'all' && row.assigned_to_name_en !== af) return false;
-      if (df === 'overdue') {
-        const due = row.due_date ? new Date(row.due_date).getTime() : null;
-        if (!due || due >= Date.now() || row.status === 'done') return false;
-      }
-      return true;
+  // Quiet periodic refresh — replaces a realtime firehose. Subscribing to
+  // postgres_changes on `tasks` streamed org-wide task changes to the tab and
+  // prepended matched INSERTs without bound (same unbounded-memory trap that
+  // white-screened the Leads/Activities pages; lower write-rate here, but the
+  // same failure mode). Re-fetch the CURRENT page every 30s while the tab is
+  // visible (bounded, respects the active filters via the loader ref), plus once
+  // on regaining focus, paused while hidden.
+  const loadTasksRef = useRef(loadTasks);
+  loadTasksRef.current = loadTasks;
+  useEffect(() => {
+    let timer = null;
+    const refresh = () => loadTasksRef.current(undefined, { quiet: true });
+    const tick = () => { if (document.visibilityState === 'visible') refresh(); };
+    const start = () => { if (!timer) timer = setInterval(tick, 30000); };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { refresh(); start(); }
+      else stop();
     };
-
-    setTasks(prev => {
-      // DELETE always applies — stale rows are worse than over-deletion.
-      if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== payload.old?.id);
-      if (payload.eventType === 'INSERT') {
-        // Skip rows that don't match the active filters; the user can
-        // adjust filters to see them. Avoids a flood of off-scope inserts
-        // (e.g. another agent's task) appearing in the list.
-        if (!matchesView(payload.new)) return prev;
-        if (prev.some(t => t.id === payload.new.id)) return prev; // de-dupe
-        return [payload.new, ...prev];
-      }
-      if (payload.eventType === 'UPDATE') {
-        const exists = prev.some(t => t.id === payload.new?.id);
-        // If the row was already visible, merge the update (even if it now
-        // falls outside the view) — better UX than rows that mutate then
-        // disappear silently mid-edit.
-        if (exists) return prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t);
-        // Otherwise only adopt if it matches the view (e.g. a row was just
-        // reassigned to the current agent).
-        return matchesView(payload.new) ? [payload.new, ...prev] : prev;
-      }
-      return prev;
-    });
-  }, []));
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+  }, []);
 
   // Stats — from server
   const loadStats = useCallback(async () => {
