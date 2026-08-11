@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef as useReactRef, useCallback, useReducer } from 'react';
-import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -1622,37 +1621,34 @@ export default function ContactsPage() {
   }, []);
 
   // Realtime: auto-refresh contacts when any row changes in Supabase. We
-  // hold the latest loader in a ref so this callback identity is stable —
-  // otherwise every filter / page change re-subscribed to the channel
-  // (~20 churn/sec while the user types in search), which leaked WebSocket
-  // connections and dropped events between unsub and re-sub.
+  // Hold the latest loader in a ref so the periodic-refresh interval (below) and
+  // the highlight fetch always call the CURRENT loader (with the live filter /
+  // page / scope) without re-creating the interval on every render.
   const loadContactsDataRef = useReactRef(loadContactsData);
   loadContactsDataRef.current = loadContactsData;
 
-  useRealtimeSubscription('contacts', useCallback((payload) => {
-    if (payload?.eventType) {
-      const newRec = payload.new;
-      const names = newRec?.assigned_to_names || [];
-      // Skip contacts not relevant to this user's role
-      if (profile?.role === 'sales_agent') {
-        const myName = profile?.full_name_en || profile?.full_name_ar;
-        if (myName && !names.includes(myName)) return;
-      } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
-        if (payload.eventType === 'INSERT') {
-          // For managers, INSERT events from realtime can't be safely merged
-          // into the current page (no way to know if the new lead matches the
-          // active filter / belongs on the user's current page). Earlier this
-          // returned silently, so managers wouldn't see new leads until manual
-          // reload. Trigger a re-fetch instead so the page stays in sync.
-          loadContactsDataRef.current();
-          return;
-        }
-      }
-      setContacts(prev => applyRealtimePayload(prev, payload));
-    } else if (profile) {
-      loadContactsDataRef.current();
-    }
-  }, [profile?.role, profile?.full_name_en, profile?.full_name_ar]));
+  // Quiet periodic refresh — replaces a realtime firehose. The old
+  // useRealtimeSubscription('contacts') streamed EVERY org-wide contact change
+  // to the tab and grew the in-memory list without bound (applyRealtimePayload
+  // prepended every INSERT), so a tab left open filled memory until it
+  // white-screened (a plain F5 fixed it). Instead we just re-fetch the CURRENT
+  // page every 30s while the tab is visible (bounded — same ~50 rows, respects
+  // the active filter/scope), plus once when the tab regains focus. New leads
+  // appear within ~30s; memory never grows. Paused while the tab is hidden so a
+  // backgrounded tab does no work and there's no wake-up storm.
+  useEffect(() => {
+    let timer = null;
+    const tick = () => { if (document.visibilityState === 'visible') loadContactsDataRef.current(); };
+    const start = () => { if (!timer) timer = setInterval(tick, 30000); };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { loadContactsDataRef.current(); start(); }
+      else stop();
+    };
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+  }, []);
 
   // Handle highlight query param — open contact drawer directly
   useEffect(() => {
