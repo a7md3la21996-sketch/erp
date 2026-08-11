@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS, ROLE_NAV_GROUPS, MODULE_IDS, GLOBAL_IDS, findModuleId } from '../../config/navigation';
 import { P } from '../../config/roles';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle, Circle } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 import { getEmailStats } from '../../services/emailService';
@@ -138,7 +138,15 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const activeModuleId = findModuleId(location.pathname);
   const moduleItem = visibleItems.find(i => i.id === activeModuleId && MODULE_IDS.includes(i.id));
   const inModule = !!moduleItem;
-  const navList = inModule ? [moduleItem] : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
+  // Inside a module, show its pages FLAT (module page + each child as its own
+  // top-level row) — no redundant collapsible module header, since you're already
+  // scoped to that world. Outside, show the cross-cutting globals.
+  const navList = inModule
+    ? [
+        ...(moduleItem.path ? [{ ...moduleItem, children: undefined }] : []),
+        ...(moduleItem.children || []).filter(c => !c.group && hasPermission(c.permission)),
+      ]
+    : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
   // Cross-cutting shortcuts pinned in the footer — reachable from any workspace.
   const globalQuick = [
     { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'الرئيسية', en: 'Home' }, perm: P.DASHBOARD },
@@ -275,7 +283,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             </Link>
           )}
           {navList.map(item => {
-            const Icon = item.icon;
+            const Icon = item.icon || Circle;
             const hasChildren = item.children?.length > 0;
             const isOpen = openMenus[item.id] || isParentActive(item);
             const active = item.path ? isActive(item.path) : isParentActive(item);
