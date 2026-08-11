@@ -12,9 +12,9 @@ export const NAV_ITEMS = [
   // CRM as a scoped module: the card lands on the CRM Dashboard, and its side
   // menu exposes Leads (/leads). Master Leads / Opportunities / Lead-Distribution
   // deep-links still live in App.jsx and the dashboard lens cards.
-  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CRM_DASHBOARD_PREVIEW, children: [
-    { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW },
+  { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW, children: [
     { id: 'leads', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/leads', permission: P.CONTACTS_VIEW_OWN },
+    { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   ]},
   // OLD CRM submenu (rollback reference):
   // { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
@@ -28,9 +28,6 @@ export const NAV_ITEMS = [
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, path: '/real-estate/units', permission: P.UNITS_VIEW },
-    // Developers directory lives under /real-estate/* — as a child it shows in the
-    // Real Estate scoped sidebar (was a standalone global that only admins saw).
-    { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   ]},
   { id: 'sales', label: { ar: 'المبيعات', en: 'Sales' }, icon: DollarSign, permission: P.DEALS_VIEW_OWN, children: [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
