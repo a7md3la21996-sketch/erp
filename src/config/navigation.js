@@ -1,6 +1,6 @@
 import { P } from './roles';
 import {
-  LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
+  LayoutDashboard, Users, Target, Building2, ActivitySquare,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
   TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift, Bell, HelpCircle,
@@ -25,10 +25,12 @@ export const NAV_ITEMS = [
   //   { id: 'master-leads', label: { ar: 'Master Leads', en: 'Master Leads' }, path: '/crm/master-leads', permission: P.POOL_SETTINGS },
   // ]},
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
-  { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, icon: BookUser, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, path: '/real-estate/units', permission: P.UNITS_VIEW },
+    // Developers directory lives under /real-estate/* — as a child it shows in the
+    // Real Estate scoped sidebar (was a standalone global that only admins saw).
+    { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   ]},
   { id: 'sales', label: { ar: 'المبيعات', en: 'Sales' }, icon: DollarSign, permission: P.DEALS_VIEW_OWN, children: [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
@@ -113,7 +115,7 @@ export const NAV_ITEMS = [
 //               chat, help…). They never "capture" the sidebar; they stay in the
 //               global list / footer.
 export const MODULE_IDS = ['crm', 'real-estate', 'sales', 'operations', 'marketing', 'hr', 'finance', 'reports'];
-export const GLOBAL_IDS = ['dashboard', 'activities', 'developers', 'workspace', 'communication', 'help-center', 'changelog'];
+export const GLOBAL_IDS = ['dashboard', 'activities', 'workspace', 'communication', 'help-center', 'changelog'];
 
 // Extra route prefixes a module owns beyond its own path + children paths (some
 // pages live under a different URL than their group, e.g. Leads at /contacts).
@@ -137,8 +139,9 @@ function ownedPaths(item) {
   return paths;
 }
 
-// Which top-level module does a pathname belong to? Longest-prefix wins so
-// /real-estate/developers resolves to 'developers' over 'real-estate'.
+// Which top-level module does a pathname belong to? Longest-prefix wins so a
+// nested page maps to the deepest owning module (e.g. /real-estate/developers
+// → 'real-estate' via its child path).
 export function findModuleId(pathname) {
   let bestId = null, bestLen = -1;
   for (const item of NAV_ITEMS) {
