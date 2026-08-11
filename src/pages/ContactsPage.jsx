@@ -1445,7 +1445,11 @@ export default function ContactsPage() {
           // disqualified. Only kicks in when no status filter is applied; picking
           // a status (incl. "Archive" → disqualified) or a status smart-filter
           // turns it off so those views work unchanged.
-          excludeDisqualified: (filterStatus === 'all' && !myStatusFilter && !statusFilter) ? true : undefined,
+          // EXCEPT when searching: 20k+ of 25k leads are disqualified, so a
+          // phone/name lookup that hid them returned nothing and agents
+          // concluded the lead "isn't in the system" — then re-created it as a
+          // duplicate. An explicit search always spans the archive too.
+          excludeDisqualified: (filterStatus === 'all' && !myStatusFilter && !statusFilter && !search) ? true : undefined,
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
           contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,

@@ -240,23 +240,28 @@ export async function fetchDealStats({ role, userId, teamId } = {}, scopeAgentId
     // deal-events model a deal has a status (new_deal/reserved/contracted/won/
     // lost), so "wins"/revenue must count status='won' ONLY — otherwise reserved/
     // contracted/lost deals inflate the win count and revenue.
-    const allDeals = await getWonDeals({ role, userId, teamId, userName, agentNames });
+    const allDeals = await getWonDeals({ role, userId, teamId, userName, agentNames, slim: true });
     const wonDeals = allDeals.filter(d => d.status === 'won');
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const inMonth = d => new Date(d.created_at) >= monthStart;
+    // A win belongs to the month it CLOSED, not the month the deal opened — so
+    // bucket won deals by their close timestamp (updated_at, set when status
+    // flipped to 'won'), matching computeOppStats. "Opened this month" is the
+    // funnel's open step and correctly keys on created_at.
+    const closedInMonth = d => new Date(d.updated_at || d.created_at) >= monthStart;
+    const openedInMonth = d => new Date(d.created_at) >= monthStart;
     const sumValue = list => list.reduce((s, d) => s + (parseFloat(d.deal_value) || 0), 0);
     return {
       rawDeals: wonDeals,               // won deals only — feeds the revenue trend
       revenue: sumValue(wonDeals),
-      revenueThisMonth: sumValue(wonDeals.filter(inMonth)),
-      wonThisMonth: wonDeals.filter(inMonth).length,
+      revenueThisMonth: sumValue(wonDeals.filter(closedInMonth)),
+      wonThisMonth: wonDeals.filter(closedInMonth).length,
       wonCount: wonDeals.length,
       // ALL deals opened this month (any status) — the conversion funnel needs
       // the "opened" step, which must be ≥ wins. Deriving it from wonDeals would
       // make opened == wins (a bogus ~100% opp→win rate).
-      openedThisMonth: allDeals.filter(inMonth).length,
+      openedThisMonth: allDeals.filter(openedInMonth).length,
     };
   } catch (err) {
     reportError('dashboardService', 'fetchDealStats', err);

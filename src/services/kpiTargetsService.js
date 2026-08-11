@@ -191,7 +191,7 @@ export async function getTeamKPIs(employees, month, year) {
   const results = await Promise.all(employees.map(async emp => {
     await ensureTargets(emp.id, emp.role, month, year);
     const targets = await getEmployeeTargets(emp.id, month, year);
-    const actuals = computeActuals(emp.id, month, year);
+    const actuals = await computeActuals(emp.id, month, year);
 
     const metrics = METRICS.map(metric => {
       const tgt = targets.find(t => t.metric === metric);

@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePageActions } from '../../contexts/PageActionsContext';
 import { useGlobalFilter } from '../../contexts/GlobalFilterContext';
-import { P } from '../../config/roles';
+import { P, roleHasPermission } from '../../config/roles';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -16,7 +16,7 @@ import {
   Calendar, ChevronRight, RefreshCw, Activity,
   Plus, Bell, ArrowUp, ArrowDown, Minus,
   Phone, FileText, MessageCircle, ArrowRight,
-  Tag, Sparkles, Share2, Upload, Download, Zap,
+  Tag, Sparkles, Upload, Download, Zap,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { PageSkeleton, Button } from '../../components/ui';
@@ -119,7 +119,6 @@ export default function CrmDashboardPage() {
   // no first-touch activity. Powers the SLA Breaches alert section.
   const [slaBreachCount, setSlaBreachCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [searchInput, setSearchInput] = useState('');
   // Section tab (all screen sizes) that keeps the page from becoming an
   // endless scroll of ~15 sections. Each tab groups related sections
   // (Today / Insights / Team). 'today' is the default because the most
@@ -176,7 +175,7 @@ export default function CrmDashboardPage() {
     return { type: 'all' };
   }, [gf.agentName, gf.teamId, scopePeople, scopeTeams, isRTL]);
 
-  const canScope = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+  const canScope = hasPermission(P.CRM_VIEW_TEAM);
 
   // Build a Leads-page URL that carries the current scope (a selected agent) so
   // clicking a lens card lands on the list already filtered to that agent.
@@ -204,18 +203,22 @@ export default function CrmDashboardPage() {
   // Surface the CRM actions in the top Header (replaces the old global filter).
   // The scope "view as" selector stays in-page (it's a dropdown, not a button).
   usePageActions([
-    { id: 'add-lead', icon: Plus, labelAr: 'عميل جديد', labelEn: 'Add Lead', primary: true, onClick: () => setShowAddLead(true) },
-    { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', onClick: () => navigate('/leads?action=import') },
-    { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', onClick: () => navigate('/leads?action=export') },
+    { id: 'add-lead', icon: Plus, labelAr: 'عميل جديد', labelEn: 'Add Lead', primary: true, hidden: !(hasPermission(P.CONTACTS_EDIT) || hasPermission(P.CONTACTS_EDIT_OWN)), onClick: () => setShowAddLead(true) },
+    { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', hidden: !hasPermission(P.CONTACTS_IMPORT), onClick: () => navigate('/leads?action=import') },
+    { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', hidden: !hasPermission(P.CONTACTS_EXPORT), onClick: () => navigate('/leads?action=export') },
     { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
     { id: 'refresh', icon: RefreshCw, labelAr: 'تحديث', labelEn: 'Refresh', onClick: () => setRefreshKey(k => k + 1) },
-  ], [isRTL]);
+  ], [isRTL, profile?.role]);
 
   const ctx = useMemo(() => {
     if (viewScope.type === 'agent') return { role: 'sales_agent', userId: viewScope.id, teamId: null };
     if (viewScope.type === 'team') return { role: viewScope.role || 'sales_manager', userId: null, teamId: viewScope.teamId };
     return { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
-  }, [profile?.role, profile?.id, profile?.team_id, viewScope]);
+    // Depend on viewScope's PRIMITIVE fields, not the object identity — the memo
+    // returns a fresh {type:'all'} object on every scopePeople/scopeTeams setState
+    // even when nothing changed, and depending on the object would rebuild ctx →
+    // loadAll → re-run the whole ~17-request orchestration 2–3× per mount.
+  }, [profile?.role, profile?.id, profile?.team_id, viewScope.type, viewScope.id, viewScope.role, viewScope.teamId]);
 
   // Fetch the people this user may scope to (their reports). RLS on contacts
   // still gates the actual data; this only populates the dropdown.
@@ -257,7 +260,7 @@ export default function CrmDashboardPage() {
               memberNames: sorted.filter(u => ids.includes(u.id)).map(u => u.full_name_en).filter(Boolean),
             }))
         );
-      } catch { /* ignore — dropdown just stays empty */ }
+      } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'scopePeople', e); }
     })();
     return () => { cancelled = true; };
   }, [canScope, profile?.role, profile?.id, profile?.team_id]);
@@ -325,7 +328,7 @@ export default function CrmDashboardPage() {
       const d7 = new Date(Date.now() - 7 * 86400000).toISOString();
       const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
 
-      const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(ctx.role);
+      const isManagerPlus = roleHasPermission(ctx.role, P.CRM_VIEW_TEAM);
       // Scope selector → the agent-id set every scoped loader uses to narrow to
       // the selected agent/team (so the WHOLE page follows the scope, not just
       // some cards). null = no narrowing (rely on RLS — the viewer's own slice).
@@ -469,7 +472,7 @@ export default function CrmDashboardPage() {
           mUpcoming: Number(mm.upcoming) || 0,
           mHappened: Number(mm.happened) || 0,
         });
-      } catch { /* counts are best-effort; leave zeros */ }
+      } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'leadLens', e); }
     })();
     return () => { cancelled = true; };
     // memberIds?.length is in the deps so that a team whose member list
@@ -531,7 +534,7 @@ export default function CrmDashboardPage() {
   // Guard: a stale persisted 'team' selection must not strand a non-manager on
   // an empty view (the Team tab is hidden for them). Fall back to Today.
   useEffect(() => {
-    const isManagerView = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+    const isManagerView = hasPermission(P.CRM_VIEW_TEAM);
     if (activeTab === 'team' && !isManagerView) setActiveTab('today');
   }, [activeTab, profile?.role]);
 
@@ -545,7 +548,7 @@ export default function CrmDashboardPage() {
   // to count open opportunities + wins per user. Ranking favours wins
   // because closed deals matter most; leads tie-break.
   const topPerformers = useMemo(() => {
-    const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+    const isManagerPlus = hasPermission(P.CRM_VIEW_TEAM);
     if (!isManagerPlus) return [];
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     // Phase B: wins come from DEALS (this month). Deals carry agent NAMES, so we
@@ -619,7 +622,8 @@ export default function CrmDashboardPage() {
   }, [stats.contact?.newLeadsThisMonth, stats.deal?.openedThisMonth, stats.deal?.wonThisMonth]);
 
   // Revenue per month for the last 6 calendar months (Phase B: from DEALS,
-  // by deal_value within the month the deal was created). Oldest-first.
+  // by deal_value within the month the deal CLOSED — rawDeals is won-only, so
+  // bucket by the close timestamp updated_at, not when it opened). Oldest-first.
   const revenueTrend = useMemo(() => {
     const rawDeals = stats.deal?.rawDeals || [];
     const now = new Date();
@@ -629,7 +633,7 @@ export default function CrmDashboardPage() {
       const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1).getTime();
       const monthRevenue = rawDeals
         .filter(d => {
-          const t = new Date(d.created_at).getTime();
+          const t = new Date(d.updated_at || d.created_at).getTime();
           return t >= start && t < end;
         })
         .reduce((sum, d) => sum + (parseFloat(d.deal_value) || 0), 0);
@@ -647,8 +651,8 @@ export default function CrmDashboardPage() {
     const now = new Date();
     const thisStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const lastStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
-    const wonThis = raw.filter(d => d.status === 'won' && new Date(d.created_at).getTime() >= thisStart).length;
-    const wonLast = raw.filter(d => { const t = new Date(d.created_at).getTime(); return d.status === 'won' && t >= lastStart && t < thisStart; }).length;
+    const wonThis = raw.filter(d => d.status === 'won' && new Date(d.updated_at || d.created_at).getTime() >= thisStart).length;
+    const wonLast = raw.filter(d => { const t = new Date(d.updated_at || d.created_at).getTime(); return d.status === 'won' && t >= lastStart && t < thisStart; }).length;
     return buildDelta(wonThis, wonLast, isRTL);
   }, [stats.deal?.rawDeals, isRTL]);
 
@@ -666,15 +670,6 @@ export default function CrmDashboardPage() {
     return isRTL ? 'مساء الخير' : 'Good evening';
   })();
   const displayName = (isRTL ? (profile?.full_name_ar || profile?.full_name_en) : (profile?.full_name_en || profile?.full_name_ar)) || profile?.email || '';
-
-  // Submit the header search by jumping to the leads page with `q` set —
-  // ContactsPage already reads `searchParams.get('q')` on mount.
-  const submitSearch = (e) => {
-    e.preventDefault();
-    const trimmed = searchInput.trim();
-    if (!trimmed) return;
-    navigate(`/leads?q=${encodeURIComponent(trimmed)}`);
-  };
 
   // Section-tab visibility helper — applies on every screen size now.
   // Only the active tab's sections render; the rest are hidden. Returning
@@ -769,7 +764,7 @@ export default function CrmDashboardPage() {
           and daily brief above stay pinned regardless of the active tab. The
           Team tab only appears for managers+ (agents have no team view). */}
       {(() => {
-        const isManagerView = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+        const isManagerView = hasPermission(P.CRM_VIEW_TEAM);
         // Badge on "Today" = the count that genuinely needs action now
         // (overdue follow-ups + never-contacted SLA breaches) so the tab
         // nudges without the user having to open it.
@@ -901,7 +896,7 @@ export default function CrmDashboardPage() {
       </div>
 
       {/* ===== TEAM tab — Team Activity (managers only) ===== */}
-      {['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role) && (
+      {hasPermission(P.CRM_VIEW_TEAM) && (
         <div className={tabVisible('team')}>
           <Section title={isRTL ? 'نشاط الفريق اليوم' : "Team Activity Today"} icon={Users}>
             <TeamActivityList profile={profile} isRTL={isRTL}
@@ -1042,7 +1037,7 @@ export default function CrmDashboardPage() {
             items={overdueTasks}
             renderItem={(t) => ({
               primary: t.title,
-              secondary: t.due_date ? formatDate(t.due_date) : null,
+              secondary: t.due_date ? formatDate(t.due_date, isRTL) : null,
               meta: t.priority,
               to: t.contact_id ? `/leads?highlight=${t.contact_id}` : '/tasks',
               flag: 'red',
@@ -1073,7 +1068,7 @@ export default function CrmDashboardPage() {
             items={upcomingTasks}
             renderItem={(t) => ({
               primary: t.title,
-              secondary: [t.contact_name, t.due_date ? formatDate(t.due_date) : null].filter(Boolean).join(' • '),
+              secondary: [t.contact_name, t.due_date ? formatDate(t.due_date, isRTL) : null].filter(Boolean).join(' • '),
               meta: t.priority,
               to: t.contact_id ? `/leads?highlight=${t.contact_id}` : '/tasks',
             })}
@@ -1094,8 +1089,9 @@ export default function CrmDashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={activityByDay}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
+                  {/* RTL: run the time axis right→left and move the Y scale to the right */}
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} reversed={isRTL} />
+                  <YAxis tick={{ fontSize: 10 }} orientation={isRTL ? 'right' : 'left'} />
                   <Tooltip />
                   <Bar dataKey="count" fill="#2F6BD3" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -1106,7 +1102,7 @@ export default function CrmDashboardPage() {
       </div>
 
       {/* Revenue trend — closed_won totals across the last 6 calendar
-          months. Derived entirely from rawOpps so no extra query.
+          months. Derived from stats.deal.rawDeals (won-only) so no extra query.
           Hidden when every bucket is zero (a healthy "hide noise" check). */}
       {revenueTrend.some(m => m.revenue > 0) && (
         <Section title={isRTL ? 'الإيرادات (آخر 6 شهور)' : 'Revenue (Last 6 Months)'} icon={TrendingUp} compact>
@@ -1114,8 +1110,8 @@ export default function CrmDashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueTrend}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => formatCurrency(v)} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} reversed={isRTL} />
+                <YAxis tick={{ fontSize: 10 }} orientation={isRTL ? 'right' : 'left'} tickFormatter={(v) => formatCurrency(v)} />
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Bar dataKey="revenue" fill="#158A57" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -1172,7 +1168,7 @@ export default function CrmDashboardPage() {
                     )}
                   </div>
                   <span className="text-[10px] text-content-muted dark:text-content-muted-dark whitespace-nowrap mt-0.5">
-                    {formatRelativeTime(a.created_at, isRTL)}
+                    {formatRelativeTime(a.created_at, isRTL, now)}
                   </span>
                 </div>
               );
@@ -1716,9 +1712,9 @@ function isoMonthStart() {
   return localMonthStartStr(now);
 }
 
-function formatDate(iso) {
+function formatDate(iso, isRTL) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString();
+  return new Date(iso).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US');
 }
 
 function formatRelativeTime(iso, isRTL, nowMs = Date.now()) {
@@ -1732,7 +1728,7 @@ function formatRelativeTime(iso, isRTL, nowMs = Date.now()) {
   if (hr < 24) return isRTL ? `منذ ${hr} س` : `${hr}h ago`;
   const day = Math.floor(hr / 24);
   if (day < 7) return isRTL ? `منذ ${day} يوم` : `${day}d ago`;
-  return formatDate(iso);
+  return formatDate(iso, isRTL);
 }
 
 // Map an activity row's `type` value to a presentation icon + label.
@@ -1805,7 +1801,7 @@ function MyTargetsWidget({ profile, isRTL, scopeUserId, scopeRole }) {
           const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : 0;
           return { metric: m, target, actual, pct, label: isRTL ? METRIC_CONFIG[m]?.ar : METRIC_CONFIG[m]?.en, color: METRIC_CONFIG[m]?.color || '#2F6BD3' };
         }));
-      } catch { if (!cancelled) setRows([]); }
+      } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'MyTargets', e); if (!cancelled) setRows([]); }
     })();
     return () => { cancelled = true; };
   }, [empId, empRole, isRTL]);
@@ -1869,7 +1865,7 @@ function TeamActivityList({ profile, isRTL, scopeUserNames, scopeKey }) {
           map[name].total++;
         });
         setTeamData(Object.values(map).sort((x, y) => y.total - x.total).slice(0, 8));
-      } catch { /* ignore */ }
+      } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'TeamActivity', e); }
     })();
     return () => { cancelled = true; };
   }, [profile?.id, profile?.role, profile?.team_id, profile?.full_name_en, scopeKey]);
@@ -1882,10 +1878,10 @@ function TeamActivityList({ profile, isRTL, scopeUserNames, scopeKey }) {
           <div className="flex-1 min-w-0">
             <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.name}</p>
             <div className="flex gap-2 mt-0.5">
-              {t.calls > 0 && <span className="text-[10px] text-emerald-500">📞 {t.calls}</span>}
-              {t.whatsapp > 0 && <span className="text-[10px] text-green-500">💬 {t.whatsapp}</span>}
-              {t.meetings > 0 && <span className="text-[10px] text-blue-500">👥 {t.meetings}</span>}
-              {t.status > 0 && <span className="text-[10px] text-amber-500">🔄 {t.status}</span>}
+              {t.calls > 0 && <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-500" title={isRTL ? 'مكالمات' : 'Calls'}><Phone size={11} />{t.calls}</span>}
+              {t.whatsapp > 0 && <span className="inline-flex items-center gap-0.5 text-[10px] text-green-500" title="WhatsApp"><MessageCircle size={11} />{t.whatsapp}</span>}
+              {t.meetings > 0 && <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-500" title={isRTL ? 'اجتماعات' : 'Meetings'}><Calendar size={11} />{t.meetings}</span>}
+              {t.status > 0 && <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-500" title={isRTL ? 'تغيير حالة' : 'Status'}><RefreshCw size={11} />{t.status}</span>}
             </div>
           </div>
           <span className="text-sm font-bold text-brand-500">{t.total}</span>
@@ -1955,7 +1951,7 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
         for (const c of (hotRes.data || [])) { if (!seen.has(c.id)) { seen.add(c.id); merged.push({ ...c, reason: 'hot' }); } }
         for (const c of (freshRes.data || [])) { if (!seen.has(c.id)) { seen.add(c.id); merged.push({ ...c, reason: 'fresh' }); } }
         setLeads(merged.slice(0, 10));
-      } catch { if (!cancelled) setLeads([]); }
+      } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'WorkQueue', e); if (!cancelled) setLeads([]); }
     })();
     return () => { cancelled = true; };
   }, [profile?.id, profile?.role, scopeKey]);
@@ -2131,15 +2127,6 @@ function Section({ title, icon: Icon, compact = false, children, action }) {
 // Lightweight group heading — label + icon, NO card border. KPI/lens cards
 // placed under it sit on the page background, so we avoid the heavy "bordered
 // cards inside a bordered card" nesting. Use Section only for list/chart panels.
-function GroupHeading({ title, icon: Icon }) {
-  return (
-    <div className="flex items-center gap-2 mb-3 mt-1 px-0.5">
-      {Icon && <Icon size={14} className="text-content-muted dark:text-content-muted-dark" />}
-      <h2 className="text-[11px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark m-0">{title}</h2>
-    </div>
-  );
-}
-
 function FocusList({ title, items, renderItem, emptyMessage }) {
   return (
     <div className="rounded-xl bg-surface-bg/60 dark:bg-white/[0.03] border border-edge/60 dark:border-edge-dark/50 p-3">

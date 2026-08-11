@@ -45,47 +45,56 @@ async function getTeamMemberNames(role, teamId) {
 /**
  * Get deals filtered by role
  */
-export async function getWonDeals({ role, userId, teamId, userName, contactId, agentNames } = {}) {
+export async function getWonDeals({ role, userId, teamId, userName, contactId, agentNames, slim } = {}) {
   try {
     // CRM/sales deals are distinguished from Operations' manual deals by
     // their CRM linkage: a sales deal has an opportunity_id (legacy, opp-based)
     // OR a contact_id (Phase B: deals created straight from a lead, no opp).
     // Operations' manual deals (OperationsPage AddDealModal) have NEITHER, so
     // they stay excluded here.
-    let query = supabase
-      .from('deals')
-      .select('*')
-      .or('opportunity_id.not.is.null,contact_id.not.is.null')
-      .order('created_at', { ascending: false })
-      .range(0, 499);
-
-    if (contactId) {
-      query = query.eq('contact_id', contactId);
-    }
-
-    // Caller can supply an explicit name set (e.g. the dashboard resolves team
-    // membership with the SAME helper the rest of its panels use, so deal
-    // numbers stay consistent with lead numbers). Otherwise fall back to the
-    // role-based scoping below.
+    // `slim` (dashboard aggregates) selects only the columns the KPI/revenue
+    // maths read — skips the heavy documents/units JSONB — and fetches ALL rows
+    // so the totals aren't silently capped. Other callers keep '*' + one page.
+    const cols = slim
+      ? 'id, status, deal_value, created_at, updated_at, agent_en, agent_ar, client_en, client_ar, contact_id, opportunity_id, assigned_to'
+      : '*';
+    // Resolve team-member names (async) before building the query.
     // Quote each value so names containing a comma / parenthesis / dot don't
     // corrupt the PostgREST or() grammar (that produced 400s).
     const qv = (n) => `"${String(n).replace(/"/g, '')}"`;
+    let nameOr = null;
     if (Array.isArray(agentNames) && agentNames.length) {
-      const or = agentNames.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
-      query = query.or(or);
+      nameOr = agentNames.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
     } else if (role === 'sales_agent' && userName) {
-      query = query.or(`agent_en.eq.${qv(userName)},agent_ar.eq.${qv(userName)}`);
+      nameOr = `agent_en.eq.${qv(userName)},agent_ar.eq.${qv(userName)}`;
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
       const names = await getTeamMemberNames(role, teamId);
-      if (names.length) {
-        const or = names.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
-        query = query.or(or);
-      }
+      if (names.length) nameOr = names.map(n => `agent_en.eq.${qv(n)},agent_ar.eq.${qv(n)}`).join(',');
     }
+    const build = () => {
+      let q = supabase.from('deals').select(cols)
+        .or('opportunity_id.not.is.null,contact_id.not.is.null')
+        .order('created_at', { ascending: false });
+      if (contactId) q = q.eq('contact_id', contactId);
+      if (nameOr) q = q.or(nameOr);
+      return q;
+    };
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
+    if (!slim) {
+      const { data, error } = await build().range(0, 499);
+      if (error) throw error;
+      return data || [];
+    }
+    // slim path — page through everything so revenue/win totals are complete
+    const all = []; let from = 0; const PAGE = 1000;
+    for (;;) {
+      const { data, error } = await build().range(from, from + PAGE - 1);
+      if (error) throw error;
+      all.push(...(data || []));
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
   } catch (err) {
     reportError('dealsService', 'getWonDeals', err);
     return [];

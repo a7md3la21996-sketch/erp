@@ -104,6 +104,11 @@ export const P = {
   // below; not added to any other role, so the nav entry + route stay
   // invisible to everyone else until the feature is officially released.
   CRM_DASHBOARD_PREVIEW: 'crm.dashboard.preview',
+  // "Manager+" capability: see team-level CRM sections (Top Performers, Team
+  // Activity, Source Performance, scope-as-others). Granted to managers, the
+  // sales director, team leaders and operations — the single source of truth
+  // for that check, replacing hardcoded role lists.
+  CRM_VIEW_TEAM: 'crm.view_team',
   AUDIT_VIEW: 'audit.view',
 
   // Operations
@@ -118,7 +123,7 @@ export const ROLE_PERMISSIONS = {
   admin: Object.values(P),
 
   sales_director: [
-    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW, P.CRM_VIEW_TEAM,
     // Contacts: full access (no export, no delete)
     P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
     // Opportunities: full access (no export, no delete)
@@ -132,7 +137,7 @@ export const ROLE_PERMISSIONS = {
   ],
 
   sales_manager: [
-    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW, P.CRM_VIEW_TEAM,
     // Contacts: view/edit/bulk only. No import + no export per May 17
     // requirement — import/export are admin/operations responsibilities;
     // sales_manager works the leads rather than feeding/exporting the pool.
@@ -148,7 +153,7 @@ export const ROLE_PERMISSIONS = {
   ],
 
   team_leader: [
-    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW, P.CRM_VIEW_TEAM,
     // Contacts: view own + edit own + bulk (for team assignment)
     P.CONTACTS_VIEW_OWN, P.CONTACTS_EDIT_OWN, P.CONTACTS_BULK,
     // Opportunities: view own + edit own + bulk
@@ -183,7 +188,7 @@ export const ROLE_PERMISSIONS = {
   hr: [P.DASHBOARD, P.HR_VIEW_OWN, P.HR_VIEW_ALL, P.HR_POLICIES_MANAGE, P.HR_EMPLOYEES_VIEW, P.HR_EMPLOYEES_MANAGE, P.ATTEND_VIEW_OWN, P.LEAVE_REQUEST, P.PAYROLL_VIEW, P.PAYROLL_MANAGE, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
   finance: [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.FINANCE_VIEW, P.EXPENSES_VIEW_OWN, P.DEALS_VIEW_OWN, P.COMM_VIEW_OWN, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE, P.OPS_VIEW, P.OPS_PAYMENTS],
   operations: [
-    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW,
+    P.DASHBOARD, P.CRM_DASHBOARD_PREVIEW, P.CRM_VIEW_TEAM,
     // Operations
     P.OPS_VIEW, P.OPS_MANAGE, P.OPS_PAYMENTS, P.OPS_HANDOVER, P.OPS_AFTERSALES,
     // Sales (contacts, opps, deals)
@@ -217,12 +222,21 @@ export const LOCKED_PERMISSIONS = new Set([
 export const LOCKED_ROLES = new Set(['admin']);
 
 /**
+ * Does a GIVEN role (not necessarily the logged-in user) hold a permission?
+ * Use this for scoped checks — e.g. "is the view-as role a manager view" —
+ * where `hasPermission` (which reads the current user) is the wrong subject.
+ * Base grants only (ignores Settings overrides), matching the old role-list checks.
+ */
+export const roleHasPermission = (role, perm) => (ROLE_PERMISSIONS[role] || []).includes(perm);
+
+/**
  * Merge default role permissions with custom overrides from Settings.
  * Respects LOCKED_PERMISSIONS (can't be added/removed via overrides).
  * @param {string} role - User role
  * @param {Object} overrides - { [role]: { added: [], removed: [] } } from system_config
  * @returns {Array} - Effective permissions for the role
  */
+
 export function mergePermissions(role, overrides = {}) {
   if (LOCKED_ROLES.has(role)) {
     return ROLE_PERMISSIONS[role] || Object.values(P);
