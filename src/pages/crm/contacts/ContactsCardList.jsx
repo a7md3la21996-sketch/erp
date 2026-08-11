@@ -367,7 +367,7 @@ export default function ContactsCardList({
                   )}
                 </div>
 
-                {/* Status / Score row */}
+                {/* Status + next follow-up row */}
                 <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
                   <span
                     className="inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full"
@@ -380,11 +380,6 @@ export default function ContactsCardList({
                     <span onClick={e => e.stopPropagation()} className="inline-flex">
                       <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                     </span>
-                    {typeof c.lead_score === 'number' && c.lead_score > 0 && (
-                      <span className="text-[11px] font-bold text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">
-                        {c.lead_score}/100
-                      </span>
-                    )}
                   </div>
                 </div>
 

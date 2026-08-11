@@ -361,23 +361,6 @@ export function Chip({ label, color, bg, size = 'sm' }) {
   );
 }
 
-export function ScorePill({ score }) {
-  const s = score ?? 0;
-  const color = s >= 75 ? '#2F6BD3' : s >= 50 ? '#6B8DB5' : s >= 25 ? '#8BA8C8' : '#D6403B';
-  return (
-    <div className="flex items-center gap-1.5 min-w-[70px]">
-      {/* dir="ltr" forces fill direction even in RTL — without it the bar
-          appears to grow from the right but text labels grow from the left,
-          looking misaligned. Score is conceptually "% complete" which is
-          consistently LTR worldwide. */}
-      <div dir="ltr" className="flex-1 h-1 bg-brand-500/15 rounded-sm overflow-hidden">
-        <div className="h-full rounded-sm" style={{ width: `${s}%`, background: color }} />
-      </div>
-      <span className="text-xs font-bold min-w-[20px]" style={{ color }}>{s}</span>
-    </div>
-  );
-}
-
 // ── Next Action badge ──────────────────────────────────────────────────────
 // Renders the next pending follow-up for a lead from the `_nextFollowup`
 // blob set by the get_next_followup_per_contact RPC:

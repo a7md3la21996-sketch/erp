@@ -74,21 +74,8 @@ export function getAssignmentHistory() {
 const softDeleteFields = () => ({ is_deleted: true,  deleted_at: new Date().toISOString() });
 const softUndeleteFields = () => ({ is_deleted: false, deleted_at: null });
 
-/**
- * Increment a contact's lead score, capped at 100. Single-assignment now —
- * the score belongs to the sole assignee, so this is just a numeric update.
- */
-export async function incrementLeadScore(contactId, increment) {
-  try {
-    const { data: current } = await rq(() => supabase.from('contacts').select('lead_score').eq('id', contactId).maybeSingle(), 'incrementLeadScore.read');
-    const next = Math.min((current?.lead_score || 0) + increment, 100);
-    await rq(() => supabase.from('contacts').update({ lead_score: next }).eq('id', contactId), 'incrementLeadScore.write');
-    return next;
-  } catch (err) {
-    reportError('contactsService', 'incrementLeadScore', err);
-    throw err;
-  }
-}
+// Lead scoring retired 2026-08-11 — incrementLeadScore removed (the score was
+// unused everywhere and every contact sat at 0).
 
 export async function recordAssignment(contactId, {
   fromAgent, toAgent,
@@ -142,7 +129,6 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       updated:       { column: 'updated_at',       ascending: false },
       next_follow_up:{ column: 'next_follow_up_at', ascending: true },
       next_follow_up_desc:{ column: 'next_follow_up_at', ascending: false },
-      score:         { column: 'lead_score',        ascending: false },
       name:          { column: 'full_name',         ascending: true },
       stale:         { column: 'last_activity_at',  ascending: true },
     };
@@ -1178,7 +1164,6 @@ export async function distributeLeadToAgents(originContactId, targetUserIds) {
       // Fresh operational state
       contact_status: 'new',
       temperature: 'cold',
-      lead_score: 0,
       // A distributed clone's ORIGIN is 'distributed' regardless of the
       // origin lead's category — that's what makes it tell-apart-able.
       lead_category: 'distributed',

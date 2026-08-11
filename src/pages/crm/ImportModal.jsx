@@ -818,7 +818,6 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         ...r,
         assigned_to_name: resolveAgent(r.assigned_to_name),
         id: r._status === 'overwrite' ? r._existingId : undefined, // Let Supabase generate UUID
-        lead_score: 0,
         is_blacklisted: false,
         created_at: r.created_at || new Date().toISOString(),
       });

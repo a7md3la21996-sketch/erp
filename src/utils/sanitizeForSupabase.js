@@ -2,7 +2,7 @@
  * Strip internal/frontend-only fields before sending to Supabase.
  * Use before every .insert() and .update() call.
  *
- * Critical: virtual fields like my_status / my_temperature / my_score are
+ * Critical: virtual fields like my_status / my_temperature are
  * computed by withAgentView for SmartFilter and chips. They DON'T exist as
  * DB columns — sending them causes PostgREST to reject the whole UPDATE
  * with "column not found", which is what silently dropped 200+ writes
@@ -13,7 +13,7 @@ const INTERNAL_FIELDS = new Set([
   '_opp_count', '_aging_level', '_interactionLogged', '_skipConfirmed',
   '_skipGate', '_touchStart',
   // Computed per-agent virtual fields (no underscore prefix → escaped startsWith filter)
-  'my_status', 'my_temperature', 'my_score',
+  'my_status', 'my_temperature',
   'countryCode', 'country',
   'contacts', 'users', 'projects', 'opportunities', 'departments',
   'activities', 'tasks', 'deals', 'shifts',
@@ -44,7 +44,7 @@ const KNOWN_COLUMNS = {
     'source', 'contact_type', 'contact_status', 'platform', 'lead_category',
     'campaign_name', 'campaign_id', 'campaign_interactions',
     // sales
-    'temperature', 'lead_score', 'budget_min', 'budget_max',
+    'temperature', 'budget_min', 'budget_max',
     'preferred_location', 'interested_in_type',
     // assignment (single-assignment after Phase 1)
     'assigned_to_name', 'assigned_to_names', 'assigned_by_name',
@@ -69,7 +69,7 @@ const KNOWN_COLUMNS = {
     'fingerprint_id', 'metadata',
     // legacy stub columns kept to absorb writes from old bundles —
     // we accept them so writes don't fail, but they're not used.
-    'my_status', 'my_temperature', 'my_score', 'assigned_to',
+    'my_status', 'my_temperature', 'assigned_to',
   ]),
 };
 

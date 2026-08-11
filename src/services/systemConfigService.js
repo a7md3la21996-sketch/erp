@@ -167,7 +167,6 @@ export const DEFAULT_CONFIG = {
     campaign_name: true,
     assigned_at: true,
     contact_status: true,
-    lead_score: true,
     notes: true,
     dq_reason: true,
     last_activity_at: true,

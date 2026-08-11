@@ -1324,7 +1324,6 @@ const DRAWER_FIELDS_LIST = [
   { key: 'campaign_name',      ar: 'الحملة',            en: 'Campaign' },
   { key: 'assigned_at',        ar: 'تاريخ التوزيع',     en: 'Assigned Date' },
   { key: 'contact_status',     ar: 'الحالة',            en: 'Status' },
-  { key: 'lead_score',         ar: 'تقييم العميل',      en: 'Lead Score' },
   { key: 'notes',              ar: 'ملاحظات',           en: 'Notes' },
   { key: 'dq_reason',          ar: 'سبب الاستبعاد',     en: 'DQ Reason' },
   { key: 'last_activity_at',   ar: 'آخر نشاط',          en: 'Last Activity' },

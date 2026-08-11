@@ -14,7 +14,7 @@ export const DEPT_VIEWS = {
     // Smart filter fields relevant to this department
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', 'assigned_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
+      'created_at', 'assigned_at', 'last_activity_at', 'campaign_name', '_country',
       'assigned_to_name', 'assigned_by_name', '_campaign_count', '_no_activity_by', '_meeting',
     ],
     // Contact types available in this department
@@ -22,7 +22,7 @@ export const DEPT_VIEWS = {
     // Status options for filtering
     statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     // Sort options
-    sortIds: ['created', 'created_asc', 'next_follow_up', 'next_follow_up_desc', 'assigned', 'last_activity', 'updated', 'score', 'name', 'stale'],
+    sortIds: ['created', 'created_asc', 'next_follow_up', 'next_follow_up_desc', 'assigned', 'last_activity', 'updated', 'name', 'stale'],
     // Actions in the row menu
     menuActions: ['edit', 'logCall', 'reminder', 'export', 'delete', 'disqualify', 'blacklist'],
     // Quick action buttons visible in the row

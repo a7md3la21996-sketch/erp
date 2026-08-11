@@ -6,13 +6,13 @@ import {
   SOURCE_LABELS, SOURCE_EN,
   TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
-  Chip, PhoneCell, ScorePill, getDeptStages, deptStageLabel,
+  Chip, PhoneCell, getDeptStages, deptStageLabel,
   agentInitials, NextActionBadge,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
-import { getMyScore, getAgentCount, getAgentsView } from '../../../utils/contactView';
+import { getAgentCount, getAgentsView } from '../../../utils/contactView';
 import { leadCategoryLabel, leadCategoryColor } from '../../../config/leadCategories';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 
@@ -303,7 +303,6 @@ export default function ContactsTable({
               {hasCol('job_title') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</th>}
               {hasCol('company') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الشركة' : 'Company'}</th>}
               {hasCol('contact_status') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
-              {hasCol('lead_score') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'النقاط' : 'Score'}</th>}
               {hasCol('source_date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
               {hasCol('next_action') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
@@ -553,11 +552,6 @@ export default function ContactsTable({
                       </div>
                     );
                   })()}
-                </td>}
-
-                {/* Lead Score — Marketing */}
-                {hasCol('lead_score') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  <ScorePill score={getMyScore(c, agentName)} />
                 </td>}
 
                 {/* Source + Date */}

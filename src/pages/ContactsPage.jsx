@@ -1374,7 +1374,6 @@ export default function ContactsPage() {
         created_by_name:  { column: 'created_by_name',  kind: 'select' },
         assigned_at:      { column: 'assigned_at',      kind: 'date'   },
         last_activity_at: { column: 'last_activity_at', kind: 'date'   },
-        my_score:         { column: 'lead_score',       kind: 'number' },
       };
       const NO_VALUE_DATE_OPS = ['last_7', 'last_30', 'this_month', 'this_week'];
       const columnFilters = smartFilters
@@ -2452,7 +2451,7 @@ export default function ContactsPage() {
         // Only allow known contacts table columns. assigned_to is included so
         // imports can carry the agent UUID — name-only writes get reverted by
         // the assigned_to/_name sync trigger and orphan rows from RLS.
-        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at']);
+        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','is_blacklisted','last_activity_at','created_at']);
         // Resolve agent names → UUIDs once, in bulk, BEFORE batch insert.
         // Per-row lookups inside createContact would race + each one is its
         // own RLS-gated round-trip; one call here is the whole list.

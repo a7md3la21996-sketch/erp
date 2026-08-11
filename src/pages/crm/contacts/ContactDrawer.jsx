@@ -46,7 +46,7 @@ import WhatsAppQuickPopup from './WhatsAppQuickPopup';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials,
-  Chip, ScorePill, getDeptStages, deptStageLabel,
+  Chip, getDeptStages, deptStageLabel,
   agentInitials, normalizePhone,
 } from './constants';
 import { generateWhatsAppLink } from '../../../services/whatsappService';
@@ -57,8 +57,8 @@ const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meetin
 // fields fall back to the raw column name.
 const AUDIT_FIELD_LABELS = {
   full_name: { ar: 'الاسم', en: 'Name' }, phone: { ar: 'التليفون', en: 'Phone' }, phone2: { ar: 'تليفون 2', en: 'Phone 2' }, email: { ar: 'الإيميل', en: 'Email' },
-  contact_status: { ar: 'الحالة', en: 'Status' }, temperature: { ar: 'الحرارة', en: 'Temperature' }, lead_score: { ar: 'التقييم', en: 'Score' },
-  my_status: { ar: 'الحالة', en: 'Status' }, my_temperature: { ar: 'الحرارة', en: 'Temperature' }, my_score: { ar: 'التقييم', en: 'Score' },
+  contact_status: { ar: 'الحالة', en: 'Status' }, temperature: { ar: 'الحرارة', en: 'Temperature' },
+  my_status: { ar: 'الحالة', en: 'Status' }, my_temperature: { ar: 'الحرارة', en: 'Temperature' },
   source: { ar: 'المصدر', en: 'Source' }, company: { ar: 'الشركة', en: 'Company' }, job_title: { ar: 'المسمى', en: 'Job title' }, budget_min: { ar: 'أقل ميزانية', en: 'Min budget' },
   budget_max: { ar: 'أعلى ميزانية', en: 'Max budget' }, assigned_to_name: { ar: 'المسؤول', en: 'Assigned to' }, lead_category: { ar: 'التصنيف', en: 'Category' },
   notes: { ar: 'ملاحظات', en: 'Notes' }, disqualify_reason: { ar: 'سبب الاستبعاد', en: 'Disqualify reason' }, disqualify_note: { ar: 'ملاحظة الاستبعاد', en: 'Disqualify note' },
@@ -2360,19 +2360,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             {/* ══════ DATA / DETAILS ══════ */}
             <section id="sec-data" data-section-key="data" className={tab === 'data' ? 'mb-4' : 'hidden'}>
               <div>
-                {/* Lead Score card — the temperature editor lives only in the
-                    hero chip now (single source of truth), so it was removed here. */}
-                <div className="mb-4">
-                  <div className="bg-brand-500/[0.05] rounded-xl p-3.5 border border-brand-500/10">
-                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-2 font-medium">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
-                    {(() => {
-                      const mn = profile?.full_name_en || profile?.full_name_ar;
-                      const myScore = (contact.assigned_to_name === mn || isManagerViewer) ? contact.lead_score : null;
-                      return <ScorePill score={myScore != null ? Number(myScore) : null} />;
-                    })()}
-                  </div>
-                </div>
-
                 {/* Grouped Data Sections */}
                 <div className="flex flex-col gap-4 mb-4">
                   {dataGroups.map(group => {
@@ -2535,9 +2522,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   {extraSources.audits.map(a => {
                     // Defensive filter: rows logged before the auditService fix
                     // may still carry internal '_'-prefixed keys (e.g. _skipDbUpdate)
-                    // or the noisy last_activity_at — hide them here too.
+                    // or the noisy last_activity_at — hide them here too. Lead score
+                    // is retired from the UI, so hide its change lines as well.
+                    const HIDE_AUDIT_KEYS = ['last_activity_at', 'lead_score', 'my_score', 'score'];
                     const chg = a.changes && typeof a.changes === 'object'
-                      ? Object.entries(a.changes).filter(([k]) => !k.startsWith('_') && k !== 'last_activity_at')
+                      ? Object.entries(a.changes).filter(([k]) => !k.startsWith('_') && !HIDE_AUDIT_KEYS.includes(k))
                       : [];
                     return (
                       <div key={a.id} className="rounded-lg border border-edge/60 dark:border-edge-dark/60 bg-surface-bg/30 dark:bg-surface-bg-dark/20 px-3 py-2">

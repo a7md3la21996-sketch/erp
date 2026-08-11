@@ -46,18 +46,11 @@ export function getMyTemp(contact, userName) {
   return null;
 }
 
-/** The viewer's lead score on this contact — 0 when they're not the assignee. */
-export function getMyScore(contact, userName) {
-  if (!contact || !userName) return 0;
-  if (contact.assigned_to_name === userName && typeof contact.lead_score === 'number') return contact.lead_score;
-  return 0;
-}
-
 /**
  * Flat per-agent breakdown for tables/drawers/chips. Single-assignment now,
- * so this returns at most one row — the sole assignee's status / temperature
- * / score. Kept as an array shape so existing call sites that iterate keep
- * working without churn. Returns [] for contacts with no assignees.
+ * so this returns at most one row — the sole assignee's status / temperature.
+ * Kept as an array shape so existing call sites that iterate keep working
+ * without churn. Returns [] for contacts with no assignees.
  */
 export function getAgentsView(contact, viewerName) {
   if (!contact) return [];
@@ -70,7 +63,6 @@ export function getAgentsView(contact, viewerName) {
       name,
       status: isAssignee ? (contact.contact_status ?? null) : null,
       temperature: isAssignee ? (contact.temperature ?? null) : null,
-      score: isAssignee && typeof contact.lead_score === 'number' ? contact.lead_score : null,
       isViewer: !!viewerName && name === viewerName,
     };
   });
@@ -87,7 +79,6 @@ export function withAgentView(contacts, profile) {
     ...c,
     my_status: getMyStatus(c, name),
     my_temperature: getMyTemp(c, name),
-    my_score: getMyScore(c, name),
     _agent_count: getAgentCount(c),
   }));
 }

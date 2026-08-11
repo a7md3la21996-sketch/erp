@@ -4,7 +4,6 @@ import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
-import { incrementLeadScore } from './contactsService';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
 import { requireAnyPerm, currentProfile } from '../utils/permissionGuard';
 import { P } from '../config/roles';
@@ -13,9 +12,6 @@ import { P } from '../config/roles';
 // use for INSERT — retrying a request whose response was dropped after a
 // successful write would create duplicates.
 const rq = (fn, label) => retryWithBackoff(fn, { label });
-
-// ── Score map for lead scoring ──
-const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
@@ -181,7 +177,6 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
         .single(), 'createActivity.completeScheduled');
       if (!error && data) {
         if (entityType === 'contact' && entityId) {
-          const scoreIncrement = SCORE_MAP[type] || 2;
           try {
             const { data: contact } = await supabase.from('contacts').select('first_response_at').eq('id', entityId).maybeSingle();
             const updates = { last_activity_at: new Date().toISOString() };
@@ -189,9 +184,8 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
               updates.first_response_at = new Date().toISOString();
             }
             await supabase.from('contacts').update(updates).eq('id', entityId);
-            await incrementLeadScore(entityId, scoreIncrement);
           } catch (err) {
-            reportError('activitiesService', 'createActivity.updateScore', err);
+            reportError('activitiesService', 'createActivity.updateActivityMeta', err);
             await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
           }
         }
@@ -232,8 +226,6 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 
     logCreate('activity', data.id, data);
     if (entityType === 'contact' && entityId) {
-      const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
-      const scoreIncrement = SCORE_MAP[type] || 2;
       try {
         const { data: contact } = await supabase.from('contacts').select('first_response_at').eq('id', entityId).maybeSingle();
         const updates = { last_activity_at: new Date().toISOString() };
@@ -241,7 +233,6 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
           updates.first_response_at = new Date().toISOString();
         }
         await supabase.from('contacts').update(updates).eq('id', entityId);
-        await incrementLeadScore(entityId, scoreIncrement);
         // Auto-complete matching pending tasks. Fire-and-forget but
         // failures should be visible in monitoring, not silently dropped.
         // Bounded to 50 tasks per call: in practice a single activity rarely

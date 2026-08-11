@@ -109,7 +109,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
     { id: 'assigned_at', label: 'تاريخ التوزيع', labelEn: 'Assignment Date', type: 'date' },
     { id: 'last_activity_at', label: 'آخر نشاط', labelEn: 'Last Activity', type: 'date' },
-    { id: 'my_score', label: 'تقييمي', labelEn: 'My Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
     { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: (allAgentNames || [...new Set((contacts || []).map(c => c.assigned_to_name).filter(Boolean))]).map(n => ({ value: n, label: n, labelEn: n })) },
@@ -149,7 +148,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { value: 'assigned', label: 'ترتيب: تاريخ التوزيع', labelEn: 'Sort: Assignment Date' },
     { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
     { value: 'updated', label: 'ترتيب: آخر تحديث', labelEn: 'Sort: Recently Updated' },
-    { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
     { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
     { value: 'stale', label: 'ترتيب: يحتاج متابعة', labelEn: 'Sort: Needs Follow-up' },
   ];
@@ -183,7 +181,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     // server page and desync the list from the total count. Includes the
     // column-backed smart filters newly moved to the server applier.
     const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by', '_meeting',
-      'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'assigned_at', 'last_activity_at', 'my_score', '_country'];
+      'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'assigned_at', 'last_activity_at', '_country'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
     list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
@@ -197,7 +195,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
       if (aPinned !== bPinned) return aPinned - bPinned;
       if (sortBy === 'last_activity') return new Date(b.last_activity_at || 0) - new Date(a.last_activity_at || 0);
-      if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
       if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       if (sortBy === 'created_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);

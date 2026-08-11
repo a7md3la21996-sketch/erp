@@ -52,7 +52,6 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
   }
   // Merge assigned_to_names
   merged.assigned_to_names = [...new Set([...(c1.assigned_to_names || []), ...(c2.assigned_to_names || [])])].filter(Boolean);
-  if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
   const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
 
   return (

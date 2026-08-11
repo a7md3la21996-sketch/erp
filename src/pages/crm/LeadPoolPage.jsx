@@ -59,7 +59,7 @@ async function fetchPoolLeads() {
     // NO assignment, wasting bandwidth.
     const { data, error } = await supabase
       .from('contacts')
-      .select('id, full_name, phone, source, contact_type, lead_score, created_at, campaign_name')
+      .select('id, full_name, phone, source, contact_type, created_at, campaign_name')
       .or('assigned_to_names.is.null,assigned_to_names.eq.[]')
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -71,7 +71,6 @@ async function fetchPoolLeads() {
       phone: c.phone || '',
       source: c.source || 'organic',
       type: c.contact_type || 'fresh',
-      score: c.lead_score || 0,
       created_at: c.created_at,
       // contacts table doesn't have a team_id column; team derivation would
       // need a join with the assignee user. For unassigned pool leads, no team.
@@ -105,9 +104,11 @@ function getSLAStatus(lead) {
   return { pct, remaining, breached: elapsed > sla, elapsed };
 }
 
-function getLeadScore(lead) {
-  const srcWeight = SOURCES[lead.source]?.weight || 1;
-  return Math.min(Math.round(lead.score + srcWeight * 5), 100);
+// Distribution priority — higher-weight sources go out first. (Was mixed with
+// lead_score, which is retired; every lead sat at 0 so this preserves the exact
+// ordering.)
+function getSourcePriority(lead) {
+  return SOURCES[lead.source]?.weight || 1;
 }
 
 // ── SmartFilter field definitions (static parts) ──────────────────────────
@@ -211,10 +212,10 @@ export default function LeadPoolPage() {
       });
     }
 
-    // Sort: Score DESC, then Aging ASC
+    // Sort: source priority DESC, then Aging ASC (oldest first)
     return result.sort((a, b) => {
-      const scoreDiff = getLeadScore(b) - getLeadScore(a);
-      if (scoreDiff !== 0) return scoreDiff;
+      const prioDiff = getSourcePriority(b) - getSourcePriority(a);
+      if (prioDiff !== 0) return prioDiff;
       return new Date(a.created_at) - new Date(b.created_at);
     });
   }, [leads, canViewFresh, canViewAll, poolScope, smartFilters, search, tick, user?.team_id]);
@@ -306,8 +307,8 @@ export default function LeadPoolPage() {
     const assignmentMap = []; // {leadId, agentId, agentName}
     const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
-    // Sort leads by score desc (best leads first)
-    const sorted = [...unassigned].sort((a, b) => getLeadScore(b) - getLeadScore(a));
+    // Sort leads by source priority desc (highest-weight sources first)
+    const sorted = [...unassigned].sort((a, b) => getSourcePriority(b) - getSourcePriority(a));
 
     // Check source restrictions (Google → senior only)
     sorted.forEach(lead => {
@@ -501,7 +502,6 @@ export default function LeadPoolPage() {
           const aging   = getAging(lead.created_at, isRTL);
           const sla     = getSLAStatus(lead);
           const src     = SOURCES[lead.source];
-          const score   = getLeadScore(lead);
           const isSel   = selected.includes(lead.id);
           const isReserved = lead.reserved_by && new Date(lead.reserved_until) > new Date();
 
@@ -555,12 +555,6 @@ export default function LeadPoolPage() {
                     <div className={`h-full rounded-sm transition-[width] duration-300 ${sla.breached ? 'bg-red-500' : sla.pct > 75 ? 'bg-[#6B8DB5]' : 'bg-brand-500'}`} style={{ width: sla.pct + '%' }} />
                   </div>
                 </div>
-              </div>
-
-              {/* Score */}
-              <div className="text-center shrink-0">
-                <div className={`text-lg font-bold ${score > 75 ? 'text-red-500' : score > 50 ? 'text-[#6B8DB5]' : 'text-brand-500'}`}>{score}</div>
-                <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سكور' : 'Score'}</div>
               </div>
 
               {/* Actions */}
