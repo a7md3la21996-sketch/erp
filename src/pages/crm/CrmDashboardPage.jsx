@@ -35,6 +35,9 @@ import { reportError } from '../../utils/errorReporter';
 // no cross-account leak and so role upgrades invalidate naturally.
 const DASHBOARD_CACHE_PREFIX = 'crm-dashboard';
 const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+// A uuid that matches no row — used to fail a scope CLOSED (show nothing) when
+// the intended agent/team hasn't resolved yet, rather than falling open to all.
+const NO_MATCH_ID = '00000000-0000-0000-0000-000000000000';
 
 function readDashboardCache(userId, role) {
   if (typeof window === 'undefined' || !userId) return null;
@@ -219,6 +222,34 @@ export default function CrmDashboardPage() {
     // even when nothing changed, and depending on the object would rebuild ctx →
     // loadAll → re-run the whole ~17-request orchestration 2–3× per mount.
   }, [profile?.role, profile?.id, profile?.team_id, viewScope.type, viewScope.id, viewScope.role, viewScope.teamId]);
+
+  // ── Canonical scope resolution ──────────────────────────────────────────
+  // Resolve the current view into ONE id-list (uuid[]) that every scope-aware
+  // widget filters by — so no widget re-derives role/team/name scoping itself.
+  //   uuid[]  → filter to exactly these agents
+  //   null    → "everything" (rely on RLS: admin sees all; scoped roles their set)
+  //   undefined → still resolving (widgets wait)
+  // This replaces the by-name matching + hand-rolled team expansion that lived
+  // (differently) inside each widget. Uses the same getTeamMemberIds helper once.
+  const [scopedAgentIds, setScopedAgentIds] = useState(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let ids;
+      if (viewScope.type === 'agent') ids = [viewScope.id || NO_MATCH_ID];
+      else if (viewScope.type === 'team') ids = viewScope.memberIds?.length ? viewScope.memberIds : [NO_MATCH_ID];
+      else if (profile?.role === 'sales_agent') ids = [profile?.id || NO_MATCH_ID];
+      else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) ids = await getTeamMemberIds(profile.role, profile.team_id);
+      else ids = null; // admin / sales_director / operations → everything via RLS
+      if (!cancelled) setScopedAgentIds(ids);
+    })();
+    return () => { cancelled = true; };
+  }, [viewScope.type, viewScope.id, viewScope.teamId, viewScope.memberIds?.length, profile?.role, profile?.id, profile?.team_id]);
+  // Stable string key derived from the RESOLVED scope — widgets key their fetch
+  // effect on this (changes exactly when the covered agent set changes).
+  const scopeKey = scopedAgentIds === undefined ? 'resolving'
+    : scopedAgentIds === null ? 'all'
+    : scopedAgentIds.slice().sort().join(',');
 
   // Fetch the people this user may scope to (their reports). RLS on contacts
   // still gates the actual data; this only populates the dropdown.
@@ -818,15 +849,11 @@ export default function CrmDashboardPage() {
         <div className="min-w-0">
           <Section title={isRTL ? 'أولويات اليوم' : 'Today\'s Priorities'} icon={Sparkles}>
             <p className="text-[11px] text-content-muted dark:text-content-muted-dark m-0 mb-3">{isRTL ? 'أهم العملاء للتواصل معهم الآن — الساخن أولاً، ثم الفريش الجديد.' : 'Call these first — hot leads, then untouched fresh.'}</p>
-            <WorkQueueWidget profile={profile} navigate={navigate} isRTL={isRTL}
-              scopeUserIds={viewScope.type === 'agent' ? [viewScope.id] : viewScope.type === 'team' ? viewScope.memberIds : null}
-              scopeKey={viewScope.type === 'agent' ? `a:${viewScope.id}` : viewScope.type === 'team' ? `t:${viewScope.teamId}` : 'all'} />
+            <WorkQueueWidget profile={profile} navigate={navigate} isRTL={isRTL} agentIds={scopedAgentIds} scopeKey={scopeKey} />
           </Section>
           <Section title={isRTL ? 'عملاء بحاجة لاتصال' : 'Need a Call'} icon={Phone}>
             <p className="text-[11px] text-content-muted dark:text-content-muted-dark m-0 mb-3">{isRTL ? 'تحت المتابعة وبدون نشاط منذ ٣ أيام أو أكثر — بادر بالتواصل معهم.' : 'In follow-up with no activity for 3+ days — reach out before they go cold.'}</p>
-            <NeedACallWidget profile={profile} navigate={navigate} isRTL={isRTL}
-              scopeUserIds={viewScope.type === 'agent' ? [viewScope.id] : viewScope.type === 'team' ? viewScope.memberIds : null}
-              scopeKey={viewScope.type === 'agent' ? `a:${viewScope.id}` : viewScope.type === 'team' ? `t:${viewScope.teamId}` : 'all'} />
+            <NeedACallWidget profile={profile} navigate={navigate} isRTL={isRTL} agentIds={scopedAgentIds} scopeKey={scopeKey} />
           </Section>
         </div>
 
@@ -899,9 +926,7 @@ export default function CrmDashboardPage() {
       {hasPermission(P.CRM_VIEW_TEAM) && (
         <div className={tabVisible('team')}>
           <Section title={isRTL ? 'نشاط الفريق اليوم' : "Team Activity Today"} icon={Users}>
-            <TeamActivityList profile={profile} isRTL={isRTL}
-              scopeUserNames={viewScope.type === 'agent' ? [viewScope.name] : viewScope.type === 'team' ? viewScope.memberNames : null}
-              scopeKey={viewScope.type === 'agent' ? `a:${viewScope.id}` : viewScope.type === 'team' ? `t:${viewScope.teamId}` : 'all'} />
+            <TeamActivityList profile={profile} isRTL={isRTL} agentIds={scopedAgentIds} scopeKey={scopeKey} />
           </Section>
         </div>
       )}
@@ -1827,48 +1852,41 @@ function MyTargetsWidget({ profile, isRTL, scopeUserId, scopeRole }) {
 
 // Team Activity Today — calls / WhatsApp / meetings logged today per agent.
 // Managers only. Moved from the main dashboard.
-function TeamActivityList({ profile, isRTL, scopeUserNames, scopeKey }) {
+function TeamActivityList({ profile, isRTL, agentIds, scopeKey }) {
   const [teamData, setTeamData] = useState([]);
   useEffect(() => {
+    if (scopeKey === 'resolving') return;
     let cancelled = false;
     (async () => {
       try {
         const todayStr = localDateStr();
         // Real work on a lead: outreach (call/whatsapp/meeting) + status changes.
-        // Deliberately EXCLUDES reassignment (bulk/system rows that had a null
-        // user_id and an Arabic name baked into user_name_en) and notes — both
+        // Deliberately EXCLUDES reassignment (bulk/system rows) and notes — both
         // used to silently inflate the totals here.
-        let query = supabase.from('activities').select('user_name_en, type')
+        // Scope by user_id (agentIds resolved upstream, once) — robust against the
+        // name collisions/renames the old user_name_en matching broke on. null =
+        // everything via RLS. Display still uses the row's denormalized name.
+        let query = supabase.from('activities').select('user_id, user_name_en, type')
           .in('type', ['call', 'whatsapp', 'meeting', 'status_change'])
           .gte('created_at', todayStr + 'T00:00:00');
-        if (scopeUserNames && scopeUserNames.length) query = query.in('user_name_en', scopeUserNames);
-        else if (profile?.role === 'sales_agent') query = query.eq('user_name_en', profile?.full_name_en);
-        else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
-          const teamIds = [profile.team_id];
-          if (profile.role === 'sales_manager') {
-            const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-            if (ch) teamIds.push(...ch.map(c => c.id));
-          }
-          const { data: members } = await supabase.from('users').select('full_name_en').in('team_id', teamIds);
-          if (members?.length) query = query.in('user_name_en', members.map(m => m.full_name_en).filter(Boolean));
-        }
+        if (agentIds) query = query.in('user_id', agentIds);
         const { data } = await query;
         if (cancelled || !data) return;
         const map = {};
         data.forEach(a => {
-          const name = a.user_name_en || 'Unknown';
-          if (!map[name]) map[name] = { name, calls: 0, whatsapp: 0, meetings: 0, status: 0, total: 0 };
-          if (a.type === 'call') map[name].calls++;
-          else if (a.type === 'whatsapp') map[name].whatsapp++;
-          else if (a.type === 'meeting') map[name].meetings++;
-          else if (a.type === 'status_change') map[name].status++;
-          map[name].total++;
+          const uid = a.user_id || a.user_name_en || 'unknown';
+          if (!map[uid]) map[uid] = { name: a.user_name_en || 'Unknown', calls: 0, whatsapp: 0, meetings: 0, status: 0, total: 0 };
+          if (a.type === 'call') map[uid].calls++;
+          else if (a.type === 'whatsapp') map[uid].whatsapp++;
+          else if (a.type === 'meeting') map[uid].meetings++;
+          else if (a.type === 'status_change') map[uid].status++;
+          map[uid].total++;
         });
         setTeamData(Object.values(map).sort((x, y) => y.total - x.total).slice(0, 8));
       } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'TeamActivity', e); }
     })();
     return () => { cancelled = true; };
-  }, [profile?.id, profile?.role, profile?.team_id, profile?.full_name_en, scopeKey]);
+  }, [scopeKey]);
   if (!teamData.length) return <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark text-center py-3">{isRTL ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>;
   return (
     <div className="space-y-2">
@@ -1919,10 +1937,10 @@ function leadInitials(name) {
   return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
 }
 
-function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
+function WorkQueueWidget({ profile, navigate, isRTL, agentIds, scopeKey }) {
   const [leads, setLeads] = useState(null);
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || scopeKey === 'resolving') return;
     let cancelled = false;
     (async () => {
       try {
@@ -1932,11 +1950,9 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
         // and untouched-fresh separately guarantees hot leads always surface,
         // each ordered by neglect (hot: longest since activity; fresh: oldest
         // still-new). Merged hot-first, deduped, top 10.
-        const applyScope = (q) => {
-          if (scopeUserIds && scopeUserIds.length) return q.in('assigned_to', scopeUserIds);
-          if (profile?.role === 'sales_agent') return q.eq('assigned_to', profile.id);
-          return q;
-        };
+        // agentIds is resolved upstream: uuid[] = filter to these agents,
+        // null = everything (rely on RLS). No role/team logic here anymore.
+        const applyScope = (q) => (agentIds ? q.in('assigned_to', agentIds) : q);
         const cols = 'id, full_name, phone, temperature, lead_category, contact_status';
         const base = () => supabase.from('contacts').select(cols).eq('is_deleted', false);
         const [hotRes, freshRes] = await Promise.all([
@@ -1954,7 +1970,7 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
       } catch (e) { if (!isMissingRpc(e)) reportError('CrmDashboardPage', 'WorkQueue', e); if (!cancelled) setLeads([]); }
     })();
     return () => { cancelled = true; };
-  }, [profile?.id, profile?.role, scopeKey]);
+  }, [profile?.id, scopeKey]);
   const cleanPhone = (p) => (p || '').replace(/[^0-9+]/g, '');
   if (leads === null) return <ListSkeleton rows={5} />;
   if (!leads.length) return (
@@ -1997,11 +2013,11 @@ function WorkQueueWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
 // "Need a call" — leads in 'following' with no activity for 3+ days, the ones
 // most likely to slip. Moved here from the main dashboard so the CRM page is the
 // single sales home. Role-scoped: a sales_agent sees only their own.
-function NeedACallWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
+function NeedACallWidget({ profile, navigate, isRTL, agentIds, scopeKey }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || scopeKey === 'resolving') return;
     let cancelled = false;
     (async () => {
       try {
@@ -2013,17 +2029,15 @@ function NeedACallWidget({ profile, navigate, isRTL, scopeUserIds, scopeKey }) {
           .lt('last_activity_at', cutoff)
           .order('last_activity_at', { ascending: true })
           .limit(8);
-        // Scope: explicit selection (one agent or a team's members) wins;
-        // otherwise a sales_agent sees own.
-        if (scopeUserIds && scopeUserIds.length) q = q.in('assigned_to', scopeUserIds);
-        else if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
+        // agentIds resolved upstream (uuid[] = these agents, null = all via RLS).
+        if (agentIds) q = q.in('assigned_to', agentIds);
         const { data, error } = await q;
         if (cancelled) return;
         setLeads(!error && Array.isArray(data) ? data : []);
       } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, [profile?.id, profile?.role, scopeKey]);
+  }, [profile?.id, scopeKey]);
   const cleanPhone = (p) => (p || '').replace(/[^0-9+]/g, '');
   if (loading) return <ListSkeleton rows={4} />;
   if (!leads.length) return (
