@@ -133,7 +133,6 @@ export default function CrmDashboardPage() {
   // Live counter of activities streamed in since the last loadAll
   // completed. Drives the "X جديد" badge on the Recent Activity feed.
   // Resets to 0 whenever recentFeed gets a fresh batch (loadAll finish).
-  const [newActivityCount, setNewActivityCount] = useState(0);
   // Wall-time of the last successful load (or cache hydration). Drives
   // the "محدّث منذ Xم" indicator so users always see how fresh the
   // dashboard is. Ticked every 60s via the `now` state below so the
@@ -512,21 +511,9 @@ export default function CrmDashboardPage() {
     // first pass — otherwise team follow-up/status counts render as zero.
   }, [refreshKey, viewScope.type, viewScope.id, viewScope.teamId, viewScope.memberIds?.length]);
 
-  // Realtime: every INSERT on the activities table bumps the unread
-  // counter, which the Recent Activity feed surfaces as a badge. The
-  // counter resets when the feed itself is replaced by a fresh fetch
-  // (see the recentFeed-dep effect just below). For sales_agent we
-  // filter to events authored by them so the count matches what their
-  // feed would actually show.
-  useRealtimeSubscription('activities', useCallback((payload) => {
-    if (payload.eventType !== 'INSERT') return;
-    if (ctx.role === 'sales_agent' && ctx.userId && payload.new?.user_id !== ctx.userId) return;
-    setNewActivityCount(c => c + 1);
-  }, [ctx.role, ctx.userId]));
-
-  // Whenever the feed is replaced (loadAll completed), clear the "new"
-  // badge — those events are now part of the visible feed.
-  useEffect(() => { setNewActivityCount(0); }, [recentFeed]);
+  // The "N new activity" badge + its realtime subscription live in the isolated
+  // <NewActivityBadge> leaf (rendered in the Recent Activity section), so an
+  // activity INSERT re-renders ONLY that badge — not this whole page.
 
   // Tick `now` once a minute so the "محدّث منذ Xم" indicator stays
   // fresh without re-fetching anything.
@@ -1154,16 +1141,7 @@ export default function CrmDashboardPage() {
         <Section
           title={isRTL ? 'آخر النشاطات' : 'Recent Activity'}
           icon={Activity}
-          action={newActivityCount > 0 && (
-            <button
-              type="button"
-              onClick={() => { setRefreshKey(k => k + 1); }}
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-500 text-white hover:bg-brand-600 transition-colors"
-              title={isRTL ? 'تحديث لعرض الجديد' : 'Refresh to show new'}
-            >
-              {newActivityCount} {isRTL ? 'جديد' : 'new'}
-            </button>
-          )}
+          action={<NewActivityBadge role={ctx.role} userId={ctx.userId} resetKey={recentFeed} isRTL={isRTL} onRefresh={() => setRefreshKey(k => k + 1)} />}
         >
           <ul className="list-none p-0 m-0 divide-y divide-edge/40 dark:divide-edge-dark/40">
             {recentFeed.map((a) => {
@@ -1800,6 +1778,31 @@ function buildDelta(current, previous, isRTL) {
 // My Targets — this month's target vs actual per metric, as progress bars.
 // Per-user (profile.id), so everyone sees their own goals. Falls back to the
 // role's default targets when none are explicitly set.
+// Isolated "N new" badge for the Recent Activity feed. It owns the activities
+// realtime subscription + counter, so an INSERT re-renders ONLY this badge
+// instead of the whole 2000-line dashboard. Resets when the feed is replaced
+// (resetKey = the recentFeed array identity, which changes on a fresh fetch).
+function NewActivityBadge({ role, userId, resetKey, isRTL, onRefresh }) {
+  const [count, setCount] = useState(0);
+  useRealtimeSubscription('activities', useCallback((payload) => {
+    if (payload.eventType !== 'INSERT') return;
+    if (role === 'sales_agent' && userId && payload.new?.user_id !== userId) return;
+    setCount(c => c + 1);
+  }, [role, userId]));
+  useEffect(() => { setCount(0); }, [resetKey]);
+  if (count === 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={onRefresh}
+      className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-500 text-white hover:bg-brand-600 transition-colors"
+      title={isRTL ? 'تحديث لعرض الجديد' : 'Refresh to show new'}
+    >
+      {count} {isRTL ? 'جديد' : 'new'}
+    </button>
+  );
+}
+
 function MyTargetsWidget({ profile, isRTL, scopeUserId, scopeRole }) {
   const [rows, setRows] = useState(null);
   const empId = scopeUserId || profile?.id;
