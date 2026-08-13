@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo, AlertTriangle } from 'lucide-react';
+import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo, AlertTriangle, ChevronDown } from 'lucide-react';
 import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
+import { isFollowUpRequired } from '../../../services/interactionsService';
+import { LEAD_CATEGORY_MAP } from '../../../config/leadCategories';
 import {
-  TYPE,
   daysSince, initials, avatarColor, normalizePhone,
   Chip,
 } from './constants';
@@ -19,6 +20,22 @@ const STATUS_DEFS = {
   has_opportunity: { ar: 'لديه فرصة',   en: 'Has Opp',       color: '#117049' },
   disqualified:    { ar: 'غير مؤهل',    en: 'DQ',            color: '#D6403B' },
 };
+
+// Statuses offered in the quick dropdown (order matters).
+const STATUS_ORDER = ['new', 'contacted', 'following', 'has_opportunity', 'disqualified'];
+
+// Disqualify reasons — the DB constraint requires one when status → disqualified.
+const DQ_REASONS = [
+  { value: 'existing_client',    ar: 'عميل حالي (شاري)',  en: 'Existing Client' },
+  { value: 'resale',             ar: 'عايز يبيع وحدته',   en: 'Wants to sell unit' },
+  { value: 'not_interested',     ar: 'غير مهتم',          en: 'Not interested' },
+  { value: 'no_answer_all_time', ar: 'لا يرد أبداً',       en: 'No Answer All Time' },
+  { value: 'no_budget',          ar: 'ميزانية غير مناسبة', en: 'No budget' },
+  { value: 'wrong_audience',     ar: 'جمهور خاطئ',        en: 'Wrong audience' },
+  { value: 'wrong_number',       ar: 'رقم خاطئ',          en: 'Wrong number' },
+  { value: 'duplicate',          ar: 'مكرر',              en: 'Duplicate' },
+  { value: 'other',              ar: 'سبب آخر',           en: 'Other' },
+];
 
 export default function BatchCallModal({
   batchCallMode,
@@ -44,6 +61,10 @@ export default function BatchCallModal({
 }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
+  // Quick status change during the batch call. '' = keep the current status.
+  const [batchCallStatus, setBatchCallStatus] = useState('');
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [batchDqReason, setBatchDqReason] = useState('');
 
   if (!batchCallMode) return null;
 
@@ -133,6 +154,18 @@ export default function BatchCallModal({
 
   const daysAgo = current.last_activity_at ? daysSince(current.last_activity_at) : null;
 
+  // Status/validation for this contact. newStatus = the effective status after
+  // any pending change. Follow-up is mandatory when logging a call (same rule as
+  // the drawer via isFollowUpRequired) — exempt when disqualifying. Disqualifying
+  // needs a reason (DB constraint).
+  const newStatus = batchCallStatus || current.contact_status || 'new';
+  const isDisqualifying = batchCallStatus === 'disqualified';
+  const followUpRequired = !!batchCallResult && isFollowUpRequired('call', newStatus);
+  const dqReasonMissing = isDisqualifying && !batchDqReason;
+  const taskMissing = followUpRequired && !batchTaskForm.due;
+  const canSave = !saving && !dqReasonMissing && !taskMissing;
+  const catDef = LEAD_CATEGORY_MAP[current.lead_category];
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
       <div className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
@@ -176,13 +209,39 @@ export default function BatchCallModal({
               )}
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
-              {(() => {
-                const s = current.contact_status || 'new';
-                const def = STATUS_DEFS[s];
-                if (!def) return null;
-                return <Chip label={isRTL ? def.ar : def.en} color={def.color} bg={def.color + '1A'} />;
-              })()}
-              {TYPE[current.contact_type] && <Chip label={isRTL ? TYPE[current.contact_type].label : TYPE[current.contact_type].labelEn} color={TYPE[current.contact_type].color} bg={TYPE[current.contact_type].bg} />}
+              {/* Status — click to change (dropdown) */}
+              <div className="relative">
+                {(() => {
+                  const def = STATUS_DEFS[newStatus] || STATUS_DEFS.new;
+                  return (
+                    <button type="button" onClick={() => setStatusMenuOpen(o => !o)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer"
+                      style={{ background: def.color + '1A', color: def.color, border: `1px solid ${def.color}55` }}>
+                      {isRTL ? def.ar : def.en}
+                      <ChevronDown size={12} />
+                    </button>
+                  );
+                })()}
+                {statusMenuOpen && (<>
+                  <div className="fixed inset-0 z-10" onClick={() => setStatusMenuOpen(false)} />
+                  <div className="absolute end-0 mt-1 z-20 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg shadow-lg py-1 min-w-[150px]">
+                    {STATUS_ORDER.map(s => {
+                      const def = STATUS_DEFS[s];
+                      const active = newStatus === s;
+                      return (
+                        <button key={s} type="button"
+                          onClick={() => { setBatchCallStatus(s === (current.contact_status || 'new') ? '' : s); if (s !== 'disqualified') setBatchDqReason(''); setStatusMenuOpen(false); }}
+                          className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs text-start hover:bg-surface-bg dark:hover:bg-white/[0.06] ${active ? 'font-bold' : 'font-normal text-content dark:text-content-dark'}`}>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: def.color }} />
+                          <span style={active ? { color: def.color } : undefined}>{isRTL ? def.ar : def.en}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>)}
+              </div>
+              {/* Lead category */}
+              {catDef && <Chip label={isRTL ? catDef.label_ar : catDef.label_en} color={catDef.color} bg={catDef.color + '1A'} />}
               {daysAgo !== null && (
                 <span className={`text-[10px] font-semibold ${daysAgo === 0 ? 'text-emerald-500' : daysAgo <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>
                   {daysAgo === 0 ? (isRTL ? 'تواصل اليوم' : 'Today') : (isRTL ? `آخر تواصل: ${daysAgo} يوم` : `${daysAgo}d ago`)}
@@ -221,27 +280,47 @@ export default function BatchCallModal({
             </div>
           </div>
 
+          {/* Disqualify reason — required when the status dropdown is set to DQ */}
+          {isDisqualifying && (
+            <div className="mb-3">
+              <div className="text-xs font-semibold text-red-500 mb-1.5">{isRTL ? 'سبب الاستبعاد (مطلوب)' : 'Disqualify reason (required)'}</div>
+              <select value={batchDqReason} onChange={e => setBatchDqReason(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs box-border font-inherit ${dqReasonMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} style={{ outline: 'none' }}>
+                <option value="">{isRTL ? 'اختر السبب...' : 'Select reason...'}</option>
+                {DQ_REASONS.map(r => <option key={r.value} value={r.value}>{isRTL ? r.ar : r.en}</option>)}
+              </select>
+            </div>
+          )}
+
           {/* Notes */}
           <textarea value={batchCallNotes} onChange={e => setBatchCallNotes(e.target.value)} placeholder={isRTL ? 'ملاحظات سريعة...' : 'Quick notes...'} rows={2}
             className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-3" />
 
-          {/* Add Task */}
+          {/* Follow-up task — MANDATORY after a logged call (like the drawer),
+              exempt only when disqualifying */}
           <div className="mb-3">
-            <button onClick={() => { setBatchTaskOpen(!batchTaskOpen); if (!batchTaskOpen) setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
-              className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer bg-transparent border-none text-brand-500 dark:text-brand-400 p-0 mb-1.5">
-              <ListTodo size={13} />
-              {isRTL ? (batchTaskOpen ? 'إلغاء التاسك' : '+ إضافة تاسك متابعة') : (batchTaskOpen ? 'Cancel task' : '+ Add follow-up task')}
-            </button>
-            {batchTaskOpen && (
+            {followUpRequired ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-500 dark:text-brand-400 mb-1.5">
+                <ListTodo size={13} />
+                {isRTL ? 'متابعة قادمة (مطلوبة)' : 'Next follow-up (required)'}
+              </div>
+            ) : (
+              <button onClick={() => { setBatchTaskOpen(!batchTaskOpen); if (!batchTaskOpen) setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
+                className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer bg-transparent border-none text-brand-500 dark:text-brand-400 p-0 mb-1.5">
+                <ListTodo size={13} />
+                {isRTL ? (batchTaskOpen ? 'إلغاء التاسك' : '+ إضافة تاسك متابعة') : (batchTaskOpen ? 'Cancel task' : '+ Add follow-up task')}
+              </button>
+            )}
+            {(batchTaskOpen || followUpRequired) && (
               <div className="bg-brand-500/[0.04] dark:bg-brand-500/[0.06] border border-brand-500/10 dark:border-brand-500/15 rounded-[10px] p-2.5">
                 <input value={batchTaskForm.title} onChange={e => setBatchTaskForm(f => ({ ...f, title: e.target.value }))}
                   placeholder={isRTL ? 'عنوان التاسك (مثل: متابعة عرض سعر)' : 'Task title (e.g. Follow up proposal)'}
                   className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs box-border font-inherit mb-2" style={{ outline: 'none' }} />
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'تاريخ الاستحقاق' : 'Due date'}</label>
+                    <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'تاريخ الاستحقاق' : 'Due date'}{followUpRequired && <span className="text-red-500"> *</span>}</label>
                     <input type="date" value={batchTaskForm.due} onChange={e => setBatchTaskForm(f => ({ ...f, due: e.target.value }))}
-                      className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit" style={{ outline: 'none' }} />
+                      className={`w-full px-2 py-1.5 rounded-md border bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit ${taskMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} style={{ outline: 'none' }} />
                   </div>
                   <div className="flex-1">
                     <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'الأولوية' : 'Priority'}</label>
@@ -260,17 +339,18 @@ export default function BatchCallModal({
 
           {/* Navigation */}
           <div className="flex gap-2.5 justify-between">
-            <button disabled={batchCallIndex === 0 || saving} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
+            <button disabled={batchCallIndex === 0 || saving} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); setBatchCallStatus(''); setBatchDqReason(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
               className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${(batchCallIndex === 0 || saving) ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
               {isRTL ? 'السابق' : 'Previous'}
             </button>
-            <button disabled={saving} onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) { setBatchCallIndex(i => i + 1); } else { setBatchCallIndex(batchContacts.length); } }}
+            <button disabled={saving} onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchCallStatus(''); setBatchDqReason(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) { setBatchCallIndex(i => i + 1); } else { setBatchCallIndex(batchContacts.length); } }}
               className={`px-3 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted dark:text-content-muted-dark ${saving ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}>
               {isRTL ? 'تخطي' : 'Skip'}
             </button>
-            <Button size="sm" className="flex-[2] justify-center" disabled={saving} onClick={async () => {
+            <Button size="sm" className="flex-[2] justify-center" disabled={!canSave} onClick={async () => {
               if (saving) return; // belt-and-braces guard against double-click
               setSaving(true);
+              const statusChanged = batchCallStatus && batchCallStatus !== (current.contact_status || 'new');
               let logEntry = null;
               let activitySaved = true;
               let statusSaved = true;
@@ -294,6 +374,7 @@ export default function BatchCallModal({
                     }
                     setBatchCallNotes('');
                     setBatchCallResult('');
+                    setBatchCallStatus(''); setBatchDqReason('');
                     return;
                   }
                   const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
@@ -313,6 +394,10 @@ export default function BatchCallModal({
                     // contact rises in "recently touched" sorting; the
                     // status itself stays wherever the rep set it.
                     const statusUpdate = { last_activity_at: new Date().toISOString() };
+                    if (statusChanged) {
+                      statusUpdate.contact_status = batchCallStatus;
+                      if (isDisqualifying) statusUpdate.disqualify_reason = batchDqReason;
+                    }
                     try {
                       await updateContact(current.id, statusUpdate);
                       setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
@@ -325,12 +410,27 @@ export default function BatchCallModal({
                   }
                   logEntry = { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes, activityFailed: !activitySaved, statusFailed: !statusSaved };
                   setBatchCallLog(prev => [...prev, logEntry]);
+                } else if (statusChanged) {
+                  // Status change with no call result logged this round.
+                  try {
+                    const upd = { contact_status: batchCallStatus, last_activity_at: new Date().toISOString() };
+                    if (isDisqualifying) upd.disqualify_reason = batchDqReason;
+                    await updateContact(current.id, upd);
+                    setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...upd } : c));
+                  } catch (err) { reportError('BatchCallModal', 'updateStatus', err); }
                 }
-                // Create follow-up task if filled
-                if (batchTaskOpen && batchTaskForm.title.trim() && batchTaskForm.due) {
+                // Record the status change in the timeline/audit (same as the drawer).
+                if (statusChanged) {
+                  try {
+                    await createActivity({ type: 'status_change', notes: `${STATUS_DEFS[current.contact_status]?.en || current.contact_status || 'New'} → ${STATUS_DEFS[batchCallStatus]?.en || batchCallStatus}${isDisqualifying && batchDqReason ? ` (${DQ_REASONS.find(r => r.value === batchDqReason)?.en || batchDqReason})` : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', dept: 'sales', created_at: new Date().toISOString() });
+                  } catch (err) { reportError('BatchCallModal', 'statusChangeActivity', err); }
+                }
+                // Create the follow-up task (mandatory after a call → the form is
+                // shown; also created if the rep opened it manually).
+                if ((batchTaskOpen || followUpRequired) && batchTaskForm.due) {
                   try {
                     await createTask({
-                      title: batchTaskForm.title,
+                      title: batchTaskForm.title.trim() || (isRTL ? `متابعة ${current.full_name}` : `Follow up ${current.full_name}`),
                       description: `${isRTL ? 'متابعة' : 'Follow-up'}: ${current.full_name}${batchCallNotes ? ' — ' + batchCallNotes : ''}`,
                       priority: batchTaskForm.priority,
                       due_date: batchTaskForm.due || null,
@@ -367,7 +467,7 @@ export default function BatchCallModal({
                 setBatchTaskForm({ title: '', due: '', priority: 'medium' });
                 if (batchCallIndex < batchContacts.length - 1) {
                   setBatchCallIndex(i => i + 1);
-                  setBatchCallNotes(''); setBatchCallResult('');
+                  setBatchCallNotes(''); setBatchCallResult(''); setBatchCallStatus(''); setBatchDqReason('');
                 } else {
                   // Show summary — log entry already pushed above
                   setBatchCallIndex(batchContacts.length);
