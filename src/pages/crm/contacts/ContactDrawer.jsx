@@ -1285,12 +1285,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {/* Quick Campaign Edit Modal */}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'} role="dialog" aria-modal="true" aria-labelledby="drawer-contact-name">
       {/* Backdrop */}
-      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
+      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px] animate-in fade-in duration-300" aria-hidden="true" />
 
-      {/* Drawer Panel */}
+      {/* Drawer Panel — slides in from its edge (right in LTR, left in RTL) */}
       <div
         ref={drawerRef}
-        className={`contact-drawer relative w-[480px] md:w-[580px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}
+        className={`contact-drawer relative w-[480px] md:w-[580px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark animate-in ${isRTL ? 'slide-in-from-left' : 'slide-in-from-right'} duration-300 ease-out`}
       >
         {/* ═══ FLOATING ACTION STACK — Log (opens the speed-dial) · Call · WhatsApp.
             Icon-only, translucent + blurred so they never hide the timeline; each
