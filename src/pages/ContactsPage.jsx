@@ -7,7 +7,7 @@ import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { usePageActions } from '../contexts/PageActionsContext';
 import { P } from '../config/roles';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock, Tag, RefreshCw, Archive } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock, Tag, RefreshCw, Archive, SlidersHorizontal } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact, restoreContact,
   createActivity, recordAssignment,
@@ -130,6 +130,10 @@ export default function ContactsPage() {
   // it can be round-tripped to the URL and deep-linked from the CRM dashboard.
   const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || 'all');
   const [filterActivity, setFilterActivity] = useState(() => searchParams.get('activity') || 'all'); // all, active_3d, moderate_7d, stale, never
+  // Advanced filters (type / activity / temperature) are hidden behind a
+  // "Filters" toggle so they don't crowd the toolbar — active ones surface as
+  // removable pills below. Open automatically when one is already applied.
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('from') || '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('to') || '');
   const [showUnassigned, setShowUnassigned] = useState(() => searchParams.get('unassigned') === 'true');
@@ -2008,91 +2012,79 @@ export default function ContactsPage() {
 
       </div>
 
-      {/* Follow-up chips — top of the page. Overdue / Today / Upcoming with live,
-          server-side distinct-contact counts; each its own colour. Toggle to
-          filter the list (one bucket at a time). */}
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'المتابعة' : 'Follow-up'}</span>
-        {[
+      {/* ═══ UNIFIED FILTER LENS ROW ═══
+          One horizontal row (scrolls on mobile, wraps on desktop) that replaces
+          the old three stacked, labelled chip groups (Follow-up / Category /
+          Status) — those ate ~half the mobile screen before the first lead.
+          v1-style: a coloured dot + live count per lens, logical groups split by
+          a thin divider. Same state/handlers/counts as before. */}
+      {(() => {
+        const dot = (color) => <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} aria-hidden="true" />;
+        const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 transition-colors ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`;
+        const chipStyle = (active, color) => active ? { border: `1px solid ${color}`, background: `${color}15`, color } : undefined;
+        const countCls = (active) => `rounded-xl px-2 py-px text-[10px] ms-0.5 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`;
+        const Divider = () => <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1 shrink-0 self-center" aria-hidden="true" />;
+
+        const followupChips = [
           { key: 'overdue',  label: isRTL ? 'متأخرة' : 'Overdue',  count: followupCounts.overdue,  color: '#D6403B' },
           { key: 'today',    label: isRTL ? 'النهاردة' : 'Today',   count: followupCounts.today,    color: '#C9860A' },
           { key: 'upcoming', label: isRTL ? 'قادمة' : 'Upcoming',   count: followupCounts.upcoming, color: '#2F6BD3' },
-        ].map(c => {
-          const active = followupFilterValue === c.key;
-          return (
-            <button key={c.key} onClick={() => setFollowupFilter(active ? 'all' : c.key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-              style={active ? { border: `1px solid ${c.color}`, background: `${c.color}15`, color: c.color } : undefined}>
-              <Clock size={11} /> {c.label}
-              <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Lead ORIGIN chips — Fresh / Rotation / Distributed / Cold Calls. Lets a
-          sales agent tell a real fresh lead apart from a rotated / distributed
-          one at a glance. Counts are RLS-scoped (own / team / all), so the
-          number matches the list you get on click. Categories with a 0 count
-          stay hidden until they exist (keeps the row uncluttered). */}
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'التصنيف' : 'Category'}</span>
-        {[
-          { key: 'all', label: isRTL ? 'كل الأنواع' : 'All', count: categoryCounts.total || 0, color: '#2F6BD3' },
-          // Show every CONFIGURED category (incl. newly-added ones with a 0
-          // count) so an admin sees what they just added and can filter by it.
-          ...leadCategoryDefs
-            .map(c => ({ key: c.key, label: isRTL ? c.label_ar : c.label_en, count: categoryCounts[c.key] || 0, color: c.color })),
-        ].map(c => {
-          const active = categoryFilter === c.key;
-          return (
-            <button key={c.key} onClick={() => { setCategoryFilter(c.key); setPage(1); }}
-              className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-              style={active ? { border: `1px solid ${c.color}`, background: `${c.color}15`, color: c.color } : undefined}>
-              <Tag size={11} /> {c.label}
-              <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Status Chips */}
-      <div className="flex gap-2 mb-3 flex-wrap items-center">
-        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark shrink-0 min-w-[52px] text-start">{isRTL ? 'الحالة' : 'Status'}</span>
-        {[
-          // Phase 0: the main row is the ACTIVE pipeline only. "All" sums the
-          // active statuses (disqualified excluded); disqualified moves to the
-          // separate Archive button below.
+        ];
+        const statusChips = [
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: STATUS_DEFS.filter(s => s.value !== 'disqualified').reduce((acc, s) => acc + (stats[s.value] || 0), 0), color: '#2F6BD3' },
-          ...STATUS_DEFS.filter(s => s.value !== 'disqualified').map(s => ({
-            ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0,
-          })),
-        ].map(s => {
-          const active = filterStatus === s.value;
-          return (
-          <button key={s.value} onClick={() => setFilterStatus(s.value)}
-            className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
-            {s.label} <span
-              className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
-          </button>
-          );
-        })}
-        {/* Archive — disqualified leads live here, out of the active pipeline. */}
-        <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1 shrink-0" aria-hidden="true" />
-        <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}
-          className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterStatus === 'disqualified' ? 'border border-gray-500 bg-gray-500/[0.12] text-gray-600 dark:text-gray-300 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${filterStatus === 'disqualified' ? 'bg-gray-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{(stats.disqualified || 0).toLocaleString()}</span>
-        </button>
-        {profile?.role !== 'sales_agent' && (
-        <button onClick={() => setShowUnassigned(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
-        </button>
-        )}
-      </div>
+          ...STATUS_DEFS.filter(s => s.value !== 'disqualified').map(s => ({ ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0 })),
+        ];
+        const categoryChips = [
+          { key: 'all', label: isRTL ? 'كل التصنيفات' : 'All', count: categoryCounts.total || 0, color: '#2F6BD3' },
+          ...leadCategoryDefs.map(c => ({ key: c.key, label: isRTL ? c.label_ar : c.label_en, count: categoryCounts[c.key] || 0, color: c.color })),
+        ];
+
+        return (
+          <div className="flex gap-2 mb-3 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+            {/* Follow-up (daily driver) */}
+            {followupChips.map(c => {
+              const active = followupFilterValue === c.key;
+              return (
+                <button key={`fu-${c.key}`} onClick={() => setFollowupFilter(active ? 'all' : c.key)} className={chipCls(active)} style={chipStyle(active, c.color)}>
+                  {dot(c.color)} {c.label} <span className={countCls(active)} style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+                </button>
+              );
+            })}
+            <Divider />
+            {/* Status (active pipeline) */}
+            {statusChips.map(s => {
+              const active = filterStatus === s.value;
+              return (
+                <button key={`st-${s.value}`} onClick={() => setFilterStatus(s.value)} className={chipCls(active)} style={chipStyle(active, s.color)}>
+                  {dot(s.color)} {s.label} <span className={countCls(active)} style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
+                </button>
+              );
+            })}
+            <Divider />
+            {/* Category (lead origin) */}
+            {categoryChips.map(c => {
+              const active = categoryFilter === c.key;
+              return (
+                <button key={`cat-${c.key}`} onClick={() => { setCategoryFilter(c.key); setPage(1); }} className={chipCls(active)} style={chipStyle(active, c.color)}>
+                  {dot(c.color)} {c.label} <span className={countCls(active)} style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+                </button>
+              );
+            })}
+            <Divider />
+            {/* Archive + Unassigned */}
+            <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterStatus === 'disqualified' ? 'border border-gray-500 bg-gray-500/[0.12] text-gray-600 dark:text-gray-300 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+              <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={`rounded-xl px-2 py-px text-[10px] ms-0.5 ${filterStatus === 'disqualified' ? 'bg-gray-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{(stats.disqualified || 0).toLocaleString()}</span>
+            </button>
+            {profile?.role !== 'sales_agent' && (
+              <button onClick={() => setShowUnassigned(v => !v)}
+                className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+                <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-0.5 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Smart Filter Bar */}
       <SmartFilter
@@ -2113,8 +2105,17 @@ export default function ContactsPage() {
           const types = deptView.contactTypes || (cfgTypeKeys.length ? cfgTypeKeys : LEAD_TYPES);
           const ddCls = 'px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
           const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
+          const advCount = [filterType, filterActivity, filterTemp].filter(v => v !== 'all').length;
           return (
             <>
+              {/* "Filters" toggle — reveals the advanced dropdowns (kept hidden
+                  so they don't crowd the bar; active ones show as pills below). */}
+              <button type="button" onClick={() => setShowAdvanced(v => !v)}
+                className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
+                <SlidersHorizontal size={13} /> {isRTL ? 'فلترة' : 'Filters'}
+                {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
+              </button>
+              {showAdvanced && (<>
               {/* Type */}
               <div className="relative inline-block">
                 <select value={filterType} onChange={e => setFilterType(e.target.value)} className={ddCls}
@@ -2146,6 +2147,7 @@ export default function ContactsPage() {
                   ))}
                 </select>{chev}
               </div>
+              </>)}
             </>
           );
         })()}
@@ -2156,6 +2158,26 @@ export default function ContactsPage() {
           ...(profile?.role !== 'sales_agent' ? [{ label: 'لم يتم نقله', labelEn: 'Never Reassigned', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
         ]}
       />
+
+      {/* Active advanced-filter pills — surface what's applied (type / activity /
+          temperature, hidden behind the Filters toggle) and clear it in one tap. */}
+      {(() => {
+        if (filterType === 'all' && filterActivity === 'all' && filterTemp === 'all') return null;
+        const actLabel = { active_3d: isRTL ? 'نشط' : 'Active', moderate_7d: isRTL ? 'متوسط' : 'Moderate', stale: isRTL ? 'مهمل' : 'Stale', never: isRTL ? 'لم يتواصل' : 'Never' }[filterActivity];
+        const actColor = { active_3d: '#158A57', moderate_7d: '#C9860A', stale: '#D6403B', never: '#6b7280' }[filterActivity];
+        const pill = (key, label, color, onClear) => (
+          <button key={key} onClick={onClear} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer border-none" style={{ color, background: (color || '#2F6BD3') + '20' }}>
+            {label} <XIcon size={11} />
+          </button>
+        );
+        return (
+          <div className="flex gap-2 items-center flex-wrap mt-2 px-1">
+            {filterType !== 'all' && pill('p-type', `${isRTL ? 'النوع' : 'Type'}: ${isRTL ? TYPE[filterType]?.label : TYPE[filterType]?.labelEn}`, TYPE[filterType]?.color, () => setFilterType('all'))}
+            {filterActivity !== 'all' && pill('p-act', `${isRTL ? 'النشاط' : 'Activity'}: ${actLabel}`, actColor, () => setFilterActivity('all'))}
+            {filterTemp !== 'all' && pill('p-temp', `${isRTL ? 'الحرارة' : 'Temp'}: ${isRTL ? TEMP[filterTemp]?.labelAr : TEMP[filterTemp]?.label}`, TEMP[filterTemp]?.color, () => setFilterTemp('all'))}
+          </div>
+        );
+      })()}
 
       {/* Saved Filters */}
       {(savedFilters.length > 0 || smartFilters.length > 0) && (

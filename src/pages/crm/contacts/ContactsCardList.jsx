@@ -305,7 +305,7 @@ export default function ContactsCardList({
                       every time, making the list scannable. */}
                   <div
                     aria-hidden="true"
-                    className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold"
                     style={{ background: avatarBg }}
                   >
                     {initials}
@@ -370,9 +370,10 @@ export default function ContactsCardList({
                 {/* Status + next follow-up row */}
                 <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
                   <span
-                    className="inline-flex items-center text-[11px] font-bold px-2.5 py-0.5 rounded-full"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full"
                     style={{ color: statusColor, background: statusColor + '18' }}
                   >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
                     {statusLabels[status] || status}
                   </span>
                   <div className="flex items-center gap-2">
