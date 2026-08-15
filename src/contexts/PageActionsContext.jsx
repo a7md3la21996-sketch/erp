@@ -24,9 +24,15 @@ export function useHeaderActions() {
 // when the handlers/labels they close over change. Cleared on unmount.
 export function usePageActions(actions, deps = []) {
   const { setActions } = useContext(PageActionsContext);
+  // Register / refresh this page's actions when the caller's deps change.
   useEffect(() => {
     setActions((actions || []).filter(a => a && !a.hidden));
-    return () => setActions([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
+  // Clear ONLY on unmount. Previously the cleanup lived in the effect above and
+  // ran setActions([]) on every deps change — so a caller with an unstable dep
+  // ping-ponged actions → [] → actions each render (header flicker, wasted
+  // renders). Keeping the clear mount-scoped means a bad dep just re-registers
+  // the same actions cheaply instead of thrashing the whole header.
+  useEffect(() => () => setActions([]), []); // eslint-disable-line react-hooks/exhaustive-deps
 }

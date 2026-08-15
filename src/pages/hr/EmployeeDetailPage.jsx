@@ -68,7 +68,7 @@ export default function EmployeeDetailPage() {
   );
 
   if (!emp) return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen flex flex-col items-center justify-center text-center">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh flex flex-col items-center justify-center text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
         <User size={28} className="text-red-500" />
       </div>
@@ -91,7 +91,7 @@ export default function EmployeeDetailPage() {
   const tabsToShow = TABS.filter(t => t.key !== 'disciplinary' || canViewDisciplinary);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
       {/* Back button */}
       <button
         onClick={() => navigate('/hr/employees')}

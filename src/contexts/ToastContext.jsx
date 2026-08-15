@@ -92,7 +92,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, success, error, warning, info, loading, showToast }}>
       {children}
-      <div className="fixed bottom-6 start-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
+      <div style={{ bottom: 'calc(1.5rem + var(--safe-bottom))' }} className="fixed start-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className="pointer-events-auto">
             <ToastItem toast={t} onRemove={remove} />

@@ -779,7 +779,7 @@ export default function SMSTemplatesPage() {
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
 
   return (
-    <div style={{ padding: '20px 24px', minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ padding: '20px 24px', minHeight: '100dvh', direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>

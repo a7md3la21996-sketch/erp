@@ -123,7 +123,7 @@ export default function GlobalFilterBar() {
       {open && (
         <div
           dir={isRTL ? 'rtl' : 'ltr'}
-          className="fixed top-16 inset-x-2 w-auto sm:absolute sm:top-full sm:mt-1 sm:end-0 sm:inset-x-auto sm:w-[260px] max-h-[80vh] overflow-y-auto z-[100] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg dark:shadow-2xl p-3 flex flex-col gap-2.5"
+          className="fixed top-[calc(4rem+var(--safe-top))] inset-x-2 w-auto sm:absolute sm:top-full sm:mt-1 sm:end-0 sm:inset-x-auto sm:w-[260px] max-h-[80vh] overflow-y-auto z-[100] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg dark:shadow-2xl p-3 flex flex-col gap-2.5"
         >
           <div className="flex items-center justify-between">
             <span className={`text-xs font-semibold flex items-center gap-1.5 ${isFiltered ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>

@@ -48,7 +48,7 @@ export default function LoginPage() {
   const disabled = loading || !email || !password;
 
   return (
-    <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-dvh flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Left panel */}
       <div className="hidden md:flex flex-[0_0_50%] bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 items-center justify-center relative overflow-hidden">
         <div className="absolute top-20 -left-20 w-[300px] h-[300px] bg-white/5 rounded-full blur-[60px]" />
@@ -114,8 +114,8 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <Button type="submit" disabled={disabled} className="w-full !h-11">
-              {loading ? '...' : t('auth.login')}
+            <Button type="submit" loading={loading} disabled={!email || !password} className="w-full !h-11">
+              {t('auth.login')}
             </Button>
           </form>
 

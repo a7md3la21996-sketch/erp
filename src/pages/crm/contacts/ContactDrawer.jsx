@@ -1283,14 +1283,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {showHandOff && <HandOffLeadModal contact={contact} onClose={() => setShowHandOff(false)} onSuccess={() => { onClose?.(); /* lead now belongs to someone else; close the drawer */ }} />}
 
     {/* Quick Campaign Edit Modal */}
-    <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'} role="dialog" aria-modal="true" aria-labelledby="drawer-contact-name">
-      {/* Backdrop */}
-      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px] animate-in fade-in duration-300" aria-hidden="true" />
+    <div className="fixed inset-0 z-[900]" dir={isRTL ? 'rtl' : 'ltr'} role="dialog" aria-modal="true" aria-labelledby="drawer-contact-name">
+      {/* Backdrop — full screen so the panel can overlay it (no reserved slot) */}
+      <div onClick={onClose} className="absolute inset-0 bg-black/50 backdrop-blur-[2px] animate-in fade-in duration-300" aria-hidden="true" />
 
-      {/* Drawer Panel — slides in from its edge (right in LTR, left in RTL) */}
+      {/* Drawer Panel — pinned to the trailing edge (absolute = no empty slot),
+          slides in over the backdrop (from right in LTR, from left in RTL) */}
       <div
         ref={drawerRef}
-        className={`contact-drawer relative w-[480px] md:w-[580px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark animate-in ${isRTL ? 'slide-in-from-left' : 'slide-in-from-right'} duration-300 ease-out`}
+        className={`contact-drawer absolute inset-y-0 end-0 w-[480px] md:w-[580px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark animate-in ${isRTL ? 'slide-in-from-left' : 'slide-in-from-right'} duration-300 ease-out`}
       >
         {/* ═══ FLOATING ACTION STACK — Log (opens the speed-dial) · Call · WhatsApp.
             Icon-only, translucent + blurred so they never hide the timeline; each
@@ -1356,7 +1357,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           </div>
         )}
         {/* ═══ STICKY TOP BAR ═══ */}
-        <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
+        <div style={{ paddingTop: 'var(--safe-top)' }} className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
           <div className="flex items-center justify-between h-11 px-3">
             {/* Left: mobile back button OR desktop nav arrows */}
             <div className="flex items-center gap-0.5">

@@ -1651,7 +1651,7 @@ export default function SystemConfigPage() {
   // Admin-only page
   if (profile?.role !== 'admin' && profile?.role !== 'operations') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-dvh">
         <div className="text-center">
           <p className="text-lg font-bold text-content dark:text-content-dark mb-2">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p>
           <p className="text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'هذه الصفحة للأدمن فقط' : 'This page is admin only'}</p>
@@ -1726,7 +1726,7 @@ export default function SystemConfigPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">

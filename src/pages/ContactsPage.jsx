@@ -36,7 +36,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 
 import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone } from './crm/contacts/constants';
-import AddContactModal from './crm/contacts/AddContactModal';
+import AddLeadModal from './crm/contacts/AddLeadModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
 import ContactDrawer from './crm/contacts/ContactDrawer';
@@ -1864,23 +1864,31 @@ export default function ContactsPage() {
   // the server query with the active filters. Falls back to the current page
   // only if the full fetch returns nothing (network etc.).
   const [exporting, setExporting] = useState(false);
+  // Latest filtered list read through a ref — NOT a hook dependency. `filtered`
+  // gets a fresh identity on nearly every render, so pinning it as a dep made
+  // handleExportAll (and the header actions that close over it) change identity
+  // every render too. That re-ran usePageActions each render → setActions fired
+  // a brand-new array each time → re-render → repeat: a live infinite loop
+  // ("Maximum update depth exceeded") burning CPU on the Leads page.
+  const filteredRef = useReactRef(filtered);
+  filteredRef.current = filtered;
   const handleExportAll = useCallback(async () => {
     if (exporting) return;
     setExporting(true);
     toast.info(isRTL ? 'جاري تجهيز التصدير…' : 'Preparing export…');
     try {
       const all = await loadContactsData(1, { exportAll: true });
-      const rows = Array.isArray(all) && all.length ? all : filtered;
+      const rows = Array.isArray(all) && all.length ? all : filteredRef.current;
       exportCSV(rows);
       toast.success(isRTL ? `تم تصدير ${rows.length} عميل` : `Exported ${rows.length} leads`);
     } catch (err) {
       reportError('ContactsPage', 'handleExportAll', err);
-      exportCSV(filtered);
+      exportCSV(filteredRef.current);
     } finally {
       setExporting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exporting, isRTL, filtered]);
+  }, [exporting, isRTL]);
 
   // Fire the deferred export (from a ?action=export deep-link) once the list
   // has finished its first load — exports ALL matching contacts.
@@ -1899,7 +1907,7 @@ export default function ContactsPage() {
     { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', hidden: !perms.canExportContacts, onClick: handleExportAll },
     { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
     { id: 'refresh', icon: RefreshCw, labelAr: 'تحديث', labelEn: 'Refresh', onClick: () => loadContactsData() },
-  ], [isRTL, perms.canImportContacts, perms.canExportContacts, filtered, handleExportAll]);
+  ], [isRTL, perms.canImportContacts, perms.canExportContacts, handleExportAll]);
 
   const handleSave = async (form) => {
     const matchedCampaign = form.campaign_name ? campaignsList.find(c => c.name_en?.toLowerCase() === form.campaign_name.toLowerCase() || c.name_ar?.toLowerCase() === form.campaign_name.toLowerCase()) : null;
@@ -1988,7 +1996,7 @@ export default function ContactsPage() {
         )}
       </div>
     )}
-    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -2332,7 +2340,7 @@ export default function ContactsPage() {
       />
 
       {/* Modals */}
-      {showAddModal && <AddContactModal profile={profile} campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={async (phone) => {
+      {showAddModal && <AddLeadModal profile={profile} campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={async (phone) => {
         // Check the local list first — instant for already-visible duplicates.
         // If we miss, fall back to the DB so we catch dupes that are off-page
         // (the local `contacts` is capped at 1000 by fetchContacts).

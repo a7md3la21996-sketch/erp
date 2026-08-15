@@ -110,7 +110,7 @@ export default function RecentItemsDropdown({ show, onClose }) {
         right: 8,
         maxWidth: 360,
         marginLeft: 'auto',
-        maxHeight: 'calc(100vh - 80px)',
+        maxHeight: 'calc(100dvh - 80px)',
         background: isDark ? '#1a2332' : '#ffffff',
         border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
         borderRadius: 14,

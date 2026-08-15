@@ -587,7 +587,7 @@ export default function GoalsPage() {
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{
       padding: '16px 28px',
       background: isDark ? '#0a1929' : '#f8fafc',
-      minHeight: '100vh',
+      minHeight: '100dvh',
     }}>
       {/* Page Header */}
       <div style={{

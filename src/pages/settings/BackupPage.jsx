@@ -261,7 +261,7 @@ export default function BackupPage() {
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{
       padding: '24px 28px',
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: isDark ? '#0a1929' : '#f8fafc',
     }}>
       {/* Toast */}

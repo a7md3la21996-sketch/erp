@@ -19,6 +19,13 @@
 @tailwind utilities;
 
 :root {
+  /* iOS safe-area insets (notch / status bar / home indicator). Real values
+     only once viewport-fit=cover is set on the viewport meta; otherwise 0.
+     Exposed as variables so the header height and any element that offsets
+     from the header (see the sticky sub-bars) stay in sync. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   --primary-900: #1A3159;
   --primary-800: #1E3E77;
   --primary-700: #1F478F;
@@ -34,6 +41,22 @@
 html { font-family: 'Cairo', 'Plus Jakarta Sans', sans-serif; }
 body { margin: 0; background: #f9fafb; color: #111827; transition: background-color 0.3s ease, color 0.3s ease; }
 html.dark body, body.dark { background: #030712; color: #f3f4f6; }
+
+/* Native-app feel: remove the mobile-browser tells.
+   • tap-highlight-color: kills the grey/blue flash on every tap (inherited, so
+     setting it on <html> cascades everywhere). Buttons keep their own :active
+     press states (active:scale-95), so no feedback is lost.
+   • overscroll-behavior-y: stops the whole-page rubber-band bounce / browser
+     pull-to-refresh — the app has its own refresh.
+   • text-size-adjust: stops iOS inflating font sizes on orientation change. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html, body {
+  overscroll-behavior-y: none;
+}
 
 /* Smooth theme transitions – scoped to body only (not all elements) */
 body {
@@ -85,6 +108,20 @@ html.dark textarea, body.dark textarea {
   .contact-drawer { width: 100vw !important; }
 }
 
+/* Prevent iOS Safari's auto-zoom on field focus. Mobile Safari zooms the page
+   whenever a focused input/textarea/select has a font-size < 16px; our controls
+   use 14px, so tapping ANY field zoomed in then bounced back out — a jarring,
+   website-like jump on every edit. Forcing 16px on the actual form controls
+   (touch-width screens only — desktop sizing is untouched) stops the zoom.
+   !important is needed to beat Tailwind's text-sm utility on the inputs. */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ── Mobile responsiveness enhancements ────────────────────────── */
 @media (max-width: 768px) {
   /* Reduce page padding on mobile */
@@ -111,7 +148,7 @@ html.dark textarea, body.dark textarea {
 
 /* Small phone adjustments */
 @media (max-width: 380px) {
-  .modal-content { width: 100vw !important; max-width: 100vw !important; margin: 0 !important; border-radius: 0 !important; min-height: 100vh; }
+  .modal-content { width: 100vw !important; max-width: 100vw !important; margin: 0 !important; border-radius: 0 !important; min-height: 100dvh; }
 }
 
 /* ── Print stylesheet ────────────────────────────────────────── */

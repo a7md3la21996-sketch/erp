@@ -458,7 +458,7 @@ export default function TriggersPage() {
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{
       fontFamily: "'Cairo','Tajawal',sans-serif",
       color: isDark ? '#e2e8f0' : '#1e293b',
-      padding: '24px 28px', minHeight: '100vh',
+      padding: '24px 28px', minHeight: '100dvh',
       background: isDark ? '#0a1929' : '#f8fafc',
     }}>
       {/* Header */}

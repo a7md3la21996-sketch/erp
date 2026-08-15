@@ -185,8 +185,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
       <aside
         data-tour="sidebar"
+        style={{ paddingTop: 'var(--safe-top)' }}
         className={`
-          fixed top-0 start-0 h-screen z-50 bg-surface-card dark:bg-surface-card-dark border-e border-edge dark:border-edge-dark flex flex-col
+          fixed top-0 start-0 h-dvh z-50 bg-surface-card dark:bg-surface-card-dark border-e border-edge dark:border-edge-dark flex flex-col
           transition-all duration-300
           ${/* Mobile: slide in/out drawer, always full width (260px) */''}
           ${mobileOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full' : '-translate-x-full')}

@@ -322,7 +322,7 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div style={{ padding: '16px 28px', minHeight: '100vh', background: isDark ? '#0a1929' : '#f8fafc' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div style={{ padding: '16px 28px', minHeight: '100dvh', background: isDark ? '#0a1929' : '#f8fafc' }} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>

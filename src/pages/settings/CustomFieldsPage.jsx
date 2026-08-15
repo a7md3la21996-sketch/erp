@@ -213,7 +213,7 @@ export default function CustomFieldsPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '16px 28px', backgroundColor: surfaceBg, minHeight: '100vh' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '16px 28px', backgroundColor: surfaceBg, minHeight: '100dvh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

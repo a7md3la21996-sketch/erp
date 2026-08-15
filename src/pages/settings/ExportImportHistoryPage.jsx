@@ -100,7 +100,7 @@ export default function ExportImportHistoryPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px', minHeight: '100vh', background: pageBg }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px', minHeight: '100dvh', background: pageBg }}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

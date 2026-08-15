@@ -75,7 +75,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const { contactTypes, leadCategories } = useSystemConfig();
-  // Build allowed types per department from system config (same pattern as AddContactModal)
+  // Build allowed types per department from system config (same pattern as AddLeadModal)
   const DEPT_TYPES = (() => {
     const map = { sales: [], hr: [], marketing: [], finance: [], operations: [] };
     (contactTypes || []).forEach(t => {
@@ -105,7 +105,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   const isSalesDept = form.department === 'sales';
   const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
 
-  // Auto-detect country across the same input shapes AddContactModal does:
+  // Auto-detect country across the same input shapes AddLeadModal does:
   // +966..., 00966..., bare-intl "966...", and local "0X..." prefixes.
   // libphonenumber is authoritative when the prefix is unambiguous; the
   // local-prefix table handles short partial input that can't yet be parsed.

@@ -150,7 +150,7 @@ class AppErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-surface-bg-dark flex-col gap-4 p-6">
+        <div className="flex items-center justify-center h-dvh bg-gray-50 dark:bg-surface-bg-dark flex-col gap-4 p-6">
           <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-2xl">!</div>
           <h2 className="text-content dark:text-content-dark m-0 text-lg">Something went wrong</h2>
           <p className="text-content-muted dark:text-content-muted-dark m-0 text-[13px] text-center max-w-[400px]">{this.state.error?.message}</p>
@@ -183,7 +183,7 @@ function ComingSoon({ title }) {
 function AuthRedirect() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-surface-bg dark:bg-surface-bg-dark flex-col gap-4">
+    <div className="flex items-center justify-center h-dvh bg-surface-bg dark:bg-surface-bg-dark flex-col gap-4">
       <div className="w-10 h-10 border-[3px] border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
       <p className="text-content-muted dark:text-content-muted-dark text-sm m-0">Loading...</p>
     </div>

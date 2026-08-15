@@ -485,7 +485,7 @@ export default function APIDocsPage() {
         <div style={{
           width: 240, flexShrink: 0, background: sidebarBg,
           borderRadius: 14, border: cardBorder, padding: '12px 8px',
-          position: 'sticky', top: 80, maxHeight: 'calc(100vh - 160px)', overflow: 'auto',
+          position: 'sticky', top: 80, maxHeight: 'calc(100dvh - 160px)', overflow: 'auto',
         }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: textSecondary, padding: '4px 10px', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {t('Services', 'الخدمات')} ({filteredServices.length})

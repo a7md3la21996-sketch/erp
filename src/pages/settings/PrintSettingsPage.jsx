@@ -136,7 +136,7 @@ export default function PrintSettingsPage() {
   ];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', minHeight: '100vh' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', minHeight: '100dvh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

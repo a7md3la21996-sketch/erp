@@ -206,7 +206,7 @@ export default function SalesForecastPage() {
   const hoverBg = isDark ? 'rgba(74,122,171,0.08)' : '#f1f5f9';
 
   return (
-    <div style={{ padding: '24px', background: pageBg, minHeight: '100vh' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div style={{ padding: '24px', background: pageBg, minHeight: '100dvh' }} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

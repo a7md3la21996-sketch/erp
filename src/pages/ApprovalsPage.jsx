@@ -416,7 +416,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
         dir={isRTL ? 'rtl' : 'ltr'}
         style={{
           position: 'fixed', top: 0, [isRTL ? 'left' : 'right']: 0,
-          width: '100%', maxWidth: 520, height: '100vh',
+          width: '100%', maxWidth: 520, height: '100dvh',
           background: panelBg, zIndex: 201,
           display: 'flex', flexDirection: 'column',
           boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',

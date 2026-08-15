@@ -178,7 +178,7 @@ export default function NotificationsDropdown({ show, onClose }) {
         right: 8,
         maxWidth: 400,
         marginLeft: 'auto',
-        maxHeight: 'calc(100vh - 80px)',
+        maxHeight: 'calc(100dvh - 80px)',
         borderRadius: 14,
         background: isDark ? '#1a1f2e' : '#fff',
         border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,

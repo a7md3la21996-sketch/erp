@@ -196,7 +196,7 @@ export default function SettingsPage() {
   // Content rendered inline with display:none for persistence
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="flex min-h-screen bg-[#F7F8FA] dark:bg-[#0A0D13]">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="flex min-h-dvh bg-[#F7F8FA] dark:bg-[#0A0D13]">
       {/* Sidebar */}
       <div className="w-[220px] shrink-0 border-e border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark overflow-y-auto hidden md:block">
         <div className="p-4 border-b border-edge dark:border-edge-dark">

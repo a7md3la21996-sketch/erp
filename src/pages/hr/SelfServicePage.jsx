@@ -72,7 +72,7 @@ export default function SelfServicePage() {
   const leaveBalance = emp?.leave_balance ?? 0;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
       {/* ─── Hero ─── */}
       <Card className="p-5 md:p-6 mb-5">
         <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>

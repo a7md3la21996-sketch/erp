@@ -286,7 +286,7 @@ export default function FinancePage() {
 
   // Admin/Finance only
   if (profile && !['admin', 'operations', 'finance'].includes(profile.role)) {
-    return <div className="flex items-center justify-center min-h-screen"><p className="text-lg font-bold text-content dark:text-content-dark">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p></div>;
+    return <div className="flex items-center justify-center min-h-dvh"><p className="text-lg font-bold text-content dark:text-content-dark">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p></div>;
   }
 
   const location = useLocation();
@@ -1637,7 +1637,7 @@ export default function FinancePage() {
      ═══════════════════════════════════════════════════════════════════════ */
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16">
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">

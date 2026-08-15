@@ -54,7 +54,7 @@ export default function DocumentsPage() {
   // Employee documents include contracts, IDs, certificates — restrict to HR/admin.
   if (profile && !['admin', 'hr'].includes(profile.role)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-dvh">
         <p className="text-lg font-bold text-content dark:text-content-dark">
           {isRTL ? 'غير مصرح' : 'Unauthorized'}
         </p>
@@ -207,7 +207,7 @@ export default function DocumentsPage() {
   if (loading) return <div className="px-4 py-4 md:px-7 md:py-6"><PageSkeleton hasKpis={false} tableRows={6} tableCols={5} /></div>;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
       {/* Header */}
       <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>

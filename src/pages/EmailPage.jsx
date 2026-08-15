@@ -113,7 +113,7 @@ export default function EmailPage() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 80px)', direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Header */}
       <div style={{
         padding: '20px 24px 16px',

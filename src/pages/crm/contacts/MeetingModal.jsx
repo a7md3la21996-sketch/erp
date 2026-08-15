@@ -62,9 +62,9 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}
-      className="fixed inset-0 z-[920] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4">
+      className="fixed inset-0 z-[920] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 animate-in fade-in duration-200">
       <div onClick={e => e.stopPropagation()}
-        className="w-full max-w-[420px] bg-surface-card dark:bg-surface-card-dark rounded-2xl border border-edge dark:border-edge-dark shadow-2xl overflow-hidden">
+        className="w-full max-w-[420px] bg-surface-card dark:bg-surface-card-dark rounded-2xl border border-edge dark:border-edge-dark shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 ease-out">
         <div className="flex items-center justify-between px-4 py-3 border-b border-edge dark:border-edge-dark">
           <span className="text-sm font-bold text-content dark:text-content-dark">{scheduled ? (isRTL ? 'حجز اجتماع' : 'Schedule meeting') : (isRTL ? 'تسجيل اجتماع' : 'Log meeting')}</span>
           <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
@@ -130,7 +130,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
 
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-edge dark:border-edge-dark">
           <Button variant="secondary" size="sm" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button size="sm" onClick={save} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
+          <Button size="sm" onClick={save} loading={saving}>{isRTL ? 'حفظ' : 'Save'}</Button>
         </div>
       </div>
     </div>

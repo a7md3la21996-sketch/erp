@@ -94,8 +94,8 @@ export default function QuickTaskModal({ contact, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={requestClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="quick-task-title" dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5 animate-in fade-in duration-200" onClick={requestClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="quick-task-title" dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 ease-out" onClick={e => e.stopPropagation()}>
         <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <h3 id="quick-task-title" className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
           <button onClick={requestClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>

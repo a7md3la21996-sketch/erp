@@ -2,9 +2,35 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Platform ERP</title>
-    <meta name="theme-color" content="#4A7AAB" />
+    <meta name="theme-color" content="#2F6BD3" />
+    <!-- Apply the saved theme BEFORE first paint. React only sets the .dark
+         class after it mounts (ThemeContext useEffect), so dark-mode users saw
+         a white flash on every load/refresh. This mirrors ThemeContext's exact
+         resolution (manual / auto / schedule, key: platform_theme_config) so
+         the class is already correct when the page paints — no flash. -->
+    <script>
+      (function () {
+        try {
+          var cfg = JSON.parse(localStorage.getItem('platform_theme_config') || 'null') || {};
+          var mode = cfg.themeMode || 'manual';
+          var theme = cfg.theme || 'light';
+          if (mode === 'auto') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          } else if (mode === 'schedule') {
+            var s = cfg.scheduleStart == null ? 18 : cfg.scheduleStart;
+            var e = cfg.scheduleEnd == null ? 6 : cfg.scheduleEnd;
+            var h = new Date().getHours();
+            var isDark = s <= e ? (h >= s && h < e) : (h >= s || h < e);
+            theme = isDark ? 'dark' : 'light';
+          }
+          var root = document.documentElement;
+          root.classList.remove('light', 'dark');
+          root.classList.add(theme);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="apple-touch-icon" href="/pwa-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

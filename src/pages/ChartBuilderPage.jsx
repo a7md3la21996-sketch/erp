@@ -280,7 +280,7 @@ export default function ChartBuilderPage() {
   // ── Styles ──
   const pageStyle = {
     padding: '24px 28px',
-    minHeight: '100vh',
+    minHeight: '100dvh',
     direction: isRTL ? 'rtl' : 'ltr',
   };
 

@@ -140,7 +140,7 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
   );
 }
 
-export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction, campaigns = [], onCreateCampaign, profile }) {
+export default function AddLeadModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction, campaigns = [], onCreateCampaign, profile }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -354,8 +354,8 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   };
 
   return (
-    <div onClick={requestClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-contact-title" onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
+    <div onClick={requestClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5 animate-in fade-in duration-200" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-contact-title" onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 ease-out">
         {savedContact ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-500/[0.12] flex items-center justify-center mx-auto mb-4">
@@ -630,7 +630,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
             {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
               ? (() => { const canNext = form.contact_type && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
-              : <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
+              : <Button onClick={handleSave} loading={saving}>{isRTL ? 'حفظ' : 'Save'}</Button>
             }
           </div>
         </div>

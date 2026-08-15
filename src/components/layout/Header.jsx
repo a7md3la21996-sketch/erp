@@ -134,7 +134,9 @@ export default function Header({ onMenuClick }) {
 
   return (
     <>
-    <header className="h-16 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark flex items-center justify-between px-3 md:px-6 sticky top-0 z-30">
+    <header
+      style={{ height: 'calc(4rem + var(--safe-top))', paddingTop: 'var(--safe-top)' }}
+      className="bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark flex items-center justify-between px-3 md:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-2 md:gap-3 flex-1 md:max-w-[420px]">
         {/* Hamburger menu - mobile only */}
         <button
@@ -371,7 +373,7 @@ export default function Header({ onMenuClick }) {
       </div>
     </header>
     {isImpersonating && (
-      <div className="h-9 bg-amber-500/15 border-b border-amber-500/25 flex items-center justify-center gap-3 px-4 sticky top-16 z-30">
+      <div className="h-9 bg-amber-500/15 border-b border-amber-500/25 flex items-center justify-center gap-3 px-4 sticky top-[calc(4rem+var(--safe-top))] z-30">
         <Shield size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
         <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">
           {isRTL

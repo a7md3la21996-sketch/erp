@@ -99,7 +99,7 @@ export default function HeatmapPage() {
   return (
     <div style={{
       padding: '20px 28px',
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: isDark ? '#0a1929' : '#f8fafc',
     }} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Page header */}

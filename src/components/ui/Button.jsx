@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { Loader2 } from 'lucide-react';
 
 const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg cursor-pointer transition-all duration-200 font-cairo disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]';
 
@@ -17,8 +18,20 @@ const variants = {
   call:      'bg-gradient-to-br from-[#065F46] to-emerald-500 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0',
 };
 
-const Button = forwardRef(({ variant = 'primary', size = 'md', className = '', children, ...props }, ref) => (
-  <button ref={ref} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props}>
+// `loading` shows an inline spinner and disables the button so a slow save can't
+// be double-submitted and the user gets immediate "it's working" feedback (an
+// app tell — before this, buttons looked inert while an async action ran). The
+// label stays rendered so the button keeps its width and doesn't jump. Opt-in:
+// buttons that don't pass `loading` are unchanged.
+const Button = forwardRef(({ variant = 'primary', size = 'md', className = '', children, loading = false, disabled, ...props }, ref) => (
+  <button
+    ref={ref}
+    disabled={loading || disabled}
+    aria-busy={loading || undefined}
+    className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
+    {...props}
+  >
+    {loading && <Loader2 className="animate-spin shrink-0" size={size === 'sm' ? 14 : 16} aria-hidden="true" />}
     {children}
   </button>
 ));

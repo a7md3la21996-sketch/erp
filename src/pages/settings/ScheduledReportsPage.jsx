@@ -572,7 +572,7 @@ export default function ScheduledReportsPage() {
   });
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', minHeight: '100vh' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', minHeight: '100dvh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>

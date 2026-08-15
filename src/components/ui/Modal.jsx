@@ -23,7 +23,7 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={onClose} aria-hidden="true" />
 
       {/* Content */}
       <div
@@ -40,7 +40,7 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
           overflow-y-auto
           bg-surface-card dark:bg-surface-card-dark
           rounded-xl sm:rounded-2xl shadow-2xl z-[1]
-          animate-in fade-in zoom-in-95 duration-200
+          animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 ease-out
         `}
       >
         {/* Header */}

@@ -114,7 +114,7 @@ export default function ComparisonReportsPage() {
   const noData = metrics.every(m => m.period1Value === 0 && m.period2Value === 0);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px', background: pageBg, minHeight: '100vh' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px', background: pageBg, minHeight: '100dvh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

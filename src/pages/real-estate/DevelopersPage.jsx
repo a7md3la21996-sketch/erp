@@ -100,7 +100,7 @@ export default function DevelopersPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16">
       {/* Header */}
       <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
         <div>

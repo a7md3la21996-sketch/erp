@@ -132,7 +132,7 @@ export default function ManagerDashboardPage() {
 
   if (team.length === 0) {
     return (
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen flex flex-col items-center justify-center text-center">
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-12 md:px-7 md:py-12 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh flex flex-col items-center justify-center text-center">
         <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mb-4">
           <Users size={28} className="text-brand-500" />
         </div>
@@ -162,7 +162,7 @@ export default function ManagerDashboardPage() {
   })();
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
       {/* Hero */}
       <div className={`mb-6 ${isRTL ? 'text-right' : 'text-left'}`}>
         <h1 className="m-0 text-2xl md:text-3xl font-bold text-content dark:text-content-dark">

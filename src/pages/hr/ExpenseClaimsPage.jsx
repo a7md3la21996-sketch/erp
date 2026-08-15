@@ -196,7 +196,7 @@ export default function ExpenseClaimsPage() {
   const hoverBg = isDark ? 'rgba(74,122,171,0.06)' : '#f8fafc';
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '16px 28px', background: bg, minHeight: '100vh' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '16px 28px', background: bg, minHeight: '100dvh' }}>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

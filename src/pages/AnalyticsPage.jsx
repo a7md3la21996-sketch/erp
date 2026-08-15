@@ -315,7 +315,7 @@ export default function AnalyticsPage() {
   // RENDER
   // ══════════════════════════════════════════════════════════════
   return (
-    <div style={{ direction: isRTL ? 'rtl' : 'ltr', minHeight: '100vh' }}>
+    <div style={{ direction: isRTL ? 'rtl' : 'ltr', minHeight: '100dvh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>

@@ -1765,7 +1765,7 @@ export default function DashboardPage() {
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
 
   return (
-    <div className="px-4 py-5 md:px-8 md:py-7 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-5 md:px-8 md:py-7 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Hero banner — slim greeting strip. The KPI chips duplicated the
           card row below, so they're gone. Just role + date + the target
           progress as a single inline indicator (more useful than three

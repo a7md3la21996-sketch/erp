@@ -887,7 +887,7 @@ export default function ReportsPage() {
   const exportColumns = useMemo(() => reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [], [reportTable]);
 
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">

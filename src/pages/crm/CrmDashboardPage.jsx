@@ -24,7 +24,7 @@ import { fetchContactStats, fetchDealStats } from '../../services/dashboardServi
 import { fetchTasks } from '../../services/tasksService';
 import { getEmployeeTargets, computeActuals, getDefaultTargets, METRIC_CONFIG } from '../../services/kpiTargetsService';
 import { createContact, checkDuplicate } from '../../services/contactsService';
-import AddContactModal from './contacts/AddContactModal';
+import AddLeadModal from './contacts/AddLeadModal';
 import { reportError } from '../../utils/errorReporter';
 
 
@@ -1322,7 +1322,7 @@ export default function CrmDashboardPage() {
 
       {/* Add Lead — same modal the Leads page uses; create straight from here. */}
       {showAddLead && (
-        <AddContactModal
+        <AddLeadModal
           profile={profile}
           campaigns={[]}
           onClose={() => setShowAddLead(false)}
