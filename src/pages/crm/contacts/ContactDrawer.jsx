@@ -1241,6 +1241,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   // ── Dept-specific tab labels ─────────────────────────────────────────────
+  // Drawer = fast triage only. The heavy detail tabs (Units / Comments /
+  // Documents / Data) now live on the roomy Full Profile page
+  // (/crm/leads/:id, opened from the "Full profile" menu item), so they're
+  // removed from the rail here to keep the rep's daily surface light. Their
+  // section render-blocks below are left in place (unreachable, harmless) so
+  // this is a one-line revert if needed. Audit stays (admin-only, rare).
   const tabs = [
     { key: 'activity', label: isRTL ? 'السجل' : 'Timeline', icon: Clock },
     { key: 'deal', label: isRTL ? 'الصفقة' : 'Deal', icon: DollarSign },
@@ -1248,10 +1254,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     // Old sales "Opportunities" tab is retired — the Deal tab replaces it.
     // Non-sales depts keep their tab (recruitment / campaigns / orders / invoices).
     ...(deptTab.key === 'opportunities' ? [] : [{ key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon }]),
-    { key: 'units', label: isRTL ? 'وحدات للبيع' : 'Units', icon: Building2 },
-    { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
-    { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
-    { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
     // Admin/operations-only oversight tab: full change history + who viewed.
     ...(isAdmin ? [{ key: 'audit', label: isRTL ? 'السجل الكامل' : 'Audit', icon: History }] : []),
   ];
@@ -1411,6 +1413,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       const sectionLabelCls = "text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark px-3 pt-2 pb-1";
                       const Divider = () => <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-1" />;
                       const groups = [
+                        // Full profile — the roomy, id-based details page (all
+                        // fields, units, documents, comments). Drawer stays the
+                        // fast triage surface; this is where you go deep.
+                        <button key="fullprofile" onClick={() => { navigate(`/crm/leads/${contact.id}`); onClose?.(); setShowDrawerMenu(false); }} className={itemCls}>
+                          <Briefcase size={13} className="text-brand-500" /> {isRTL ? 'الملف الكامل' : 'Full profile'}
+                        </button>,
                         // Edit (single primary action)
                         canEditContact && (
                           <button key="edit" onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className={itemCls}>

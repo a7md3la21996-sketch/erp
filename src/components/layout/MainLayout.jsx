@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -22,6 +22,7 @@ function useIsMobile(breakpoint = 768) {
 
 export default function MainLayout() {
   const { profile } = useAuth();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
@@ -145,7 +146,13 @@ export default function MainLayout() {
         <PageActionsProvider>
           <Header onMenuClick={() => setSidebarOpen(true)} />
           <main className="pb-[64px] md:pb-0">
-            <Outlet />
+            {/* Keyed by route so each navigation replays a quick fade/rise —
+                page changes feel like an app screen arriving, not a hard jump.
+                Keyed on pathname only, so filter/query changes on the same page
+                don't re-animate. */}
+            <div key={location.pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
+              <Outlet />
+            </div>
           </main>
         </PageActionsProvider>
       </div>
