@@ -8,8 +8,24 @@ const sizes = {
   lg: 'px-4 py-2.5 text-sm',
 };
 
-const Input = forwardRef(({ size = 'md', className = '', dir = 'auto', ...props }, ref) => (
-  <input ref={ref} dir={dir} className={`${base} ${sizes[size]} ${className}`} {...props} />
+// Derive the right mobile keyboard from the input type so numeric/tel/email
+// fields don't open the default letter keyboard on phones. An explicit
+// inputMode always wins (e.g. pass inputMode="decimal" for money).
+const inputModeFor = (type) =>
+  type === 'number' ? 'numeric'
+  : type === 'tel' ? 'tel'
+  : type === 'email' ? 'email'
+  : undefined;
+
+const Input = forwardRef(({ size = 'md', className = '', dir = 'auto', type = 'text', inputMode, ...props }, ref) => (
+  <input
+    ref={ref}
+    type={type}
+    dir={dir}
+    inputMode={inputMode ?? inputModeFor(type)}
+    className={`${base} ${sizes[size]} ${className}`}
+    {...props}
+  />
 ));
 Input.displayName = 'Input';
 

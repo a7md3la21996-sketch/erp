@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, ModalFooter, Button } from '../ui';
+import { Modal, ModalFooter, Button, confirm } from '../ui';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, Calendar, X, Link2 } from 'lucide-react';
 import supabase from '../../lib/supabase';
 
@@ -700,12 +700,12 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
             <Button variant="secondary" onClick={reset}>
               {lang === 'ar' ? 'رجوع' : 'Back'}
             </Button>
-            <Button onClick={() => {
+            <Button onClick={async () => {
               const monthName = MONTHS_AR[month - 1];
               const msg = lang === 'ar'
                 ? `هيتم رفع ${totalMatchedRecords} سجل حضور لشهر ${monthName} ${year}.\n\nمتأكد إن الشهر صح؟`
                 : `${totalMatchedRecords} records will be imported for ${monthName} ${year}.\n\nIs the month correct?`;
-              if (window.confirm(msg)) handleImport();
+              if (await confirm(msg)) handleImport();
             }} disabled={!matched.length}>
               {lang === 'ar' ? `استيراد ${totalMatchedRecords} سجل` : `Import ${totalMatchedRecords} records`}
             </Button>

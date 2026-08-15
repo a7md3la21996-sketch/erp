@@ -30,7 +30,7 @@ import {
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../../contexts/ToastContext';
-import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill, ExportButton } from '../../components/ui';
+import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill, ExportButton, confirm } from '../../components/ui';
 
 const TICKET_TYPE_ICONS = { complaint: AlertTriangle, maintenance: Wrench, inquiry: HelpCircle, modification: Edit3 };
 
@@ -426,7 +426,7 @@ export default function OperationsPage() {
               <Button
                 variant="danger"
                 size="md"
-                onClick={() => { if (window.confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
+                onClick={async () => { if (await confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
               >
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
@@ -740,7 +740,7 @@ export default function OperationsPage() {
       <Modal open={true} title={isRTL?'صفقة جديدة':'New Deal'} onClose={()=>setShowDealModal(false)} width="max-w-md">
         <div className="flex flex-col gap-4">
           <div><FieldLabel>{isRTL?'اسم العميل (عربي)':'Client Name (Arabic)'}</FieldLabel><Input value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} placeholder={isRTL?'محمد أحمد':'Mohamed Ahmed'} /></div>
-          <div><FieldLabel>{isRTL?'رقم الموبايل':'Phone'}</FieldLabel><Input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="01xxxxxxxxx" /></div>
+          <div><FieldLabel>{isRTL?'رقم الموبايل':'Phone'}</FieldLabel><Input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="01xxxxxxxxx" inputMode="tel" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><FieldLabel>{isRTL?'المشروع':'Project'}</FieldLabel><Select value={form.project} onChange={e=>set('project',Number(e.target.value))}>{PROJECTS.map((p,i)=><option key={i} value={i}>{isRTL?p.ar:p.en}</option>)}</Select></div>
             <div><FieldLabel>{isRTL?'كود الوحدة':'Unit Code'}</FieldLabel><Input value={form.unit_code} onChange={e=>set('unit_code',e.target.value)} placeholder="A-101" /></div>

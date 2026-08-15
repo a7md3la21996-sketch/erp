@@ -12,7 +12,7 @@ import {
   AlertTriangle, Clock, Building2,
   UserCheck, Trash2, CheckSquare
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination , confirm } from '../../components/ui';
 
 
 /* ─── Icon Button ─── */
@@ -158,7 +158,7 @@ export default function EmployeesPage() {
   };
 
   const handleReinstate = async (emp) => {
-    if (!window.confirm(lang === 'ar' ? `إعادة تعيين ${emp.full_name_ar || emp.full_name_en}؟` : `Reinstate ${emp.full_name_en || emp.full_name_ar}?`)) return;
+    if (!await confirm(lang === 'ar' ? `إعادة تعيين ${emp.full_name_ar || emp.full_name_en}؟` : `Reinstate ${emp.full_name_en || emp.full_name_ar}?`)) return;
     try {
       const result = await updateEmployee(emp.id, {
         status: 'active',
@@ -663,7 +663,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'الهاتف' : 'Phone'}</label>
-            <input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className={inputCls} />
+            <input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className={inputCls} inputMode="tel" />
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'القسم' : 'Department'}</label>

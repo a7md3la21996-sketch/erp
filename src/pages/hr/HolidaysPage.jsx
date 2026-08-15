@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchHolidays, createHoliday, createHolidaysBulk, deleteHoliday } from '../../services/holidaysService';
 import { useToast } from '../../contexts/ToastContext';
 import { Calendar, Plus, Trash2, Copy } from 'lucide-react';
-import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, Select, PageSkeleton } from '../../components/ui';
+import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, Select, PageSkeleton , confirm } from '../../components/ui';
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const DAY_NAMES_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -71,7 +71,7 @@ export default function HolidaysPage() {
 
   const handleDelete = async (id) => {
     const msg = lang === 'ar' ? 'حذف هذه الإجازة؟' : 'Delete this holiday?';
-    if (!window.confirm(msg)) return;
+    if (!await confirm(msg)) return;
     try {
       await deleteHoliday(id);
       setHolidays(prev => prev.filter(h => h.id !== id));

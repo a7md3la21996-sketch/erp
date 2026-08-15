@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { confirm } from '../components/ui';
 import {
   getNotifications, markAsRead, markAllAsRead, deleteNotification, clearAll,
   getNotificationPreferences, setNotificationPreferences,
@@ -201,7 +202,7 @@ export default function NotificationsPage() {
   const handleBulkDelete = async () => {
     const ids = [...selectedIds];
     if (!ids.length) return;
-    if (!window.confirm(isRTL ? `حذف ${ids.length} إشعار؟` : `Delete ${ids.length} notifications?`)) return;
+    if (!await confirm(isRTL ? `حذف ${ids.length} إشعار؟` : `Delete ${ids.length} notifications?`)) return;
     const before = notifications;
     setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
     const results = await Promise.allSettled(ids.map(id => deleteNotification(id)));
@@ -216,7 +217,7 @@ export default function NotificationsPage() {
   };
 
   const handleClearAll = async () => {
-    if (!window.confirm(isRTL
+    if (!await confirm(isRTL
       ? 'حذف كل الإشعارات؟ لا يمكن التراجع عن هذه العملية.'
       : 'Delete ALL notifications? This cannot be undone.')) return;
     try {

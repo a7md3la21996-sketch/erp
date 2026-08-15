@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchShifts, createShift, updateShift, deleteShift, setDefaultShift } from '../../services/shiftsService';
 import { useToast } from '../../contexts/ToastContext';
 import { Clock, Plus, Pencil, Trash2, Star } from 'lucide-react';
-import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
+import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton , confirm } from '../../components/ui';
 
 const DAY_LABELS = { ar: ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'], en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] };
 const EMPTY_FORM = { name: '', name_ar: '', description: '', official_start: '', official_end: '', late_threshold: '', working_days: [0,1,2,3,4,6], late_penalty_multiplier: 2, required_hours: 8, break_minutes: 60 };
@@ -84,7 +84,7 @@ export default function ShiftsPage() {
   // ── Delete ──────────────────────────────────────────────────
   const handleDelete = async (id) => {
     const msg = lang === 'ar' ? 'هل أنت متأكد من الحذف؟' : 'Are you sure you want to delete this shift?';
-    if (!window.confirm(msg)) return;
+    if (!await confirm(msg)) return;
     try {
       await deleteShift(id);
       setShifts(prev => prev.filter(s => s.id !== id));

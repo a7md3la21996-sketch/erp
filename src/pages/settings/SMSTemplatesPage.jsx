@@ -318,7 +318,7 @@ function SendTestModal({ template, onClose, onSend, isRTL, isDark }) {
             <label style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4, display: 'block' }}>
               {isRTL ? 'رقم الهاتف' : 'Phone Number'}
             </label>
-            <input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+201001234567" dir="ltr" />
+            <input style={inputStyle} inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+201001234567" dir="ltr" />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {['en', 'ar'].map(l => (

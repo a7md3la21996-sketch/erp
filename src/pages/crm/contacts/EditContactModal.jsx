@@ -265,7 +265,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
                 <Select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
                   {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
                 </Select>
-                <Input value={form.phone} onChange={e => handlePhoneChange(e.target.value, 'phone', 'countryCode')} placeholder="10xxxxxxxx" className="flex-1" disabled={!canEditPhone} />
+                <Input value={form.phone} onChange={e => handlePhoneChange(e.target.value, 'phone', 'countryCode')} placeholder="10xxxxxxxx" className="flex-1" inputMode="tel" disabled={!canEditPhone} />
               </div>
             </div>
             <div>
@@ -278,7 +278,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
                 <Select value={form.countryCode2} onChange={e => set('countryCode2', e.target.value)} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
                   {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
                 </Select>
-                <Input value={form.phone2} onChange={e => handlePhoneChange(e.target.value, 'phone2', 'countryCode2')} placeholder="11xxxxxxxx" className="flex-1" disabled={!canEditPhone} />
+                <Input value={form.phone2} onChange={e => handlePhoneChange(e.target.value, 'phone2', 'countryCode2')} placeholder="11xxxxxxxx" className="flex-1" inputMode="tel" disabled={!canEditPhone} />
               </div>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
                   {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
                 </Select>
                 <div className="flex-1">
-                  <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" disabled={!rowEditable} />
+                  <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" inputMode="tel" disabled={!rowEditable} />
                   {ph && (() => { const fp = getFullPhone(ph, extraCodes[i]); if (!validatePhone(fp)) return <span className="text-[10px] text-orange-500 mt-0.5 block">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-[10px] text-emerald-500 mt-0.5 block">{info.flag} {info.country}</span> : null; })()}
                 </div>
                 {rowEditable && (

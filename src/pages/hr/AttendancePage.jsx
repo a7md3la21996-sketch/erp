@@ -6,7 +6,7 @@ import { fetchAttendance } from '../../services/attendanceService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Eraser, Search, Users, AlertTriangle } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters, Input } from '../../components/ui';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters, Input, confirm } from '../../components/ui';
 import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
 import supabase from '../../lib/supabase';
 
@@ -667,7 +667,7 @@ export default function AttendancePage() {
         : `Delete ${empName}'s ${monthName} records? (${empRecords})`;
     }
 
-    if (!window.confirm(msg)) return;
+    if (!await confirm(msg)) return;
 
     try {
       let query = supabase.from('attendance').delete();

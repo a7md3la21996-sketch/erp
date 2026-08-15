@@ -277,7 +277,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <div style={labelStyle}>{isRTL ? 'الهاتف' : 'Phone'}</div>
-                  <input style={inputStyle} value={editData.phone} onChange={e => setEditData(p => ({ ...p, phone: e.target.value }))} />
+                  <input style={inputStyle} inputMode="tel" value={editData.phone} onChange={e => setEditData(p => ({ ...p, phone: e.target.value }))} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>

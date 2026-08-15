@@ -118,7 +118,7 @@ function GeneralTab({ isRTL, isDark, toggleTheme, lang, handleLangToggle, profil
           <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'اسم الشركة (إنجليزي)' : 'Company Name (English)'}</label><Input value={form.name_en} onChange={e => handleChange('name_en', e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><Phone size={11} />{isRTL ? 'الهاتف' : 'Phone'}</label><Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} dir="ltr" /></div>
+          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><Phone size={11} />{isRTL ? 'الهاتف' : 'Phone'}</label><Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} inputMode="tel" dir="ltr" /></div>
           <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><Mail size={11} />{isRTL ? 'البريد' : 'Email'}</label><Input value={form.email} onChange={e => handleChange('email', e.target.value)} dir="ltr" /></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">

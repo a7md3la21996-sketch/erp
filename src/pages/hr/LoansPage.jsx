@@ -4,7 +4,7 @@ import { fetchLoans, createLoan, updateLoan, deleteLoan } from '../../services/p
 import { fetchEmployees } from '../../services/employeesService';
 import { useToast } from '../../contexts/ToastContext';
 import { DollarSign, Plus, Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
+import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton , confirm } from '../../components/ui';
 
 const LOAN_TYPES = [
   { value: 'loan', ar: 'قرض', en: 'Loan' },
@@ -137,7 +137,7 @@ export default function LoansPage() {
 
   const handleDelete = async (id) => {
     const msg = lang === 'ar' ? 'حذف هذا السلف/القرض؟' : 'Delete this loan?';
-    if (!window.confirm(msg)) return;
+    if (!await confirm(msg)) return;
     try {
       await deleteLoan(id);
       setLoans(prev => prev.filter(l => l.id !== id));

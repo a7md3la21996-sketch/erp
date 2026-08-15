@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchDepartments } from '../../services/employeesService';
 import { useToast } from '../../contexts/ToastContext';
 import { Building2, Plus, Pencil, Trash2 } from 'lucide-react';
-import { Button, Card, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
+import { Button, Card, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton , confirm } from '../../components/ui';
 import supabase from '../../lib/supabase';
 
 const EMPTY_FORM = { name_en: '', name_ar: '' };
@@ -56,7 +56,7 @@ export default function DepartmentsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(lang === 'ar' ? 'حذف هذا القسم؟' : 'Delete this department?')) return;
+    if (!await confirm(lang === 'ar' ? 'حذف هذا القسم؟' : 'Delete this department?')) return;
     try {
       const { error } = await supabase.from('departments').delete().eq('id', id);
       if (error) throw error;

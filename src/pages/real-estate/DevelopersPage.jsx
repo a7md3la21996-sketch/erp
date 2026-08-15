@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, Building2, Phone, MessageCircle, Send, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
-import { Button, Modal, ModalFooter, Input, Textarea, ListSkeleton, EmptyState } from '../../components/ui';
+import { Button, Modal, ModalFooter, Input, Textarea, ListSkeleton, EmptyState , confirm } from '../../components/ui';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchDevelopers, createDeveloper, updateDeveloper, deleteDeveloper, canManageDevelopers } from '../../services/developersService';
@@ -94,7 +94,7 @@ export default function DevelopersPage() {
   };
 
   const remove = async (d) => {
-    if (!window.confirm(isRTL ? `حذف "${d.name}"؟` : `Delete "${d.name}"?`)) return;
+    if (!await confirm(isRTL ? `حذف "${d.name}"؟` : `Delete "${d.name}"?`)) return;
     try { await deleteDeveloper(d.id); toast.success(isRTL ? 'تم الحذف' : 'Deleted'); setMenuFor(null); await load(); }
     catch (err) { toast.error(err.message || 'Delete failed'); }
   };
@@ -218,7 +218,7 @@ export default function DevelopersPage() {
               <div className="mt-3 space-y-3 ps-1">
                 <div className="grid grid-cols-2 gap-2">
                   <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder={isRTL ? 'اسم جهة الاتصال' : 'Contact name'} />
-                  <Input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder={isRTL ? 'موبايل جهة الاتصال' : 'Contact phone'} dir="ltr" />
+                  <Input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder={isRTL ? 'موبايل جهة الاتصال' : 'Contact phone'} inputMode="tel" dir="ltr" />
                 </div>
                 <Input value={form.projects} onChange={e => setForm(f => ({ ...f, projects: e.target.value }))} placeholder={isRTL ? 'المشاريع (بينهم فاصلة)' : 'Projects (comma separated)'} />
                 <Input value={form.commission} onChange={e => setForm(f => ({ ...f, commission: e.target.value }))} placeholder={isRTL ? 'العمولة (مثال 5%)' : 'Commission (e.g. 5%)'} />

@@ -12,7 +12,7 @@ import MainLayout from './components/layout/MainLayout';
 import KeyboardShortcutsProvider from './components/layout/KeyboardShortcutsProvider';
 import LoginPage from './pages/auth/LoginPage';
 import { P } from './config/roles';
-import { Button } from './components/ui';
+import { Button, ConfirmHost } from './components/ui';
 import { PageSkeleton } from './components/ui/PageSkeletons';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -227,6 +227,8 @@ export default function App() {
             <KeyboardShortcutsProvider>
             <ConnectionStatus />
             <VersionChecker />
+            <ConfirmHost />
+
 
             <Suspense fallback={<PageLoader />}>
             <Routes>

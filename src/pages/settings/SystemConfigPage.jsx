@@ -7,7 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { ROLES, ROLE_LABELS, ROLE_PERMISSIONS, P, LOCKED_PERMISSIONS, LOCKED_ROLES } from '../../config/roles';
 import { reloadPermissionOverrides } from '../../contexts/AuthContext';
 import { hexToRgbaBg } from '../../utils/configHelpers';
-import { Card, Button, Input, Select, FilterPill } from '../../components/ui';
+import { Card, Button, Input, Select, FilterPill, confirm } from '../../components/ui';
 import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
@@ -51,8 +51,8 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
     setNewType({ label_ar: '', label_en: '', color: '#5A63C4', departments: [] });
   };
 
-  const handleDelete = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا النوع؟' : 'Delete this type?')) return;
+  const handleDelete = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا النوع؟' : 'Delete this type?')) return;
     setTypes(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -166,8 +166,8 @@ function LeadCategoriesTab({ config, updateSection, isRTL, toast }) {
     setNewCat({ label_ar: '', label_en: '', color: '#5A63C4' });
   };
 
-  const handleDelete = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا التصنيف؟ الليدز اللي عليه هيفضلوا بنفس المفتاح.' : 'Delete this category? Existing leads keep the raw key.')) return;
+  const handleDelete = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا التصنيف؟ الليدز اللي عليه هيفضلوا بنفس المفتاح.' : 'Delete this category? Existing leads keep the raw key.')) return;
     setCats(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -267,8 +267,8 @@ function SourcesTab({ config, updateSection, isRTL, toast }) {
     setNewSource({ label_ar: '', label_en: '', platform: 'other' });
   };
 
-  const handleDelete = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا المصدر؟' : 'Delete this source?')) return;
+  const handleDelete = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا المصدر؟' : 'Delete this source?')) return;
     setSources(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -353,8 +353,8 @@ function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
     setNewStage({ label_ar: '', label_en: '', color: '#5A63C4' });
   };
 
-  const handleDelete = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذه المرحلة؟' : 'Delete this stage?')) return;
+  const handleDelete = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذه المرحلة؟' : 'Delete this stage?')) return;
     setStages(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -473,8 +473,8 @@ function DepartmentsTab({ config, updateSection, isRTL, toast }) {
     setNewDept({ label_ar: '', label_en: '', color: '#5A63C4' });
   };
 
-  const handleDelete = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا القسم؟' : 'Delete this department?')) return;
+  const handleDelete = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا القسم؟' : 'Delete this department?')) return;
     setDepts(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -900,8 +900,8 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
     setNewLost({ label_ar: '', label_en: '' });
   };
 
-  const deleteLost = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا السبب؟' : 'Delete this reason?')) return;
+  const deleteLost = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا السبب؟' : 'Delete this reason?')) return;
     setLostReasons(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -971,7 +971,7 @@ function DQReasonsTab({ config, updateSection, isRTL, toast }) {
 
   const handleSave = () => { updateSection('dqReasons', reasons); toast.success(isRTL ? 'تم الحفظ' : 'Saved'); };
   const addR = () => { if (!newR.label_en.trim()) return; setReasons(prev => [...prev, { key: newR.label_en.toLowerCase().replace(/\s+/g, '_'), ...newR }]); setNewR({ label_ar: '', label_en: '' }); };
-  const deleteR = (idx) => { if (!window.confirm(isRTL ? 'حذف؟' : 'Delete?')) return; setReasons(prev => prev.filter((_, i) => i !== idx)); };
+  const deleteR = async (idx) => { if (!await confirm(isRTL ? 'حذف؟' : 'Delete?')) return; setReasons(prev => prev.filter((_, i) => i !== idx)); };
   const changeR = (idx, field, value) => { setReasons(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r)); };
 
   return (
@@ -1024,8 +1024,8 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
     setNewType({ label_ar: '', label_en: '' });
   };
 
-  const deleteType = (idx) => {
-    if (!window.confirm(isRTL ? 'حذف هذا النوع وكل نتائجه؟' : 'Delete this type and all its results?')) return;
+  const deleteType = async (idx) => {
+    if (!await confirm(isRTL ? 'حذف هذا النوع وكل نتائجه؟' : 'Delete this type and all its results?')) return;
     const key = types[idx].key;
     setTypes(prev => prev.filter((_, i) => i !== idx));
     setResults(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -1675,12 +1675,12 @@ export default function SystemConfigPage() {
     );
   }
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     const msg = isRTL
       ? 'تحذير: سيتم إعادة جميع الإعدادات للقيم الافتراضية. هل أنت متأكد؟'
       : 'Warning: This will reset ALL settings to defaults. Are you sure?';
-    if (!window.confirm(msg)) return;
-    if (!window.confirm(isRTL ? 'تأكيد نهائي - لا يمكن التراجع!' : 'Final confirmation - this cannot be undone!')) return;
+    if (!await confirm(msg)) return;
+    if (!await confirm(isRTL ? 'تأكيد نهائي - لا يمكن التراجع!' : 'Final confirmation - this cannot be undone!')) return;
     resetToDefaults();
     toast.success(isRTL ? 'تم إعادة التعيين' : 'Reset to defaults');
     window.location.reload();

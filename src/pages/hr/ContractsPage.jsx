@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { FileText, Plus, Pencil, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
+import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton , confirm } from '../../components/ui';
 import supabase from '../../lib/supabase';
 
 const CONTRACT_TYPES = [
@@ -182,7 +182,7 @@ export default function ContractsPage() {
 
   const handleDelete = async (id) => {
     const msg = lang === 'ar' ? 'حذف هذا العقد؟' : 'Delete this contract?';
-    if (!window.confirm(msg)) return;
+    if (!await confirm(msg)) return;
     try {
       const { error } = await supabase.from('contracts').delete().eq('id', id);
       if (error) throw error;

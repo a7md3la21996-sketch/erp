@@ -28,6 +28,7 @@ import HandOffLeadModal from './HandOffLeadModal';
 import TakeActionForm from './TakeActionForm';
 import ContactSMSModal from './ContactSMSModal';
 import ResaleUnitsTab from './ResaleUnitsTab';
+import { confirm } from '../../../components/ui';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
@@ -1499,8 +1500,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                             <Divider />
                             <div className={`${sectionLabelCls} text-red-500/70 dark:text-red-400/70`}>{isRTL ? 'منطقة الخطر' : 'Danger Zone'}</div>
                             {onDelete && canDeleteContact && (
-                              <button onClick={() => {
-                                if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
+                              <button onClick={async () => {
+                                const ok = await confirm({
+                                  title: isRTL ? 'حذف الليد' : 'Delete lead',
+                                  message: isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`,
+                                  confirmText: isRTL ? 'حذف' : 'Delete',
+                                  danger: true,
+                                });
+                                if (ok) {
                                   onDelete(contact.id);
                                   setShowDrawerMenu(false);
                                 }
