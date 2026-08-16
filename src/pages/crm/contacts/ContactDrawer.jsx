@@ -1600,7 +1600,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {(() => {
             const propType = { residential: isRTL ? 'سكني' : 'Residential', commercial: isRTL ? 'تجاري' : 'Commercial', administrative: isRTL ? 'إداري' : 'Administrative' };
             const cells = [
-              contact.phone && { k: isRTL ? 'الهاتف' : 'Phone', v: contact.phone, ltr: true },
+              contact.phone && { k: isRTL ? 'الهاتف' : 'Phone', v: contact.phone, ltr: true, href: `tel:${normalizePhone(contact.phone)}` },
+              // Secondary + extra numbers were only rendered in the retired Data
+              // tab, so a lead with two numbers looked like it had one. Surface
+              // them here next to the primary, each tappable to dial.
+              contact.phone2 && { k: isRTL ? 'الهاتف الثاني' : 'Phone 2', v: contact.phone2, ltr: true, href: `tel:${normalizePhone(contact.phone2)}` },
+              ...(Array.isArray(contact.extra_phones)
+                ? contact.extra_phones.filter(Boolean).map((p, i) => ({ k: `${isRTL ? 'هاتف' : 'Phone'} ${i + 3}`, v: p, ltr: true, href: `tel:${normalizePhone(p)}` }))
+                : []),
               contact.source && { k: isRTL ? 'المصدر' : 'Source', v: isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source) },
               contact.campaign_name && { k: isRTL ? 'الحملة' : 'Campaign', v: contact.campaign_name },
               (contact.budget_min || contact.budget_max) && { k: isRTL ? 'الميزانية' : 'Budget', v: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
@@ -1612,7 +1619,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 {cells.map((f, i) => (
                   <div key={i} className="min-w-0">
                     <div className="text-[9.5px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{f.k}</div>
-                    <div className="text-[12.5px] font-semibold text-content dark:text-content-dark mt-0.5 truncate" dir={f.ltr ? 'ltr' : undefined}>{f.v}</div>
+                    {f.href ? (
+                      <a href={f.href} onClick={e => e.stopPropagation()} className="block text-[12.5px] font-semibold text-brand-600 dark:text-brand-400 mt-0.5 truncate no-underline" dir={f.ltr ? 'ltr' : undefined}>{f.v}</a>
+                    ) : (
+                      <div className="text-[12.5px] font-semibold text-content dark:text-content-dark mt-0.5 truncate" dir={f.ltr ? 'ltr' : undefined}>{f.v}</div>
+                    )}
                   </div>
                 ))}
               </div>

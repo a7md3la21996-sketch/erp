@@ -112,6 +112,9 @@ export default function ContactsCardList({
 }) {
   const { t } = useTranslation();
   const statusLabels = isRTL ? STATUS_LABELS_AR : STATUS_LABELS_EN;
+  // Which card's phone chooser is open, and for which channel.
+  // { id, mode: 'call' | 'wa' } — only shown when a lead has >1 number.
+  const [numMenu, setNumMenu] = useState(null);
 
   // ── Pull-to-refresh ─────────────────────────────────────────────────
   // Reads window scroll because the cards live inside the page's normal
@@ -261,6 +264,15 @@ export default function ContactsCardList({
           const untouched = isUntouched(c);
           const initials = agentInitials(c.full_name || '?');
           const avatarBg = avatarColor(c.id);
+          // All reachable numbers for this lead (primary + secondary + extras),
+          // de-duped. When there is more than one, Call/WhatsApp ask which to use
+          // instead of silently defaulting to the primary.
+          const phones = [...new Set(
+            [c.phone, c.phone2, ...(Array.isArray(c.extra_phones) ? c.extra_phones : [])]
+              .map(p => (p ? String(p).trim() : ''))
+              .filter(Boolean)
+          )];
+          const multiPhone = phones.length > 1;
 
           return (
             <li key={c.id}>
@@ -340,6 +352,12 @@ export default function ContactsCardList({
                       ) : (
                         <span className="shrink-0">{isRTL ? 'بدون رقم' : 'no phone'}</span>
                       )}
+                      {multiPhone && (
+                        <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-brand-500/12 text-brand-500 dark:text-brand-400"
+                          title={isRTL ? `${phones.length} أرقام — دوس اتصال للاختيار` : `${phones.length} numbers — tap call to choose`}>
+                          +{phones.length - 1}
+                        </span>
+                      )}
                       {sourceIcon && (
                         <span className="inline-flex items-center gap-0.5 shrink-0" style={{ color: sourceIcon.color }} title={c.source} aria-label={`Source: ${c.source}`}>
                           · <sourceIcon.Icon size={11} />
@@ -348,9 +366,20 @@ export default function ContactsCardList({
                     </div>
                   </div>
 
-                  {/* Quick Call + WhatsApp — aligned with the short name/phone block */}
-                  <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
-                    {c.phone && (
+                  {/* Quick Call + WhatsApp — aligned with the short name/phone
+                      block. With >1 number they open a chooser instead of
+                      silently dialing the primary. */}
+                  <div className="relative flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                    {c.phone && (multiPhone ? (
+                      <button
+                        onClick={() => setNumMenu(numMenu?.id === c.id && numMenu.mode === 'call' ? null : { id: c.id, mode: 'call' })}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 active:scale-95 transition-transform"
+                        aria-label={isRTL ? 'اتصال' : 'Call'}
+                        aria-haspopup="true"
+                      >
+                        <Phone size={16} />
+                      </button>
+                    ) : (
                       <a
                         href={`tel:${normalizePhone(c.phone)}`}
                         className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 no-underline active:scale-95 transition-transform"
@@ -358,8 +387,17 @@ export default function ContactsCardList({
                       >
                         <Phone size={16} />
                       </a>
-                    )}
-                    {c.phone && (
+                    ))}
+                    {c.phone && (multiPhone ? (
+                      <button
+                        onClick={() => setNumMenu(numMenu?.id === c.id && numMenu.mode === 'wa' ? null : { id: c.id, mode: 'wa' })}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] active:scale-95 transition-transform"
+                        aria-label="WhatsApp"
+                        aria-haspopup="true"
+                      >
+                        <MessageCircle size={16} />
+                      </button>
+                    ) : (
                       <a
                         href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`}
                         target="_blank"
@@ -369,6 +407,36 @@ export default function ContactsCardList({
                       >
                         <MessageCircle size={16} />
                       </a>
+                    ))}
+
+                    {/* Number chooser — appears for multi-number leads */}
+                    {numMenu?.id === c.id && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setNumMenu(null); }} />
+                        <div className="absolute z-50 top-full end-0 mt-1.5 min-w-[190px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] overflow-hidden">
+                          <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark border-b border-edge/60 dark:border-edge-dark/60">
+                            {numMenu.mode === 'wa' ? (isRTL ? 'واتساب لأنهي رقم؟' : 'WhatsApp which number?') : (isRTL ? 'اتصال بأنهي رقم؟' : 'Call which number?')}
+                          </div>
+                          {phones.map((p, i) => (
+                            <a
+                              key={`${c.id}-num-${i}`}
+                              href={numMenu.mode === 'wa' ? `https://wa.me/${normalizePhone(p).replace('+', '')}` : `tel:${normalizePhone(p)}`}
+                              target={numMenu.mode === 'wa' ? '_blank' : undefined}
+                              rel={numMenu.mode === 'wa' ? 'noreferrer' : undefined}
+                              onClick={() => setNumMenu(null)}
+                              className="flex items-center gap-2 px-3 py-2.5 text-xs text-content dark:text-content-dark no-underline hover:bg-surface-bg dark:hover:bg-brand-500/10 border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0"
+                            >
+                              {numMenu.mode === 'wa'
+                                ? <MessageCircle size={14} className="text-[#25D366] shrink-0" />
+                                : <Phone size={14} className="text-blue-500 shrink-0" />}
+                              <span dir="ltr" className="font-mono truncate">{p}</span>
+                              <span className="ms-auto shrink-0 text-[9px] text-content-muted dark:text-content-muted-dark">
+                                {i === 0 ? (isRTL ? 'أساسي' : 'Primary') : (isRTL ? `رقم ${i + 1}` : `#${i + 1}`)}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
