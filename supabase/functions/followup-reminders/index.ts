@@ -1,15 +1,16 @@
 // Supabase Edge Function: followup-reminders
-// Near-real-time follow-up reminders. Runs on a SHORT cron (every ~15 min) and
-// fires a per-lead notification the moment a follow-up becomes due — the instant
-// complement to the once-a-day digest in `daily-alerts`.
 //
-// How "instant" works without a per-row scheduler: each run picks up follow-ups
-// whose next_follow_up_at fell into the last ~20-minute window. A follow-up's
-// due time lands in exactly one window, so it fires once, right after it's due.
-// A 2-hour dedup guard (by contact id, read from the notification url) makes
-// overlapping windows / missed runs safe against double-notifying.
+// ⚠️ RETIRED (2026-08-16). Superseded by the pure-SQL function
+// `public.send_appointment_reminders()` scheduled on pg_cron — see
+// supabase/migrations/appointment_reminders_cron.sql. The 15-min cron job
+// named "followup-reminders" was re-pointed to that SQL function, so THIS
+// edge function is no longer invoked. Kept only for reference/history; do not
+// re-point the cron back here without first unscheduling the SQL job, or
+// due-now notifications will fire twice.
 //
-// Schedule: every 15 minutes (Supabase cron / pg_cron / external scheduler).
+// The SQL version does more than this ever did: it fires THREE tiers
+// (a day before / an hour before / at due time) for every appointment in
+// contacts.next_follow_up_at, instead of only the moment it became due.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -24,79 +25,55 @@ serve(async () => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const now = new Date();
   const nowISO = now.toISOString();
-  // ── Tiered appointment reminders ──────────────────────────────────────────
-  // Every lead carries ONE next appointment in `next_follow_up_at` — a call, a
-  // meeting, a WhatsApp, whatever the rep scheduled. We fire THREE tiers so the
-  // rep is warned AHEAD of time, not only the moment it's already due:
-  //   • d1  — ~a day before  (heads-up to prepare / travel)
-  //   • h1  — ~an hour before
-  //   • due — the moment it becomes due (the original behaviour)
-  // Each tier's window is matched to the ~15-min cron; a (contact, tier) dedup
-  // guard makes overlapping runs / missed runs safe against double-notifying.
-  const MIN = 60000, HOUR = 3600000, t0 = now.getTime();
-  const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString("ar-EG", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit" });
+  // Window a bit wider than the cron interval so jitter never drops a follow-up;
+  // the dedup guard below absorbs the resulting overlap.
+  const windowStartISO = new Date(now.getTime() - 20 * 60000).toISOString();
+  const dedupSinceISO = new Date(now.getTime() - 2 * 3600000).toISOString();
 
-  const tiers = [
-    { type: "followup_due", from: t0 - 20 * MIN, to: t0,
-      title_ar: "موعد مستحق دلوقتي", title_en: "Appointment due now",
-      body: (n: string, _t: string) => [`حان موعد "${n}"`, `Due now: "${n}"`] },
-    { type: "followup_soon_1h", from: t0 + 50 * MIN, to: t0 + 70 * MIN,
-      title_ar: "موعد بعد ساعة", title_en: "Appointment in 1 hour",
-      body: (n: string, t: string) => [`بعد ساعة (${t}) — موعد مع "${n}"`, `In 1 hour (${t}) — "${n}"`] },
-    { type: "followup_soon_1d", from: t0 + (24 * HOUR - 20 * MIN), to: t0 + 24 * HOUR,
-      title_ar: "موعد بكرة", title_en: "Appointment tomorrow",
-      body: (n: string, t: string) => [`بكرة الساعة ${t} — موعد مع "${n}"`, `Tomorrow ${t} — "${n}"`] },
-  ];
+  // Follow-ups that just became due in the last window, on live non-dead leads.
+  const { data: due, error } = await supabase
+    .from("contacts")
+    .select("id, full_name, assigned_to, assigned_to_name, next_follow_up_at")
+    .not("next_follow_up_at", "is", null)
+    .gt("next_follow_up_at", windowStartISO)
+    .lte("next_follow_up_at", nowISO)
+    .neq("contact_status", "disqualified")
+    .not("assigned_to", "is", null)
+    .or("is_deleted.is.null,is_deleted.eq.false");
 
-  // One dedup read covering the widest tier lookback (25h). Keyed by
-  // `${type}:${contactId}` read back from the notification url.
+  if (error) return json({ error: error.message, sent: 0 });
+  if (!due?.length) return json({ sent: 0 });
+
+  // Dedup: skip any lead already pinged (instant follow-up) in the last 2 hours.
   const { data: recent } = await supabase
     .from("notifications")
-    .select("type, url")
-    .in("type", tiers.map((t) => t.type))
-    .gte("created_at", new Date(t0 - 25 * HOUR).toISOString());
-  const already = new Set(
-    (recent || []).map(
-      (n: any) => `${n.type}:${(n.url || "").match(/highlight=([0-9a-fA-F-]+)/)?.[1] || ""}`,
-    ),
+    .select("url")
+    .eq("type", "followup_due")
+    .gte("created_at", dedupSinceISO);
+  const pinged = new Set(
+    (recent || [])
+      .map((n: any) => (n.url || "").match(/highlight=([0-9a-fA-F-]+)/)?.[1])
+      .filter(Boolean),
   );
 
-  const rows: any[] = [];
-  for (const tier of tiers) {
-    const { data: hits, error } = await supabase
-      .from("contacts")
-      .select("id, full_name, assigned_to, assigned_to_name, next_follow_up_at")
-      .not("next_follow_up_at", "is", null)
-      .gt("next_follow_up_at", new Date(tier.from).toISOString())
-      .lte("next_follow_up_at", new Date(tier.to).toISOString())
-      .neq("contact_status", "disqualified")
-      .not("assigned_to", "is", null)
-      .or("is_deleted.is.null,is_deleted.eq.false");
-    if (error) continue;
-    for (const c of hits || []) {
-      const dk = `${tier.type}:${c.id}`;
-      if (already.has(dk)) continue;
-      already.add(dk);
-      const [bar, ben] = tier.body(c.full_name || "عميل", fmtTime(c.next_follow_up_at));
-      rows.push({
-        type: tier.type,
-        title_ar: tier.title_ar,
-        title_en: tier.title_en,
-        body_ar: bar,
-        body_en: ben,
-        url: `/contacts?highlight=${c.id}`,
-        for_user_id: c.assigned_to,
-        for_user_name: c.assigned_to_name,
-        created_at: nowISO,
-      });
-    }
-  }
+  const rows = due
+    .filter((c: any) => !pinged.has(c.id))
+    .map((c: any) => ({
+      type: "followup_due",
+      title_ar: "متابعة مستحقة دلوقتي",
+      title_en: "Follow-up Due Now",
+      body_ar: `حان موعد متابعة "${c.full_name || "عميل"}"`,
+      body_en: `Follow-up due now: "${c.full_name || "lead"}"`,
+      url: `/contacts?highlight=${c.id}`,
+      for_user_id: c.assigned_to,
+      for_user_name: c.assigned_to_name,
+      created_at: nowISO,
+    }));
 
   if (rows.length) {
     const { error: insErr } = await supabase.from("notifications").insert(rows);
     if (insErr) return json({ error: insErr.message, sent: 0 });
   }
 
-  return json({ sent: rows.length });
+  return json({ sent: rows.length, scanned: due.length });
 });
