@@ -28,6 +28,10 @@ export const NOTIFICATION_TYPES = {
   expense_submitted:  { color: '#12897E', icon: 'Receipt' },
   system_alert:       { color: '#6B7280', icon: 'AlertCircle' },
   reminder:           { color: '#5A63C4', icon: 'Bell' },
+  // Appointment reminders (followup-reminders edge fn) — tiered ahead of time.
+  followup_soon_1d:   { color: '#5A63C4', icon: 'Bell' },
+  followup_soon_1h:   { color: '#2F6BD3', icon: 'Clock' },
+  followup_due:       { color: '#C9860A', icon: 'Clock' },
   import_complete:    { color: '#158A57', icon: 'Download' },
   export_complete:    { color: '#158A57', icon: 'Upload' },
   // Legacy compat
