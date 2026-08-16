@@ -1843,6 +1843,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 {/* Logging happens through the "+ سجّل" FAB (call/whatsapp/note/
                     meeting/deal); the timeline below is read-only history. */}
 
+                {/* Lead note — freeform note about the lead. Lives on the Timeline
+                    tab (the default) so it's the first context the rep sees. Was
+                    only shown in the old Data tab, which is no longer selectable. */}
+                {contact.notes && (
+                  <div className="mb-3 rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
+                      <FileText size={12} className="text-content-muted dark:text-content-muted-dark" />
+                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{isRTL ? 'ملاحظات' : 'Notes'}</span>
+                    </div>
+                    <div className="px-3.5 py-3 text-xs text-content dark:text-content-dark leading-relaxed whitespace-pre-wrap">{contact.notes}</div>
+                  </div>
+                )}
+
                 {/* Privacy notice — activities before the current agent's
                     assignment are hidden (moved here from the hero). */}
                 {hidePreviousHistory && myAssignmentDate && (

@@ -303,7 +303,8 @@ export default function ContactsTable({
               {hasCol('job_title') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</th>}
               {hasCol('company') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الشركة' : 'Company'}</th>}
               {hasCol('contact_status') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
-              {hasCol('source_date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>}
+              {hasCol('source') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
+              {hasCol('date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
               {hasCol('next_action') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
               {hasCol('actions') && <th className={`${thCls} text-center`}>{t('common.actions')}</th>}
@@ -365,8 +366,8 @@ export default function ContactsTable({
                 {/* Contact — Name + Type + Dept + Activity */}
                 {hasCol('contact') && <td className={tdCls}>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
-                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#D6403B' : '#fff' }}>
+                    <div className="w-9 h-9 rounded-[10px] shrink-0 flex items-center justify-center text-xs font-bold"
+                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id) + '22', color: c.is_blacklisted ? '#D6403B' : avatarColor(c.id) }}>
                       {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -374,49 +375,20 @@ export default function ContactsTable({
                         <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
-                        {c.contact_number && <span className="shrink-0 text-[9px] font-mono text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark px-1.5 py-px rounded">{c.contact_number}</span>}
                         {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
                           <span className="shrink-0 text-[9px] font-semibold px-1.5 py-px rounded-full" style={{ background: `${col}1A`, color: col, border: `1px solid ${col}40` }}>{leadCategoryLabel(c.lead_category, isRTL, leadCategoryDefs)}</span>
                         ); })()}
                         {isPinned && <Pin size={10} color="#C9860A" className="shrink-0" />}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(() => {
-                          const agents = agentsByContactId.get(c.id) || [];
-                          if (agents.length === 0) return null;
-                          const showInitials = agents.length > 1;
-                          return agents.flatMap(a => {
-                            const out = [];
-                            if (a.status && STATUS_STYLES[a.status]) {
-                              const s = STATUS_STYLES[a.status];
-                              out.push(
-                                <span key={`s-${a.name}`}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
-                                  style={{ color: s.color, background: s.color + '18' }}
-                                  title={`${a.name}: ${isRTL ? s.label : s.labelEn}`}>
-                                  {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
-                                  <span>{isRTL ? s.label : s.labelEn}</span>
-                                </span>
-                              );
-                            }
-                            if (a.temperature && TEMP[a.temperature]) {
-                              const t = TEMP[a.temperature]; const Icon = t.Icon;
-                              out.push(
-                                <span key={`t-${a.name}`}
-                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
-                                  style={{ color: t.color, background: t.bg }}
-                                  title={`${a.name}: ${isRTL ? t.labelAr : t.label}`}>
-                                  {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
-                                  <Icon size={10} />
-                                  {isRTL ? t.labelAr : t.label}
-                                </span>
-                              );
-                            }
-                            return out;
-                          });
-                        })()}
-                        {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
-                      </div>
+                      {/* Status + temperature moved OUT of this column into their
+                          own dedicated columns (contact_status / temperature) so
+                          each field lives in one column. Only the recency badge
+                          stays here as a lightweight scanning aid. */}
+                      {c.last_activity_at && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>}
@@ -434,9 +406,16 @@ export default function ContactsTable({
                     assigned_to_name only for legacy rows. */}
                 {hasCol('assigned_to') && !isSalesAgent && (
                   <td className={`${tdCls} hidden md:table-cell`}>
-                    <span className="text-xs font-medium text-content dark:text-content-dark">
-                      {(c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name || '—'}
-                    </span>
+                    {(() => {
+                      const name = (c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name;
+                      if (!name) return <span className="text-[12px] italic text-content-muted/60 dark:text-content-muted-dark/60">{isRTL ? 'مجمّع الليدز' : 'Lead pool'}</span>;
+                      return (
+                        <span className="inline-flex items-center gap-2 text-[12px] text-content dark:text-content-dark">
+                          <span className="w-[22px] h-[22px] rounded-full bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark flex items-center justify-center text-[10px] font-semibold shrink-0">{initials(name)}</span>
+                          <span className="truncate max-w-[120px]">{name}</span>
+                        </span>
+                      );
+                    })()}
                   </td>
                 )}
 
@@ -450,8 +429,8 @@ export default function ContactsTable({
                     if (agents.length === 1) {
                       const tempKey = agents[0].temperature;
                       if (!tempKey || !TEMP[tempKey]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                      const t = TEMP[tempKey]; const Icon = t.Icon;
-                      return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                      const t = TEMP[tempKey];
+                      return <div className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} /><span className="text-[11.5px] font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
                     }
                     const VISIBLE = 3;
                     const shown = agents.slice(0, VISIBLE);
@@ -509,12 +488,12 @@ export default function ContactsTable({
                       if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
                       const info = STATUS_STYLES[s];
                       return info ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 border bg-transparent" style={{ color: info.color, borderColor: info.color + '55' }}>
+                        <span className="text-[11px] px-2.5 py-[3px] rounded-full font-semibold inline-flex items-center gap-1.5" style={{ color: info.color, background: info.color + '1A' }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: info.color }} />
                           {isRTL ? info.label : info.labelEn}
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border border-brand-500/30 text-brand-600 dark:text-brand-400 bg-transparent">{s.replace(/_/g, ' ')}</span>
+                        <span className="text-[11px] px-2.5 py-[3px] rounded-full font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10">{s.replace(/_/g, ' ')}</span>
                       );
                     }
                     // Multi-agent — stack up to 3 chips, collapse the rest into a "+N" pill
@@ -535,8 +514,8 @@ export default function ContactsTable({
                           // that's the more actionable signal for next-action.
                           return (
                             <span key={a.name}
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 border bg-transparent ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
-                              style={{ color, borderColor: color + '55' }}
+                              className={`text-[10px] px-2 py-[3px] rounded-full font-semibold inline-flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color, background: color + '1A' }}
                               title={`${a.name}: ${label}`}>
                               <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                               <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>
@@ -554,16 +533,20 @@ export default function ContactsTable({
                   })()}
                 </td>}
 
-                {/* Source + Date */}
-                {hasCol('source_date') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
+                {/* Source (+ campaign) */}
+                {hasCol('source') && <td className={`${tdCls} hidden lg:table-cell`}>
+                  <div className="text-xs text-content dark:text-content-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
-                  {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
-                  {c.notes && (
-                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-0.5" title={c.notes}>
-                      {c.notes}
-                    </span>
-                  )}
+                </td>}
+
+                {/* Date — created */}
+                {hasCol('date') && <td className={`${tdCls} hidden lg:table-cell`}>
+                  {c.created_at ? (
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                      <div>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                      <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60">{new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
                 </td>}
 
                 {/* Last Feedback */}

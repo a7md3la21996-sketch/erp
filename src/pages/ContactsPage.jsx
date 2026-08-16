@@ -1975,7 +1975,7 @@ export default function ContactsPage() {
     { key: '/', action: () => { const el = document.querySelector('[data-search-input]'); if (el) el.focus(); } },
   ]);
 
-  const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
+  const tdCls = `px-4 py-3 border-b border-edge/60 dark:border-edge-dark/60 align-middle text-[13px] text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
@@ -2001,23 +2001,27 @@ export default function ContactsPage() {
       </div>
     )}
     <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
-      {/* Page Header */}
-      <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
+      {/* Page Header — title + count on the start, a primary "Add lead" on the
+          end (v1 header row). Search / filters sit in the toolbar just below. */}
+      <div className="mb-4 flex justify-between items-center flex-wrap gap-3">
         <div>
           <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'العملاء المحتملين' : 'Leads'}</h1>
           <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark">
             {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${totalContacts.toLocaleString()} ${isRTL ? 'عميل' : 'leads'}`}
           </p>
         </div>
-
+        {(hasPermission(P.CONTACTS_EDIT) || hasPermission(P.CONTACTS_EDIT_OWN)) && (
+          <button onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold cursor-pointer active:scale-95 transition-all shadow-sm">
+            <Plus size={16} /> {isRTL ? 'إضافة عميل' : 'Add Lead'}
+          </button>
+        )}
       </div>
 
-      {/* ═══ UNIFIED FILTER LENS ROW ═══
-          One horizontal row (scrolls on mobile, wraps on desktop) that replaces
-          the old three stacked, labelled chip groups (Follow-up / Category /
-          Status) — those ate ~half the mobile screen before the first lead.
-          v1-style: a coloured dot + live count per lens, logical groups split by
-          a thin divider. Same state/handlers/counts as before. */}
+      {/* Filter toolbar + chips wrapped in a flex-col so the chip row can sit
+          BELOW the search / filter bar (v1 header style: toolbar above, chips
+          just above the list) via `order-last` — no physical JSX reorder. */}
+      <div className="flex flex-col">
       {(() => {
         const dot = (color) => <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} aria-hidden="true" />;
         const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 transition-colors ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`;
@@ -2040,7 +2044,7 @@ export default function ContactsPage() {
         ];
 
         return (
-          <div className="flex gap-2 mb-3 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="order-last flex gap-2 mb-3 mt-1 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
             {/* Follow-up (daily driver) */}
             {followupChips.map(c => {
               const active = followupFilterValue === c.key;
@@ -2234,6 +2238,7 @@ export default function ContactsPage() {
           )}
         </div>
       )}
+      </div>
 
       {/* Select All Pages Banner */}
       {selectedIds.length > 0 && selectedIds.length === contacts.length && !allPagesSelected && totalContacts > contacts.length && (

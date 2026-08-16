@@ -66,27 +66,28 @@ export default function BulkActionToolbar({
       aria-label={isRTL ? 'إجراءات جماعية' : 'Bulk actions'}
       style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
       className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 pt-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap
-                 bg-gradient-to-br from-[#0a1929] to-[#132337] dark:from-[#0a1929] dark:to-[#132337]
-                 border-t border-brand-500/30
-                 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-      {/* Count + Deselect — always white-on-dark since the bar gradient stays dark */}
+                 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm
+                 border-t border-edge dark:border-edge-dark
+                 shadow-[0_-4px_20px_rgba(13,19,27,0.12)]">
+      {/* Count + Deselect */}
       <div className="flex items-center gap-2 me-2">
-        <span className="text-[13px] font-bold text-slate-200">
-          {isRTL ? `${selectedIds.length} محدد` : `${selectedIds.length} selected`}
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-brand-600 dark:text-brand-400">
+          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand-500 text-white text-[11px] font-bold flex items-center justify-center tabular-nums">{selectedIds.length}</span>
+          {isRTL ? 'محدد' : 'selected'}
         </span>
         <button onClick={() => setSelectedIds([])}
-          className="px-2.5 py-1 rounded-md border border-slate-400/30 bg-transparent text-slate-400 text-[11px] cursor-pointer flex items-center gap-1 hover:border-slate-300/50 hover:text-slate-300">
+          className="px-2.5 py-1 rounded-md border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-[11px] cursor-pointer flex items-center gap-1 hover:text-red-500 hover:border-red-500/40 transition-colors">
           <X size={11} /> {isRTL ? 'إلغاء' : 'Clear'}
         </button>
       </div>
 
-      <div className="w-px h-6 bg-slate-400/20" />
+      <div className="w-px h-6 bg-edge dark:bg-edge-dark" />
 
       {/* Change Type */}
       {perms.canBulkContacts && <div className="relative">
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'type' ? null : 'type')}
           aria-expanded={bulkDropdownOpen === 'type'} aria-haspopup="menu"
-          className={`${dropdownBtnCls('type')} text-slate-200`}>
+          className={`${dropdownBtnCls('type')}`}>
           <Tag size={12} /> {isRTL ? 'النوع' : 'Type'} <ChevronDown size={10} />
         </button>
         {bulkDropdownOpen === 'type' && (
@@ -105,7 +106,7 @@ export default function BulkActionToolbar({
       {perms.canBulkContacts && (BULK_CATEGORY_OPTIONS?.length > 0) && <div className="relative">
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'category' ? null : 'category')}
           aria-expanded={bulkDropdownOpen === 'category'} aria-haspopup="menu"
-          className={`${dropdownBtnCls('category')} text-slate-200`}>
+          className={`${dropdownBtnCls('category')}`}>
           <Tag size={12} /> {isRTL ? 'التصنيف' : 'Category'} <ChevronDown size={10} />
         </button>
         {bulkDropdownOpen === 'category' && (
@@ -124,7 +125,7 @@ export default function BulkActionToolbar({
       {perms.canBulkContacts && <div className="relative">
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'source' ? null : 'source')}
           aria-expanded={bulkDropdownOpen === 'source'} aria-haspopup="menu"
-          className={`${dropdownBtnCls('source')} text-slate-200`}>
+          className={`${dropdownBtnCls('source')}`}>
           <RefreshCw size={12} /> {isRTL ? 'المصدر' : 'Source'} <ChevronDown size={10} />
         </button>
         {bulkDropdownOpen === 'source' && (
@@ -140,7 +141,7 @@ export default function BulkActionToolbar({
 
       {/* Reassign */}
       {perms.canBulkContacts && <button onClick={() => setBulkReassignModal(true)}
-        className={`${btnBase} ${btnVariants.brand} text-slate-200`}>
+        className={`${btnBase} ${btnVariants.brand}`}>
         <Users size={12} /> {isRTL ? 'تعيين لشخص واحد' : 'Reassign to one'}
       </button>}
 
@@ -161,7 +162,7 @@ export default function BulkActionToolbar({
       {perms.canBulkContacts && <div className="relative">
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'dept' ? null : 'dept')}
           aria-expanded={bulkDropdownOpen === 'dept'} aria-haspopup="menu"
-          className={`${dropdownBtnCls('dept')} text-slate-200`}>
+          className={`${dropdownBtnCls('dept')}`}>
           <Building2 size={12} /> {isRTL ? 'القسم' : 'Dept'} <ChevronDown size={10} />
         </button>
         {bulkDropdownOpen === 'dept' && (
@@ -179,7 +180,7 @@ export default function BulkActionToolbar({
       {perms.canBulkContacts && <div className="relative">
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'status' ? null : 'status')}
           aria-expanded={bulkDropdownOpen === 'status'} aria-haspopup="menu"
-          className={`${dropdownBtnCls('status')} text-slate-200`}>
+          className={`${dropdownBtnCls('status')}`}>
           <CheckCircle2 size={12} /> {isRTL ? 'الحالة' : 'Status'} <ChevronDown size={10} />
         </button>
         {bulkDropdownOpen === 'status' && (
@@ -201,7 +202,7 @@ export default function BulkActionToolbar({
       {/* Change Campaign */}
       {perms.canBulkContacts && setBulkCampaignModal && <button
         onClick={() => setBulkCampaignModal(true)}
-        className={`${btnBase} ${btnVariants.brand} text-slate-200`}>
+        className={`${btnBase} ${btnVariants.brand}`}>
         <Megaphone size={12} /> {isRTL ? 'الحملة' : 'Campaign'}
       </button>}
 
@@ -214,7 +215,7 @@ export default function BulkActionToolbar({
 
       {/* Export Selected */}
       {perms.canExportContacts && <button onClick={exportSelectedCSV}
-        className={`${btnBase} ${btnVariants.brand} text-slate-200`}>
+        className={`${btnBase} ${btnVariants.brand}`}>
         <Download size={12} /> {isRTL ? 'تصدير' : 'Export'}
       </button>}
 

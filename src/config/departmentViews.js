@@ -10,7 +10,7 @@ export const DEPT_VIEWS = {
     label_ar: 'المبيعات',
     label_en: 'Sales',
     // Table columns to show (ids match ContactsTable column slots)
-    columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'],
+    columns: ['contact', 'phone', 'contact_status', 'temperature', 'assigned_to', 'source', 'date', 'last_feedback', 'next_action', 'actions'],
     // Smart filter fields relevant to this department
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
