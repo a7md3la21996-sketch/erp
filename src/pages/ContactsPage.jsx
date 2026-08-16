@@ -1906,7 +1906,6 @@ export default function ContactsPage() {
 
   // Surface this page's actions in the top Header (replaces the old filter bar).
   usePageActions([
-    { id: 'add-lead', icon: Plus, labelAr: 'إضافة عميل', labelEn: 'Add Lead', primary: true, onClick: () => setShowAddModal(true) },
     { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', hidden: !perms.canImportContacts, onClick: () => setShowImportModal(true) },
     { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', hidden: !perms.canExportContacts, onClick: handleExportAll },
     { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
@@ -2023,10 +2022,13 @@ export default function ContactsPage() {
           just above the list) via `order-last` — no physical JSX reorder. */}
       <div className="flex flex-col">
       {(() => {
-        const dot = (color) => <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} aria-hidden="true" />;
-        const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 transition-colors ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`;
-        const chipStyle = (active, color) => active ? { border: `1px solid ${color}`, background: `${color}15`, color } : undefined;
-        const countCls = (active) => `rounded-xl px-2 py-px text-[10px] ms-0.5 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`;
+        // Chip visuals match the redesign artifact: pill with a subtle shadow,
+        // coloured dot, and a plain tabular count (no filled count-pill). Active
+        // chip = solid in its own colour + white text.
+        const dot = (color) => <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: color }} aria-hidden="true" />;
+        const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[12.5px] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors border shadow-sm ${active ? 'text-white border-transparent' : 'bg-surface-card dark:bg-surface-card-dark border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`;
+        const chipStyle = (active, color) => active ? { background: color, borderColor: color } : undefined;
+        const countCls = (active) => `text-[11px] font-bold tabular-nums ms-0.5 ${active ? 'text-white/90' : 'text-content/55 dark:text-content-dark/55'}`;
         const Divider = () => <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1 shrink-0 self-center" aria-hidden="true" />;
 
         const followupChips = [
@@ -2050,7 +2052,7 @@ export default function ContactsPage() {
               const active = followupFilterValue === c.key;
               return (
                 <button key={`fu-${c.key}`} onClick={() => setFollowupFilter(active ? 'all' : c.key)} className={chipCls(active)} style={chipStyle(active, c.color)}>
-                  {dot(c.color)} {c.label} <span className={countCls(active)} style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+                  {dot(c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
                 </button>
               );
             })}
@@ -2060,7 +2062,7 @@ export default function ContactsPage() {
               const active = filterStatus === s.value;
               return (
                 <button key={`st-${s.value}`} onClick={() => setFilterStatus(s.value)} className={chipCls(active)} style={chipStyle(active, s.color)}>
-                  {dot(s.color)} {s.label} <span className={countCls(active)} style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
+                  {dot(s.color)} {s.label} <span className={countCls(active)}>{s.count}</span>
                 </button>
               );
             })}
@@ -2070,20 +2072,20 @@ export default function ContactsPage() {
               const active = categoryFilter === c.key;
               return (
                 <button key={`cat-${c.key}`} onClick={() => { setCategoryFilter(c.key); setPage(1); }} className={chipCls(active)} style={chipStyle(active, c.color)}>
-                  {dot(c.color)} {c.label} <span className={countCls(active)} style={active ? { background: c.color, color: '#fff' } : undefined}>{c.count}</span>
+                  {dot(c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
                 </button>
               );
             })}
             <Divider />
             {/* Archive + Unassigned */}
             <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}
-              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterStatus === 'disqualified' ? 'border border-gray-500 bg-gray-500/[0.12] text-gray-600 dark:text-gray-300 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-              <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={`rounded-xl px-2 py-px text-[10px] ms-0.5 ${filterStatus === 'disqualified' ? 'bg-gray-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{(stats.disqualified || 0).toLocaleString()}</span>
+              className={chipCls(filterStatus === 'disqualified')} style={chipStyle(filterStatus === 'disqualified', '#6b7280')}>
+              <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={countCls(filterStatus === 'disqualified')}>{(stats.disqualified || 0).toLocaleString()}</span>
             </button>
             {profile?.role !== 'sales_agent' && (
               <button onClick={() => setShowUnassigned(v => !v)}
-                className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-                <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-0.5 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
+                className={chipCls(showUnassigned)} style={chipStyle(showUnassigned, '#C9860A')}>
+                <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={countCls(showUnassigned)}>{stats.unassigned || 0}</span>
               </button>
             )}
           </div>
@@ -2116,7 +2118,7 @@ export default function ContactsPage() {
                   so they don't crowd the bar; active ones show as pills below). */}
               <button type="button" onClick={() => setShowAdvanced(v => !v)}
                 className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
-                <SlidersHorizontal size={13} /> {isRTL ? 'فلترة' : 'Filters'}
+                <SlidersHorizontal size={13} /> {isRTL ? 'متقدم' : 'Advanced'}
                 {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
               </button>
               {showAdvanced && (<>
@@ -2155,12 +2157,7 @@ export default function ContactsPage() {
             </>
           );
         })()}
-        quickFilters={[
-          // 'Today's Follow-ups' / 'Overdue Tasks' moved to the dedicated
-          // "المتابعات" chip row above (with live counts) — removed here to
-          // avoid showing the same two follow-up filters twice.
-          ...(profile?.role !== 'sales_agent' ? [{ label: 'لم يتم نقله', labelEn: 'Never Reassigned', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
-        ]}
+        quickFilters={[]}
       />
 
       {/* Active advanced-filter pills — surface what's applied (type / activity /
