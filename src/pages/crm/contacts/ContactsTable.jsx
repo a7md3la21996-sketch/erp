@@ -204,7 +204,7 @@ export default function ContactsTable({
                   {/* Row 1: Avatar + Name + Call/WA buttons */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-bold"
-                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#D6403B' : '#fff' }}>
+                      style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id) + '22', color: c.is_blacklisted ? '#D6403B' : avatarColor(c.id) }}>
                       {c.is_blacklisted ? <Ban size={15} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">

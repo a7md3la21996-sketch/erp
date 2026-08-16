@@ -161,7 +161,7 @@ export default function ContactsCardList({
     return (
       <div className="space-y-2 p-3" aria-busy="true" aria-label={isRTL ? 'جاري التحميل' : 'Loading'}>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-36 bg-surface-bg dark:bg-surface-bg-dark animate-pulse rounded-xl" />
+          <div key={i} className="h-16 bg-surface-bg dark:bg-surface-bg-dark animate-pulse rounded-xl" />
         ))}
       </div>
     );
@@ -264,6 +264,11 @@ export default function ContactsCardList({
 
           return (
             <li key={c.id}>
+              {/* Compact card — one avatar + two tight lines (identity / status
+                  + follow-up) with quick Call & WhatsApp on the end. Secondary
+                  detail (owner, source, campaign, log, pin-toggle) lives in the
+                  drawer that opens on tap, so the list stays scannable and ~2×
+                  more leads fit per screen. */}
               <div
                 role="button"
                 tabIndex={0}
@@ -284,190 +289,89 @@ export default function ContactsCardList({
                     }
                   }
                 }}
-                className={`relative bg-surface-card dark:bg-surface-card-dark border rounded-xl p-3.5 cursor-pointer transition-shadow hover:shadow-md ${
+                className={`relative flex items-center gap-2.5 bg-surface-card dark:bg-surface-card-dark border rounded-xl px-3 py-2.5 cursor-pointer transition-shadow hover:shadow-md ${
                   isSelected || inMerge
                     ? 'border-brand-500 ring-2 ring-brand-500/20'
                     : 'border-edge dark:border-edge-dark'
                 }`}
+                style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#D6403B' : (typeData?.color || '#2F6BD3')}` }}
               >
-                {/* Top row: select + avatar + name + meta + pin */}
-                <div className="flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={!!isSelected}
-                    onChange={() => toggleSelect(c.id)}
-                    onClick={e => e.stopPropagation()}
-                    className="mt-1 w-5 h-5 cursor-pointer accent-brand-500"
-                    aria-label={isRTL ? `تحديد ${c.full_name || ''}` : `Select ${c.full_name || ''}`}
-                  />
-                  {/* Avatar — colored circle with initials. Color is derived
-                      from the contact id so the same lead is the same color
-                      every time, making the list scannable. */}
-                  <div
-                    aria-hidden="true"
-                    className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: avatarBg }}
-                  >
-                    {initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap min-w-0">
-                      <span className="font-bold text-sm text-content dark:text-content-dark truncate">
-                        {c.full_name || (isRTL ? '— بدون اسم —' : '— No Name —')}
-                      </span>
-                      {tempData?.Icon && (
-                        <span
-                          title={isRTL ? tempData.labelAr : tempData.label}
-                          aria-label={isRTL ? `حرارة: ${tempData.labelAr}` : `Temperature: ${tempData.label}`}
-                          className="inline-flex items-center"
-                          style={{ color: tempData.color }}
-                        >
-                          <tempData.Icon size={14} />
-                        </span>
-                      )}
-                      {/* Untouched badge — surfaces leads that haven't been
-                          worked yet. Most likely to slip through the cracks. */}
-                      {untouched && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded animate-pulse">
-                          🆕 {isRTL ? 'لم يُتصل به' : 'Untouched'}
-                        </span>
-                      )}
-                    </div>
-                    {/* Masked phone (tap to reveal) + source icon + type */}
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 flex items-center gap-1.5 flex-wrap min-w-0">
-                      {c.phone ? (
-                        <span onClick={e => e.stopPropagation()} className="inline-flex">
-                          <PhoneCell phone={c.phone} small />
-                        </span>
-                      ) : (
-                        <span>{isRTL ? 'بدون رقم' : 'no phone'}</span>
-                      )}
-                      {sourceIcon && (
-                        <span
-                          title={c.source}
-                          aria-label={`Source: ${c.source}`}
-                          className="inline-flex items-center"
-                          style={{ color: sourceIcon.color }}
-                        >
-                          · <sourceIcon.Icon size={11} className="ms-1" />
-                        </span>
-                      )}
-                      {typeData && <span className="opacity-60">· {isRTL ? typeData.label : typeData.labelEn}</span>}
-                    </div>
-                    {/* Campaign — shown when present so the agent knows where the lead came from */}
-                    {c.campaign_name && (
-                      <div className="text-[11px] text-brand-500 dark:text-brand-400 mt-1 flex items-center gap-1 truncate">
-                        <Megaphone size={11} className="shrink-0" />
-                        <span className="truncate">{c.campaign_name}</span>
-                      </div>
-                    )}
-                  </div>
-                  {isPinned && (
-                    <Pin size={14} className="text-amber-500 shrink-0 mt-0.5" fill="currentColor" aria-label={isRTL ? 'مثبت' : 'Pinned'} />
-                  )}
+                <input
+                  type="checkbox"
+                  checked={!!isSelected}
+                  onChange={() => toggleSelect(c.id)}
+                  onClick={e => e.stopPropagation()}
+                  className="w-4 h-4 shrink-0 cursor-pointer accent-brand-500"
+                  aria-label={isRTL ? `تحديد ${c.full_name || ''}` : `Select ${c.full_name || ''}`}
+                />
+
+                {/* Avatar — soft-tint square + coloured initials (matches desktop).
+                    Colour derived from the contact id so a lead keeps its colour. */}
+                <div
+                  aria-hidden="true"
+                  className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
+                  style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarBg + '22', color: c.is_blacklisted ? '#D6403B' : avatarBg }}
+                >
+                  {c.is_blacklisted ? <Ban size={16} /> : initials}
                 </div>
 
-                {/* Status + next follow-up row */}
-                <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
-                  <span
-                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full"
-                    style={{ color: statusColor, background: statusColor + '18' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
-                    {statusLabels[status] || status}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {/* Next pending follow-up — overdue / today / upcoming. */}
-                    <span onClick={e => e.stopPropagation()} className="inline-flex">
+                {/* Identity + status — two tight lines */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {tempData && (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: tempData.color }}
+                        title={isRTL ? tempData.labelAr : tempData.label}
+                        aria-label={isRTL ? `حرارة: ${tempData.labelAr}` : `Temperature: ${tempData.label}`}
+                      />
+                    )}
+                    <span className="font-semibold text-sm text-content dark:text-content-dark truncate">
+                      {c.full_name || (isRTL ? '— بدون اسم —' : '— No Name —')}
+                    </span>
+                    {isPinned && <Pin size={11} className="text-amber-500 shrink-0" fill="currentColor" aria-label={isRTL ? 'مثبت' : 'Pinned'} />}
+                    {untouched && (
+                      <span className="shrink-0 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-px rounded-full">
+                        {isRTL ? 'جديد' : 'New'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 min-w-0">
+                    <span
+                      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
+                      style={{ color: statusColor, background: statusColor + '18' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
+                      {statusLabels[status] || status}
+                    </span>
+                    <span onClick={e => e.stopPropagation()} className="inline-flex shrink-0 truncate">
                       <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                     </span>
                   </div>
                 </div>
 
-                {/* Meta: agent (only when relevant) + last activity */}
-                {(() => {
-                  // Live name from userMap; fall back to the denormalized
-                  // assigned_to_name only when the UUID isn't in the map
-                  // (legacy rows or already-rendered cache).
-                  const liveOwnerName = (c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name;
-                  const ownerIsViewer = agentName && liveOwnerName === agentName;
-                  // Sales agent looking at their own assigned lead → skip the
-                  // agent line entirely (redundant). Admin / manager always
-                  // see it because they're looking at multiple agents'
-                  // contacts. Unassigned leads always show the placeholder.
-                  const showAgentRow = !liveOwnerName || !(isSalesAgent && ownerIsViewer);
-                  if (!showAgentRow && !last) return null;
-                  return (
-                    <div className="flex items-center justify-between mt-2 text-[11px] gap-2">
-                      {showAgentRow ? (
-                        <div className="flex items-center gap-1.5 text-content-muted dark:text-content-muted-dark min-w-0">
-                          <Users size={11} className="shrink-0" />
-                          <span className="truncate">
-                            {liveOwnerName || (isRTL ? 'غير معين' : 'Unassigned')}
-                          </span>
-                        </div>
-                      ) : <span />}
-                      {last && lastTone && (
-                        <span
-                          className={`whitespace-nowrap font-semibold px-2 py-0.5 rounded-full ${lastTone.bg} ${lastTone.fg}`}
-                          title={isRTL ? `آخر نشاط: ${last}` : `Last activity: ${last}`}
-                        >
-                          {last}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Action buttons row — 44px touch targets */}
-                <div className="flex gap-1.5 mt-3" onClick={e => e.stopPropagation()}>
-                  {c.phone ? (
+                {/* Quick Call + WhatsApp — kept on the list per request */}
+                <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                  {c.phone && (
                     <a
                       href={`tel:${normalizePhone(c.phone)}`}
-                      className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-semibold no-underline active:scale-95 transition-transform"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 no-underline active:scale-95 transition-transform"
                       aria-label={isRTL ? 'اتصال' : 'Call'}
                     >
-                      <Phone size={14} /> {isRTL ? 'اتصال' : 'Call'}
+                      <Phone size={16} />
                     </a>
-                  ) : (
-                    <div role="button" aria-disabled="true" aria-label={isRTL ? 'اتصال غير متاح' : 'Call unavailable'}
-                      className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark text-xs cursor-not-allowed border border-edge dark:border-edge-dark opacity-50">
-                      <Phone size={14} /> {isRTL ? 'اتصال' : 'Call'}
-                    </div>
                   )}
                   {c.phone && (
                     <a
                       href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-semibold no-underline active:scale-95 transition-transform"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] no-underline active:scale-95 transition-transform"
                       aria-label="WhatsApp"
                     >
-                      <MessageCircle size={14} /> WA
+                      <MessageCircle size={16} />
                     </a>
                   )}
-                  {perms.canEditContact && c.phone && (
-                    <button
-                      onClick={() => setLogCallTarget?.(c)}
-                      className="h-11 w-11 flex items-center justify-center rounded-lg bg-surface-bg dark:bg-brand-500/10 border border-edge dark:border-edge-dark text-content dark:text-content-dark active:scale-95 transition-transform"
-                      aria-label={isRTL ? 'تسجيل مكالمة' : 'Log call'}
-                      title={isRTL ? 'تسجيل مكالمة' : 'Log call'}
-                    >
-                      <PhoneCall size={14} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => togglePin(c.id)}
-                    disabled={!isPinned && pinnedIds.length >= MAX_PINS}
-                    className={`h-11 w-11 flex items-center justify-center rounded-lg border active:scale-95 transition-transform ${
-                      isPinned
-                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-500'
-                        : 'bg-surface-bg dark:bg-brand-500/10 border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-                    } ${!isPinned && pinnedIds.length >= MAX_PINS ? 'opacity-30 cursor-not-allowed' : ''}`}
-                    aria-label={isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
-                  >
-                    <Pin size={14} fill={isPinned ? 'currentColor' : 'none'} />
-                  </button>
                 </div>
               </div>
             </li>
