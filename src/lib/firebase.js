@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import supabase from './supabase';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFHeg4uQmPhE9xqg4WuNasZywYaLKVytA",
@@ -50,6 +51,35 @@ export async function getFCMToken() {
     return token;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Register THIS device's FCM token for a user and persist it, so push can
+ * actually reach them. Permission must already be granted (call it right after
+ * the "Enable notifications" prompt, or on app load). Stores into
+ * users.fcm_tokens (keeps the last 5 devices) + the single fcm_token fallback.
+ *
+ * This is the step that was missing: the Enable button only asked for
+ * permission and never saved a token, so every push found "no target tokens".
+ * Returns the token, or null if nothing was registered.
+ */
+export async function registerFcmToken(userId) {
+  if (!userId) return null;
+  const token = await getFCMToken();
+  if (!token) return null;
+  try {
+    const { data } = await supabase.from('users').select('fcm_tokens').eq('id', userId).maybeSingle();
+    const existing = Array.isArray(data?.fcm_tokens) ? data.fcm_tokens : [];
+    if (!existing.includes(token)) {
+      const updated = [...existing, token].slice(-5);
+      await supabase.from('users').update({ fcm_token: token, fcm_tokens: updated }).eq('id', userId);
+    }
+    return token;
+  } catch {
+    // fcm_tokens column may not exist yet — fall back to the single-token column.
+    try { await supabase.from('users').update({ fcm_token: token }).eq('id', userId); } catch { /* ignore */ }
+    return token;
   }
 }
 

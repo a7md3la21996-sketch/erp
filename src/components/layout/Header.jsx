@@ -260,6 +260,14 @@ export default function Header({ onMenuClick }) {
               onClick={async () => {
                 const granted = await requestPushPermission();
                 setPushPermission(granted ? 'granted' : 'denied');
+                // Actually register + save this device's FCM token now — without
+                // this the grant did nothing and push had "no target tokens".
+                if (granted) {
+                  try {
+                    const { registerFcmToken } = await import('../../lib/firebase');
+                    await registerFcmToken(profile?.id);
+                  } catch { /* ignore */ }
+                }
               }}
               className="px-2 py-0.5 rounded-md border-none cursor-pointer bg-brand-500 text-white text-[10px] font-semibold hover:bg-brand-600 transition-colors"
             >
