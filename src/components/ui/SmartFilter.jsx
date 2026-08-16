@@ -66,6 +66,10 @@ export default function SmartFilter({
   quickFilters = [],
   extraActions,
   resultsCount,
+  // Label for the add-filter button. Defaults to "Filter"; a page can override
+  // it (e.g. "Advanced") when it also exposes a simpler quick-filter control.
+  filterLabel = 'فلتر',
+  filterLabelEn = 'Filter',
   // Persists the last 5 non-trivial search queries to localStorage under
   // this key. Empty key disables the feature so other consumers (e.g.
   // tables that don't want recall) opt-in explicitly.
@@ -299,7 +303,7 @@ export default function SmartFilter({
             }`}
           >
             <Filter size={13} />
-            {isRTL ? 'فلتر' : 'Filter'}
+            {isRTL ? filterLabel : filterLabelEn}
             {filters.length > 0 && (
               <span className="bg-brand-500 text-white text-[10px] px-1.5 py-px rounded-full font-bold leading-none">
                 {filters.length}

@@ -2100,6 +2100,8 @@ export default function ContactsPage() {
         search={searchInput}
         onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالاسم، الهاتف، الإيميل، ID...' : 'Search by name, phone, email, ID...'}
+        filterLabel="متقدم"
+        filterLabelEn="Advanced"
         recentSearchesKey="platform_recent_searches_contacts"
         sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
@@ -2118,7 +2120,7 @@ export default function ContactsPage() {
                   so they don't crowd the bar; active ones show as pills below). */}
               <button type="button" onClick={() => setShowAdvanced(v => !v)}
                 className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
-                <SlidersHorizontal size={13} /> {isRTL ? 'متقدم' : 'Advanced'}
+                <SlidersHorizontal size={13} /> {isRTL ? 'فلتر' : 'Filter'}
                 {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
               </button>
               {showAdvanced && (<>

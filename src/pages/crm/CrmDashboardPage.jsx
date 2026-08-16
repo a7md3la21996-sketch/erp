@@ -205,7 +205,6 @@ export default function CrmDashboardPage() {
   // Surface the CRM actions in the top Header (replaces the old global filter).
   // The scope "view as" selector stays in-page (it's a dropdown, not a button).
   usePageActions([
-    { id: 'add-lead', icon: Plus, labelAr: 'عميل جديد', labelEn: 'Add Lead', primary: true, hidden: !(hasPermission(P.CONTACTS_EDIT) || hasPermission(P.CONTACTS_EDIT_OWN)), onClick: () => setShowAddLead(true) },
     { id: 'import', icon: Upload, labelAr: 'استيراد', labelEn: 'Import', hidden: !hasPermission(P.CONTACTS_IMPORT), onClick: () => navigate('/leads?action=import') },
     { id: 'export', icon: Download, labelAr: 'تصدير', labelEn: 'Export', hidden: !hasPermission(P.CONTACTS_EXPORT), onClick: () => navigate('/leads?action=export') },
     { id: 'master-leads', icon: Users, labelAr: 'العملاء الموحّدين', labelEn: 'Master Leads', hidden: !hasPermission(P.POOL_SETTINGS), onClick: () => navigate('/crm/master-leads') },
@@ -1305,18 +1304,15 @@ export default function CrmDashboardPage() {
         className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur border-t border-edge dark:border-edge-dark px-3 py-2 flex items-center gap-2"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
       >
-        <Button variant="primary" size="sm" className="w-full justify-center flex-1" onClick={() => setShowAddLead(true)}>
-          <Plus size={14} /> {isRTL ? 'عميل جديد' : 'Add Lead'}
-        </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setRefreshKey(k => k + 1)}
           disabled={loading}
-          className="shrink-0"
+          className="w-full justify-center flex-1"
           title={isRTL ? 'تحديث' : 'Refresh'}
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {isRTL ? 'تحديث' : 'Refresh'}
         </Button>
       </div>
 
