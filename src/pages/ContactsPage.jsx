@@ -2026,9 +2026,9 @@ export default function ContactsPage() {
         // coloured dot, and a plain tabular count (no filled count-pill). Active
         // chip = solid in its own colour + white text.
         const dot = (color) => <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: color }} aria-hidden="true" />;
-        const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[12.5px] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors border shadow-sm ${active ? 'text-white border-transparent' : 'bg-surface-card dark:bg-surface-card-dark border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`;
+        const chipCls = (active) => `shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[12.5px] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors border shadow-sm ${active ? 'text-white border-transparent' : 'bg-surface-card dark:bg-surface-card-dark border-edge dark:border-edge-dark text-[#39424E] dark:text-[#B4BDCA]'}`;
         const chipStyle = (active, color) => active ? { background: color, borderColor: color } : undefined;
-        const countCls = (active) => `text-[11px] font-bold tabular-nums ms-0.5 ${active ? 'text-white/90' : 'text-content/55 dark:text-content-dark/55'}`;
+        const countCls = (active) => `text-[12px] font-bold tabular-nums ms-0.5 ${active ? 'text-white/90' : 'text-[#39424E]/80 dark:text-[#B4BDCA]/80'}`;
         const Divider = () => <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1 shrink-0 self-center" aria-hidden="true" />;
 
         const followupChips = [

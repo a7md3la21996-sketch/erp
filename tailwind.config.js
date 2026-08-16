@@ -29,8 +29,8 @@ export default {
         content: {
           DEFAULT:  '#1A2B3C',
           dark:     '#E2EAF4',
-          muted:    '#64748B',
-          'muted-dark': '#8BA8C8',
+          muted:    '#4A5568',
+          'muted-dark': '#A3B4C9',
         },
         // Muted semantic palette (matches the redesign mockup) — overrides
         // Tailwind's bright defaults site-wide so every text-red-500 /
