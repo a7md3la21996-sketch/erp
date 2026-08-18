@@ -1161,6 +1161,10 @@ export async function distributeLeadToAgents(originContactId, targetUserIds) {
       prefix: origin.prefix,
       extra_phones: origin.extra_phones,
       referred_by: origin.referred_by,
+      // Header note travels with the clone — the receiving agent needs the same
+      // context the origin lead carried (was dropped, so distributed copies
+      // arrived blank).
+      notes: origin.notes,
       // Fresh operational state
       contact_status: 'new',
       temperature: 'cold',
