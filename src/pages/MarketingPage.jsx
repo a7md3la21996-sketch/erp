@@ -14,7 +14,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination, Modal, ModalFooter } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
-import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignStats, getCampaignFunnel, getCampaignDetail } from '../services/marketingService';
+import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignStats, getCampaignFunnel, getCampaignDetail, getCampaignBreakdown } from '../services/marketingService';
 import { normalizePhone } from './crm/contacts/constants';
 import { logView } from '../services/viewTrackingService';
 import { fmtMoney } from '../utils/formatting';
@@ -39,6 +39,22 @@ const STATUSES = [
   { id: 'paused',    ar: 'متوقف',  en: 'Paused',    color: '#C9860A' },
   { id: 'completed', ar: 'مكتمل',  en: 'Completed', color: '#6B7280' },
   { id: 'draft',     ar: 'مسودة',  en: 'Draft',     color: '#94A3B8' },
+];
+// Per-campaign breakdown buckets. LEAD_STATUS_BUCKETS mirror contacts.contact_status;
+// DEAL_STAGE_BUCKETS mirror deals.status (the live pipeline). Kept in display order.
+const LEAD_STATUS_BUCKETS = [
+  { id: 'new',             ar: 'جديد',       en: 'New',         color: '#2F6BD3' },
+  { id: 'contacted',       ar: 'تم التواصل', en: 'Contacted',   color: '#C9860A' },
+  { id: 'following',       ar: 'متابعة',     en: 'Following',    color: '#158A57' },
+  { id: 'has_opportunity', ar: 'لديه فرصة',  en: 'Has Opp',     color: '#117049' },
+  { id: 'disqualified',    ar: 'غير مؤهل',   en: 'DQ',          color: '#6B7280' },
+];
+const DEAL_STAGE_BUCKETS = [
+  { id: 'new_deal',   ar: 'صفقة جديدة', en: 'New Deal',   color: '#2F6BD3' },
+  { id: 'reserved',   ar: 'محجوز',      en: 'Reserved',   color: '#C9860A' },
+  { id: 'contracted', ar: 'تعاقد',      en: 'Contracted', color: '#6B21A8' },
+  { id: 'won',        ar: 'مكسوبة',     en: 'Won',        color: '#158A57' },
+  { id: 'lost',       ar: 'خسارة',      en: 'Lost',       color: '#D6403B' },
 ];
 const TYPES = [
   { id: 'paid_ads',    ar: 'إعلانات مدفوعة', en: 'Paid Ads' },
@@ -98,6 +114,7 @@ export default function MarketingPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [statsRows, setStatsRows] = useState([]);   // get_campaign_stats() rows
   const [funnelRows, setFunnelRows] = useState([]); // get_campaign_funnel() rows
+  const [breakdownRows, setBreakdownRows] = useState([]); // get_campaign_breakdown() rows
   const [drawerContacts, setDrawerContacts] = useState([]); // on-demand per-campaign
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -126,10 +143,12 @@ export default function MarketingPage() {
       fetchCampaigns(),
       getCampaignStats(),
       getCampaignFunnel(),
-    ]).then(([c, s, f]) => {
+      getCampaignBreakdown(),
+    ]).then(([c, s, f, b]) => {
       setCampaigns(c);
       setStatsRows(s);
       setFunnelRows(f);
+      setBreakdownRows(b);
       setLoading(false);
     });
   }, [profile?.role, profile?.id]);
@@ -181,6 +200,19 @@ export default function MarketingPage() {
     });
     return stats;
   }, [campaigns, statsRows]);
+
+  // Pivot the long-format breakdown rows into
+  // { [campaign_id]: { status: {bucket:cnt}, stage: {bucket:cnt} } }.
+  const campaignBreakdown = useMemo(() => {
+    const out = {};
+    breakdownRows.forEach(r => {
+      const cid = r.campaign_id;
+      if (!out[cid]) out[cid] = { status: {}, stage: {} };
+      const dim = out[cid][r.dim];
+      if (dim) dim[r.bucket] = Number(r.cnt) || 0;
+    });
+    return out;
+  }, [breakdownRows]);
 
   // Filter + sort
   const filtered = useMemo(() => {
@@ -1264,6 +1296,43 @@ export default function MarketingPage() {
         });
         interactions.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
+        // Per-campaign status/stage breakdown (from get_campaign_breakdown RPC).
+        const bd = campaignBreakdown[camp.id] || { status: {}, stage: {} };
+        const renderDist = (title, buckets, counts, emptyLabel) => {
+          const total = buckets.reduce((s, b) => s + (counts[b.id] || 0), 0);
+          return (
+            <div>
+              <p className="m-0 mb-1.5 text-xs font-bold text-content dark:text-content-dark">
+                {title} <span className="text-content-muted dark:text-content-muted-dark font-normal">({total})</span>
+              </p>
+              {total === 0 ? (
+                <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emptyLabel}</p>
+              ) : (
+                <>
+                  <div className="flex h-2 rounded-full overflow-hidden bg-brand-500/10 mb-2">
+                    {buckets.map(b => {
+                      const v = counts[b.id] || 0;
+                      return v > 0 ? <div key={b.id} style={{ width: (v / total * 100) + '%', backgroundColor: b.color }} title={`${isRTL ? b.ar : b.en}: ${v}`} /> : null;
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {buckets.map(b => {
+                      const v = counts[b.id] || 0;
+                      return v > 0 ? (
+                        <span key={b.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: b.color, backgroundColor: b.color + '18' }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: b.color }} />
+                          {isRTL ? b.ar : b.en}
+                          <span className="font-bold">{v}</span>
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        };
+
         return (
           <div className="fixed inset-0 z-[200] flex" onClick={() => setSelectedCampaign(null)}>
             <div className="flex-1 bg-black/40" />
@@ -1307,6 +1376,22 @@ export default function MarketingPage() {
                       <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* Status / Stage breakdown — how many leads in each status and
+                    how many deals in each pipeline stage, per campaign. */}
+                <div className="space-y-3 bg-brand-500/[0.04] rounded-xl px-4 py-3">
+                  {renderDist(
+                    isRTL ? 'توزيع الحالات' : 'By Status',
+                    LEAD_STATUS_BUCKETS, bd.status,
+                    isRTL ? 'لا يوجد ليدز' : 'No leads',
+                  )}
+                  <div className="border-t border-brand-500/[0.08]" />
+                  {renderDist(
+                    isRTL ? 'مراحل الصفقات' : 'By Deal Stage',
+                    DEAL_STAGE_BUCKETS, bd.stage,
+                    isRTL ? 'لا توجد صفقات لهذه الحملة' : 'No deals for this campaign',
+                  )}
                 </div>
 
                 {/* Budget Progress */}

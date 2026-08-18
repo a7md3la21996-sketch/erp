@@ -83,6 +83,17 @@ export async function getCampaignStats() {
   } catch (err) { reportError('marketingService', 'getCampaignStats', err); return []; }
 }
 
+// Per-campaign breakdown of leads by contact_status and deals by pipeline
+// stage. Long format: [{campaign_id, dim:'status'|'stage', bucket, cnt}].
+// Reconciles with getCampaignStats (same attribution). Pivot in the UI.
+export async function getCampaignBreakdown() {
+  try {
+    const { data, error } = await supabase.rpc('get_campaign_breakdown');
+    if (error) throw error;
+    return data || [];
+  } catch (err) { reportError('marketingService', 'getCampaignBreakdown', err); return []; }
+}
+
 // Company-wide + per-channel funnel using UNIQUE contacts. platform '__all__'
 // is the overall row; the rest are per-platform.
 export async function getCampaignFunnel() {
