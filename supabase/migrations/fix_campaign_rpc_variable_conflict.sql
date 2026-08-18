@@ -7,6 +7,8 @@
 -- Restores get_campaign_stats + get_campaign_funnel (campaign page showed
 -- 0 leads) and get_campaign_breakdown (status/stage drawer). DB-only, no
 -- frontend deploy needed. Apply in the Supabase SQL editor.
+-- NOTE: each function uses a UNIQUELY-TAGGED dollar quote ($stats$ / $funnel$
+-- / $breakdown$) so the editor doesn't mis-pair the delimiters.
 -- ============================================================================
 
 -- ── 1) get_campaign_stats ────────────────────────────────────────────────
@@ -25,7 +27,7 @@ language plpgsql
 security definer
 set search_path = public
 stable
-as $$
+as $stats$
 #variable_conflict use_column
 begin
   if not exists (
@@ -132,7 +134,7 @@ begin
   left join opp_agg   oa on oa.cid = cc.id
   left join deal_agg  da on da.cid = cc.id;
 end;
-$$;
+$stats$;
 
 -- ── 2) get_campaign_funnel ───────────────────────────────────────────────
 create or replace function get_campaign_funnel()
@@ -147,7 +149,7 @@ language plpgsql
 security definer
 set search_path = public
 stable
-as $$
+as $funnel$
 #variable_conflict use_column
 begin
   if not exists (
@@ -208,7 +210,7 @@ begin
   from vlp join contacts c on c.id = vlp.contact_id
   group by vlp.platform;
 end;
-$$;
+$funnel$;
 
 -- ── 3) get_campaign_breakdown ────────────────────────────────────────────
 create or replace function get_campaign_breakdown()
@@ -222,7 +224,7 @@ language plpgsql
 security definer
 set search_path = public
 stable
-as $$
+as $breakdown$
 #variable_conflict use_column
 begin
   if not exists (
@@ -296,4 +298,4 @@ begin
   union all
   select * from stage_rows;
 end;
-$$;
+$breakdown$;
