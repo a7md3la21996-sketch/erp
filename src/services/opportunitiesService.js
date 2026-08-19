@@ -205,7 +205,7 @@ export async function updateOpportunity(id, updates) {
       notifyOppStageChange({ contactName: enriched.contacts?.full_name || enriched.contact_name, stage: updates.stage, agentName: enriched.assigned_to_name });
     }
     if (updates.stage === 'closed_won') {
-      notifyDealWon({ dealNumber: '', dealId: id, clientName: enriched.contacts?.full_name || '', value: enriched.budget || 0, agentId: enriched.assigned_to_name });
+      notifyDealWon({ dealNumber: '', dealId: id, clientName: enriched.contacts?.full_name || '', value: enriched.budget || 0, agentId: enriched.assigned_to || null, agentName: enriched.assigned_to_name });
     }
     return enriched;
   } catch (err) {

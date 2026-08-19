@@ -40,6 +40,24 @@ export const NOTIFICATION_TYPES = {
   deal_won:           { color: '#158A57', icon: 'Trophy' },
   opportunity_update: { color: '#2F6BD3', icon: 'TrendingUp' },
   system:             { color: '#6B7280', icon: 'Info' },
+  // Types emitted by daily-alerts (edge), the appointment cron, and client
+  // actions that were missing here — so they render with a real icon/color
+  // instead of the default fallback. `followups_due` (plural) is the daily
+  // digest and is distinct from `followup_due` (instant, appointment-due).
+  followups_due:            { color: '#C9860A', icon: 'Clock' },
+  overdue_tasks:            { color: '#D6403B', icon: 'AlertTriangle' },
+  stale_leads:              { color: '#C9860A', icon: 'Clock' },
+  hot_opportunity:          { color: '#D6403B', icon: 'TrendingUp' },
+  agent_inactive:           { color: '#6B7280', icon: 'AlertCircle' },
+  daily_summary:            { color: '#2F6BD3', icon: 'Info' },
+  birthday:                 { color: '#D4548A', icon: 'Bell' },
+  team_appointments_digest: { color: '#2F6BD3', icon: 'Clock' },
+  import_done:              { color: '#158A57', icon: 'Download' },
+  import_leads:             { color: '#2F6BD3', icon: 'UserPlus' },
+  lead_reassigned:          { color: '#2F6BD3', icon: 'UserPlus' },
+  opp_stage:                { color: '#5A63C4', icon: 'ArrowRightCircle' },
+  opportunity_assigned:     { color: '#2F6BD3', icon: 'TrendingUp' },
+  sms_sent:                 { color: '#12897E', icon: 'MessageSquare' },
 };
 
 export const DEFAULT_PREFERENCES = Object.keys(NOTIFICATION_TYPES).reduce((acc, key) => {
@@ -360,10 +378,13 @@ export function notifyTaskAssigned({ taskTitle, taskId, assigneeId, assignedBy }
     entityId: taskId,
     actionUrl: '/tasks',
     priority: 'high',
+    // Was omitted — the row landed with a null recipient so the assignee never
+    // saw it (and no targeted push fired).
+    forUserId: assigneeId || null,
   });
 }
 
-export function notifyDealWon({ dealNumber, dealId, clientName, value, agentId }) {
+export function notifyDealWon({ dealNumber, dealId, clientName, value, agentId, agentName }) {
   return addNotification({
     type: 'deal_won',
     title: 'صفقة ناجحة!',
@@ -374,6 +395,9 @@ export function notifyDealWon({ dealNumber, dealId, clientName, value, agentId }
     entityId: dealId,
     actionUrl: '/sales/deals',
     priority: 'high',
+    // Recipient was never forwarded — fixed. Prefer the UUID; fall back to name.
+    forUserId: agentId || null,
+    forUserName: agentName || null,
   });
 }
 
