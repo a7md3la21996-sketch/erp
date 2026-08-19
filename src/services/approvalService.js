@@ -104,7 +104,7 @@ export async function createApproval({ type, requesterId, requesterName, data, a
 
   if (!shouldAutoApprove) {
     createNotification({
-      type: 'system',
+      type: 'approval_needed',
       title_ar: `طلب موافقة جديد - ${tl.ar}`,
       title_en: `New Approval Request - ${tl.en}`,
       body_ar: `${requesterName} قدّم طلب ${tl.ar} بانتظار موافقتك`,
@@ -271,7 +271,7 @@ export async function approveRequest(id, approverName, comments) {
   if (!approval) return null;
 
   createNotification({
-    type: 'system',
+    type: 'approval_approved',
     title_ar: 'تمت الموافقة على طلبك',
     title_en: 'Your Request Was Approved',
     body_ar: `${approverName} وافق على طلبك`,
@@ -324,7 +324,7 @@ export async function rejectRequest(id, approverName, comments) {
   if (!approval) return null;
 
   createNotification({
-    type: 'system',
+    type: 'approval_rejected',
     title_ar: 'تم رفض طلبك',
     title_en: 'Your Request Was Rejected',
     body_ar: `${approverName} رفض طلبك${comments ? ': ' + comments : ''}`,

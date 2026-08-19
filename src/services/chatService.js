@@ -69,7 +69,7 @@ export async function addComment({ entity, entityId, entityName, text, authorId,
   resolvedMentions.forEach(m => {
     if (m.id !== authorId) {
       createNotification({
-        type: 'system',
+        type: 'mention',
         title_ar: 'تم ذكرك في تعليق',
         title_en: 'You were mentioned in a comment',
         body_ar: `${authorName} ذكرك في تعليق على ${entityName || entity}`,

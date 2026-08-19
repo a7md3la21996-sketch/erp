@@ -15,30 +15,21 @@ const MAX_NOTIFICATIONS = 500;
 
 // ── Notification Types ──
 export const NOTIFICATION_TYPES = {
-  task_due:           { color: '#C9860A', icon: 'Clock' },
-  task_overdue:       { color: '#D6403B', icon: 'AlertTriangle' },
-  opportunity_won:    { color: '#158A57', icon: 'Trophy' },
-  opportunity_lost:   { color: '#D6403B', icon: 'XCircle' },
-  stage_change:       { color: '#5A63C4', icon: 'ArrowRightCircle' },
   new_comment:        { color: '#2F6BD3', icon: 'MessageSquare' },
   mention:            { color: '#5A63C4', icon: 'AtSign' },
   approval_needed:    { color: '#DD6327', icon: 'ShieldAlert' },
   approval_approved:  { color: '#158A57', icon: 'CheckCircle2' },
   approval_rejected:  { color: '#D6403B', icon: 'XOctagon' },
-  expense_submitted:  { color: '#12897E', icon: 'Receipt' },
   system_alert:       { color: '#6B7280', icon: 'AlertCircle' },
   reminder:           { color: '#5A63C4', icon: 'Bell' },
   // Appointment reminders (followup-reminders edge fn) — tiered ahead of time.
   followup_soon_1d:   { color: '#5A63C4', icon: 'Bell' },
   followup_soon_1h:   { color: '#2F6BD3', icon: 'Clock' },
   followup_due:       { color: '#C9860A', icon: 'Clock' },
-  import_complete:    { color: '#158A57', icon: 'Download' },
-  export_complete:    { color: '#158A57', icon: 'Upload' },
   // Legacy compat
   lead_assigned:      { color: '#2F6BD3', icon: 'UserPlus' },
   task_assigned:      { color: '#C9860A', icon: 'CheckSquare' },
   deal_won:           { color: '#158A57', icon: 'Trophy' },
-  opportunity_update: { color: '#2F6BD3', icon: 'TrendingUp' },
   system:             { color: '#6B7280', icon: 'Info' },
   // Types emitted by daily-alerts (edge), the appointment cron, and client
   // actions that were missing here — so they render with a real icon/color
