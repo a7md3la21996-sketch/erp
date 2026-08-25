@@ -50,6 +50,10 @@ const DEPT_LABELS = {
 
 function timeAgo(dateStr, lang) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  // Future timestamp (e.g. a scheduled meeting, or a bad row whose created_at
+  // was set to the meeting time) — never render it as "now". Show the real date
+  // + time so it reads as upcoming, not just-happened. (-120s tolerates skew.)
+  if (diff < -120) return new Date(dateStr).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   if (diff < 60)    return lang === 'ar' ? 'الآن' : 'Just now';
   if (diff < 3600)  return lang === 'ar' ? `منذ ${Math.floor(diff/60)} دقيقة` : `${Math.floor(diff/60)}m ago`;
   if (diff < 86400) return lang === 'ar' ? `منذ ${Math.floor(diff/3600)} ساعة` : `${Math.floor(diff/3600)}h ago`;
