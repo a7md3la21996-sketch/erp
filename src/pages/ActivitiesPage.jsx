@@ -222,6 +222,9 @@ export default function ActivitiesPage() {
     role: profile?.role,
     userId: profile?.id,
     teamId: profile?.team_id,
+    // The Activity Log shows what HAPPENED — a scheduled (not-yet-occurred)
+    // meeting belongs in the calendar/agenda, not at the top of this feed.
+    excludeScheduled: true,
     dept: serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
     type: serverFilters.type,
     result: serverFilters.result,

@@ -36,7 +36,7 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentId, agentName, dateFrom, dateTo, result, countMode = 'exact' } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentId, agentName, dateFrom, dateTo, result, countMode = 'exact', excludeScheduled = false } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
@@ -48,6 +48,10 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
 
     // Exclude internal types from activities list (status_change, task, reassignment)
     query = query.not('type', 'in', '("status_change","task","reassignment")');
+    // Activity Log = things that happened. Drop still-scheduled meetings (they
+    // haven't occurred yet). Keep null-status rows (calls/notes) — a bare
+    // neq would also drop NULLs.
+    if (excludeScheduled) query = query.or('status.is.null,status.neq.scheduled');
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
