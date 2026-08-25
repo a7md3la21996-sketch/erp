@@ -25,9 +25,21 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
   const [followupAt, setFollowupAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Local "now" for the datetime-local max — blocks picking a future time when
+  // logging a meeting as already happened.
+  const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   const save = async () => {
     if (scheduled && !when) { setError(isRTL ? 'اختر تاريخ الاجتماع' : 'Pick a date'); return; }
+    // A "happened" meeting must actually have happened: require its time AND
+    // reject a future time — this is what stops people logging a still-scheduled
+    // meeting as done. (If it hasn't happened yet, they should Schedule it.)
+    if (!scheduled) {
+      if (!when) { setError(isRTL ? 'اختر وقت الاجتماع اللي حصل' : 'Pick when it happened'); return; }
+      if (new Date(when).getTime() > Date.now()) {
+        setError(isRTL ? 'ماينفعش تسجّل اجتماع «حصل» بوقت في المستقبل — لو لسه جاي استخدم «احجز اجتماع»' : "Can't log a meeting as done in the future — use Schedule instead"); return;
+      }
+    }
     // A logged (happened) meeting must set the next step. A scheduled meeting IS
     // the next step, so its follow-up is auto-derived from the meeting date.
     if (!scheduled && !followupAt) { setError(isRTL ? 'حدّد موعد المتابعة' : 'Pick a follow-up date'); return; }
@@ -102,8 +114,8 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{scheduled ? (isRTL ? 'موعد الاجتماع' : 'Meeting time') : (isRTL ? 'وقت الاجتماع (اختياري)' : 'When (optional)')}</label>
-            <Input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} />
+            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{scheduled ? (isRTL ? 'موعد الاجتماع' : 'Meeting time') : (isRTL ? 'وقت الاجتماع (اللي حصل)' : 'When it happened')}{!scheduled && <span className="text-red-500"> *</span>}</label>
+            <Input type="datetime-local" value={when} max={scheduled ? undefined : nowLocal} onChange={e => setWhen(e.target.value)} />
           </div>
 
           {!scheduled && (

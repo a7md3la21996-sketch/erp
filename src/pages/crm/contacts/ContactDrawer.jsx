@@ -1306,7 +1306,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 {[
                   { key: 'call', ar: 'مكالمة', en: 'Call', Icon: Phone, color: '#2F6BD3', open: () => { setActionPresetType('call'); setShowActionForm(true); } },
                   { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp', Icon: MessageCircle, color: '#158A57', open: () => { setActionPresetType('whatsapp'); setShowActionForm(true); } },
-                  { key: 'meeting', ar: 'اجتماع', en: 'Meeting', Icon: Users, color: '#2B4C6F', open: () => setMeetingModal({ mode: 'happened' }) },
+                  { key: 'meeting_schedule', ar: 'احجز اجتماع (جاي)', en: 'Schedule meeting', Icon: Users, color: '#2B4C6F', open: () => setMeetingModal({ mode: 'scheduled' }) },
+                  { key: 'meeting_log', ar: 'سجّل اجتماع (حصل)', en: 'Log meeting (done)', Icon: Users, color: '#2B4C6F', open: () => setMeetingModal({ mode: 'happened' }) },
                   { key: 'note', ar: 'ملاحظة', en: 'Note', Icon: Pencil, color: '#C9860A', open: () => { setActionPresetType('note'); setShowActionForm(true); } },
                   { key: 'deal', ar: 'صفقة', en: 'Deal', Icon: DollarSign, color: '#5A63C4', open: () => setDealModal({ status: 'reserved', dealId: null }) },
                 ].map(t => (
