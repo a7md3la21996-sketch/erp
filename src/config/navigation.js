@@ -14,6 +14,7 @@ export const NAV_ITEMS = [
   // deep-links still live in App.jsx and the dashboard lens cards.
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, path: '/crm/dashboard', permission: P.CRM_DASHBOARD_PREVIEW, children: [
     { id: 'leads', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/leads', permission: P.CONTACTS_VIEW_OWN },
+    { id: 'meetings', label: { ar: 'الاجتماعات', en: 'Meetings' }, path: '/meetings', permission: P.CONTACTS_VIEW_OWN },
     { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
   ]},
   // OLD CRM submenu (rollback reference):

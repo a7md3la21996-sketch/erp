@@ -42,6 +42,7 @@ const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'
 const LeadProfilePage = lazyRetry(() => import('./pages/crm/contacts/LeadProfilePage'));
 const MasterLeadsPage = lazyRetry(() => import('./pages/crm/MasterLeadsPage'));
 const ActivitiesPage = lazyRetry(() => import('./pages/ActivitiesPage'));
+const MeetingsPage = lazyRetry(() => import('./pages/MeetingsPage'));
 const TasksPage = lazyRetry(() => import('./pages/TasksPage'));
 const PerformancePage = lazyRetry(() => import('./pages/PerformancePage'));
 const FinancePage = lazyRetry(() => import('./pages/finance/FinancePage'));
@@ -241,6 +242,7 @@ export default function App() {
                 <Route path="/leads" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/contacts" element={<ContactsToLeadsRedirect />} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
+                <Route path="/meetings" element={<Guarded><MeetingsPage /></Guarded>} />
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
                 <Route path="/crm/dashboard" element={<ProtectedRoute permission={P.CRM_DASHBOARD_PREVIEW}><Guarded><CrmDashboardPage /></Guarded></ProtectedRoute>} />
