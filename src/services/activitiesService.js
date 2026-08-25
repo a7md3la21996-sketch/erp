@@ -36,14 +36,14 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentId, agentName, dateFrom, dateTo, result } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentId, agentName, dateFrom, dateTo, result, countMode = 'exact' } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
   try {
     let query = supabase
       .from('activities')
-      .select('*', isServerPaginated ? { count: 'exact' } : {})
+      .select('*', isServerPaginated ? { count: countMode } : {})
       .order('created_at', { ascending: false });
 
     // Exclude internal types from activities list (status_change, task, reassignment)

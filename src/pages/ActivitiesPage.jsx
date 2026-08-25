@@ -237,7 +237,10 @@ export default function ActivitiesPage() {
     if (!opts.quiet) setLoading(true);
     try {
       const currentPage = pg || page || 1;
-      const result = await fetchActivities({ ...baseQueryArgs, page: currentPage, pageSize });
+      // count:'estimated' — an EXACT count over the ~186k activities table took
+      // ~8s per call (and the page fires several). The planner estimate is
+      // instant and plenty accurate for the "N results" label + page count.
+      const result = await fetchActivities({ ...baseQueryArgs, page: currentPage, pageSize, countMode: 'estimated' });
       setActivities(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch {
@@ -285,9 +288,11 @@ export default function ActivitiesPage() {
     try {
       const todayStr = localDateStr();
       const [totalRes, todayRes, sampleRes] = await Promise.all([
-        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1 }),
+        // Total = estimated (instant). Today keeps exact (small, selective set —
+        // fast once activities has a created_at index). Sample needs rows, not count.
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1, countMode: 'estimated' }),
         fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
-        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: TOP_TYPE_SAMPLE }),
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: TOP_TYPE_SAMPLE, countMode: 'estimated' }),
       ]);
       const sample = Array.isArray(sampleRes?.data) ? sampleRes.data : (Array.isArray(sampleRes) ? sampleRes : []);
       const typeCounts = {};
