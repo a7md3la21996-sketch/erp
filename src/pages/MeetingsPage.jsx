@@ -60,7 +60,18 @@ export default function MeetingsPage() {
     if (tab === 'upcoming') list = list.filter(isUpcoming);
     else if (tab === 'done') list = list.filter(m => !isUpcoming(m));
     if (search.trim()) { const q = search.trim().toLowerCase(); list = list.filter(m => (m.entity_name || '').toLowerCase().includes(q)); }
-    return [...list].sort((a, b) => tab === 'upcoming' ? whenOf(a) - whenOf(b) : whenOf(b) - whenOf(a));
+    const now = Date.now();
+    return [...list].sort((a, b) => {
+      const ta = whenOf(a).getTime(), tb = whenOf(b).getTime();
+      if (tab === 'upcoming') {
+        // Real upcoming (future) first, soonest on top; overdue ones sink to the
+        // bottom (most-recent overdue first).
+        const ao = ta < now, bo = tb < now;
+        if (ao !== bo) return ao ? 1 : -1;
+        return ao ? tb - ta : ta - tb;
+      }
+      return tb - ta; // done / all: latest first
+    });
   }, [meetings, tab, typeFilter, search]);
 
   const groups = useMemo(() => {
@@ -187,7 +198,10 @@ export default function MeetingsPage() {
                 <div className="space-y-2.5">
                   {g.items.map(m => {
                     const sub = SUBTYPES[m.meeting_subtype] || SUBTYPES.site_visit;
-                    const st = STATUS[m.status] || STATUS.completed;
+                    // A still-'scheduled' meeting whose time has passed = overdue
+                    // (booked, never closed out) — flag it so it reads as "needs action".
+                    const overdue = m.status === 'scheduled' && whenOf(m).getTime() < Date.now();
+                    const st = overdue ? { ar: 'متأخر', en: 'Overdue', color: '#E5484D' } : (STATUS[m.status] || STATUS.completed);
                     const agent = (isRTL ? (m.user_name_ar || m.user_name_en) : (m.user_name_en || m.user_name_ar)) || '';
                     const lead = m.entity_name || (isRTL ? 'بدون عميل' : 'No lead');
                     const { hm, ap } = timeParts(m);
