@@ -2572,7 +2572,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     return (
                       <div key={a.id} className="rounded-lg border border-edge/60 dark:border-edge-dark/60 bg-surface-bg/30 dark:bg-surface-bg-dark/20 px-3 py-2">
                         <div className="flex items-center justify-between mb-1 gap-2">
-                          <span className="text-[11px] font-semibold text-content dark:text-content-dark truncate">{a.user_name || '—'}</span>
+                          <span className="text-[11px] font-semibold text-content dark:text-content-dark truncate">{a.user_name
+                            || (isRTL ? (a.users?.full_name_ar || a.users?.full_name_en) : (a.users?.full_name_en || a.users?.full_name_ar))
+                            || (a.user_id ? '—' : (isRTL ? 'النظام' : 'System'))}</span>
                           <span className="text-[9px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">{new Date(a.created_at).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {chg.length ? (
