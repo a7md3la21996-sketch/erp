@@ -41,7 +41,7 @@ const KNOWN_COLUMNS = {
     'company', 'job_title', 'department', 'gender', 'nationality',
     'birth_date',
     // categorization
-    'source', 'contact_type', 'contact_status', 'platform', 'lead_category',
+    'source', 'contact_type', 'contact_status', 'stage', 'platform', 'lead_category',
     'campaign_name', 'campaign_id', 'campaign_interactions',
     // sales
     'temperature', 'budget_min', 'budget_max',

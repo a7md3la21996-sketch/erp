@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, X as XIcon } from 'lucide-react';
-import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge } from './constants';
+import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge, CONTACT_STAGE } from './constants';
 import { Pagination } from '../../../components/ui';
 
 // Mobile-first card view of the contacts list. Same data and handlers as
@@ -377,6 +377,16 @@ export default function ContactsCardList({
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
                     {statusLabels[status] || status}
                   </span>
+                  {c.stage && CONTACT_STAGE[c.stage] && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
+                      style={{ color: CONTACT_STAGE[c.stage].color, background: CONTACT_STAGE[c.stage].color + '18' }}
+                      title={isRTL ? 'المرحلة' : 'Stage'}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
+                      {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}
+                    </span>
+                  )}
                   <span onClick={e => e.stopPropagation()} className="inline-flex [&>button]:!min-h-0 [&>button]:!min-w-0">
                     <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                   </span>

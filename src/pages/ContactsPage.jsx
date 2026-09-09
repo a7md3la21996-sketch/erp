@@ -35,7 +35,7 @@ import useCrmPermissions from '../hooks/useCrmPermissions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 
-import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone } from './crm/contacts/constants';
+import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone, CONTACT_STAGE, CONTACT_STAGE_ORDER } from './crm/contacts/constants';
 import AddLeadModal from './crm/contacts/AddLeadModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
@@ -126,6 +126,8 @@ export default function ContactsPage() {
   const [userMap, setUserMap] = useState(() => new Map());
   const [filterTemp, setFilterTemp] = useState(() => searchParams.get('temp') || 'all');
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || 'all');
+  // Lead lifecycle stage filter (contacts.stage) — preview feature.
+  const [filterStage, setFilterStage] = useState(() => searchParams.get('stage') || 'all');
   // Lead-origin filter — declared up here (with the other URL-backed filters) so
   // it can be round-tripped to the URL and deep-linked from the CRM dashboard.
   const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || 'all');
@@ -1454,6 +1456,7 @@ export default function ContactsPage() {
           // duplicate. An explicit search always spans the archive too.
           excludeDisqualified: (filterStatus === 'all' && !myStatusFilter && !statusFilter && !search) ? true : undefined,
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
+          stage: filterStage !== 'all' ? filterStage : undefined,
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
           contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
           agentNameForStatus: myStatusFilter
@@ -1601,7 +1604,7 @@ export default function ContactsPage() {
       }
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, categoryFilter, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, globalFilter?.dateRange, gfScopeNames, smartFilters, sortBy, overdueContactIds, todayFollowupIds, upcomingContactIds, singleAgentIds, noActivityExcludeIds, loadFollowupCounts, loadCategoryCounts]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, categoryFilter, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, globalFilter?.dateRange, gfScopeNames, smartFilters, sortBy, overdueContactIds, todayFollowupIds, upcomingContactIds, singleAgentIds, noActivityExcludeIds, loadFollowupCounts, loadCategoryCounts]);
 
   // Debounce filter/page-driven refetches by 250ms so rapid chip toggles
   // (status → temperature → activity → date in quick succession) collapse
@@ -2044,6 +2047,11 @@ export default function ContactsPage() {
           { key: 'all', label: isRTL ? 'كل التصنيفات' : 'All', count: categoryCounts.total || 0, color: '#2F6BD3' },
           ...leadCategoryDefs.map(c => ({ key: c.key, label: isRTL ? c.label_ar : c.label_en, count: categoryCounts[c.key] || 0, color: c.color })),
         ];
+        // Stage chips (lead lifecycle) — preview feature; no counts yet.
+        const stageChips = [
+          { key: 'all', label: isRTL ? 'كل المراحل' : 'All Stages', color: '#2F6BD3' },
+          ...CONTACT_STAGE_ORDER.map(k => ({ key: k, label: isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en, color: CONTACT_STAGE[k].color })),
+        ];
 
         return (
           <div className="order-last flex gap-2 mb-3 mt-1 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
@@ -2073,6 +2081,16 @@ export default function ContactsPage() {
               return (
                 <button key={`cat-${c.key}`} onClick={() => { setCategoryFilter(c.key); setPage(1); }} className={chipCls(active)} style={chipStyle(active, c.color)}>
                   {dot(c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
+                </button>
+              );
+            })}
+            <Divider />
+            {/* Stage (lead lifecycle) — preview feature */}
+            {stageChips.map(s => {
+              const active = filterStage === s.key;
+              return (
+                <button key={`stg-${s.key}`} onClick={() => { setFilterStage(s.key); setPage(1); }} className={chipCls(active)} style={chipStyle(active, s.color)}>
+                  {dot(s.color)} {s.label}
                 </button>
               );
             })}

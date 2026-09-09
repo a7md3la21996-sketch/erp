@@ -194,6 +194,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
     if (filters.lead_category) query = query.eq('lead_category', filters.lead_category);
+    if (filters.stage) query = query.eq('stage', filters.stage);
     if (filters.source) {
       const srcValues = Array.isArray(filters.source) ? filters.source.filter(Boolean) : [filters.source];
       if (srcValues.length > 0) {

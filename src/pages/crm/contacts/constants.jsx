@@ -31,6 +31,22 @@ export const AD_SOURCES = ['facebook', 'instagram', 'google_ads'];
 export const STAGE_LABELS = { qualification: { ar: 'تأهيل', en: 'Qualification' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, proposal: { ar: 'عرض سعر', en: 'Proposal' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
 export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 
+// ── Lead lifecycle STAGE (contacts.stage) ───────────────────────────────────
+// NOTE: distinct from the opportunity STAGE_LABELS/DEPT_STAGES above. This is
+// the new per-lead journey ladder on contacts.stage (forward-only). Kept here
+// so the card, table and drawer all render it identically.
+export const CONTACT_STAGE = {
+  new:         { ar: 'جديد',         en: 'New',         color: '#8A94A6' },
+  contacted:   { ar: 'تم التواصل',   en: 'Contacted',   color: '#2F6BD3' },
+  meeting_set: { ar: 'تحديد موعد',   en: 'Meeting Set', color: '#0EA5E9' },
+  met:         { ar: 'تمت المقابلة', en: 'Met',         color: '#6B54D3' },
+  reserved:    { ar: 'حجز',          en: 'Reserved',    color: '#C9860A' },
+  contracted:  { ar: 'تعاقد',        en: 'Contracted',  color: '#D9730B' },
+  deal_done:   { ar: 'صفقة مكتملة',  en: 'Deal Done',   color: '#0FA372' },
+};
+export const CONTACT_STAGE_ORDER = ['new', 'contacted', 'meeting_set', 'met', 'reserved', 'contracted', 'deal_done'];
+export const contactStageLabel = (key, isRTL) => { const s = CONTACT_STAGE[key]; return s ? (isRTL ? s.ar : s.en) : null; };
+
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [
@@ -249,7 +265,7 @@ export const getPhoneInfo = (p) => {
       NG:'🇳🇬', KE:'🇰🇪', ET:'🇪🇹', GH:'🇬🇭', ZA:'🇿🇦',
       US:'🇺🇸', GB:'🇬🇧', DE:'🇩🇪', FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', PT:'🇵🇹', NL:'🇳🇱', BE:'🇧🇪',
       CH:'🇨🇭', AT:'🇦🇹', SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', IE:'🇮🇪', GR:'🇬🇷', PL:'🇵🇱',
-      CZ:'🇨🇿', RU:'🇷🇺', UA:'🇺🇦', CY:'🇨🇾', AU:'🇦🇺', NZ:'🇳🇿', BR:'🇧🇷', MX:'🇲🇽',
+      CZ:'🇨🇿', RU:'🇷🇺', UA:'🇺🇦', CY:'🇨🇾', MT:'🇲🇹', HU:'🇭🇺', AU:'🇦🇺', NZ:'🇳🇿', BR:'🇧🇷', MX:'🇲🇽',
       CN:'🇨🇳', JP:'🇯🇵', KR:'🇰🇷', HK:'🇭🇰', SG:'🇸🇬', MY:'🇲🇾', TH:'🇹🇭',
     };
     return { country: phone.country, flag: flags[phone.country] || '🌍', formatted: phone.formatInternational() };
@@ -325,6 +341,8 @@ export const COUNTRY_CODES = [
   { code: '+7', country: 'RU', flag: '🇷🇺', label: 'Russia', labelAr: 'روسيا' },
   { code: '+380', country: 'UA', flag: '🇺🇦', label: 'Ukraine', labelAr: 'أوكرانيا' },
   { code: '+357', country: 'CY', flag: '🇨🇾', label: 'Cyprus', labelAr: 'قبرص' },
+  { code: '+356', country: 'MT', flag: '🇲🇹', label: 'Malta', labelAr: 'مالطا' },
+  { code: '+36', country: 'HU', flag: '🇭🇺', label: 'Hungary', labelAr: 'المجر' },
   { code: '+61', country: 'AU', flag: '🇦🇺', label: 'Australia', labelAr: 'أستراليا' },
   { code: '+64', country: 'NZ', flag: '🇳🇿', label: 'New Zealand', labelAr: 'نيوزيلندا' },
   { code: '+55', country: 'BR', flag: '🇧🇷', label: 'Brazil', labelAr: 'البرازيل' },

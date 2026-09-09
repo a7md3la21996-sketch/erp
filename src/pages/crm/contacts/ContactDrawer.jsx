@@ -49,6 +49,7 @@ import {
   TEMP, TYPE, fmtBudget, daysSince, initials,
   Chip, getDeptStages, deptStageLabel,
   agentInitials, normalizePhone,
+  CONTACT_STAGE, CONTACT_STAGE_ORDER,
 } from './constants';
 import { generateWhatsAppLink } from '../../../services/whatsappService';
 
@@ -140,6 +141,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showQuickStatus, setShowQuickStatus] = useState(false);
   // Quick temperature popover anchored on the temperature card.
   const [showQuickTemp, setShowQuickTemp] = useState(false);
+  // Lead lifecycle stage (contacts.stage) dropdown — preview feature.
+  const [showLeadStage, setShowLeadStage] = useState(false);
   // Quick stage popover anchored on each opportunity card's stage chip.
   // Tracks which opp.id is currently open (only one at a time).
   const [openStagePopoverFor, setOpenStagePopoverFor] = useState(null);
@@ -626,6 +629,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setMeetingModal(null);
     toast.success(isRTL ? 'تم حفظ الاجتماع' : 'Meeting saved');
     setDrawerRefresh(n => n + 1);
+  };
+
+  // Lead lifecycle stage change (contacts.stage). Preview feature — a plain
+  // manual set; no side effects, no forward-only guard yet (that comes with the
+  // auto-advance phase). Optimistic like the status change.
+  const handleLeadStageChange = (newStage) => {
+    if (!onUpdate) return;
+    if (newStage === contact.stage) return;
+    toast.success(isRTL ? 'تم تحديث المرحلة' : 'Stage updated');
+    onUpdate({ ...contact, stage: newStage }).catch(() => {});
   };
 
   // Handle contact status change from TakeActionForm (per-agent)
@@ -1634,6 +1647,47 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* ═══ STATE BAR — Status · Temperature · Score in one structured,
                 bordered row (matching the fields grid). Segments open a change
                 popover; non-editors see them read-only. ═══ */}
+            {/* ═══ Lead lifecycle STAGE (contacts.stage) — preview feature ═══ */}
+            {(() => {
+              const curStage = CONTACT_STAGE[contact.stage];
+              const canEditStage = (isOwner || isManagerViewer) && canEditContact;
+              return (
+                <div className="relative mb-3">
+                  <button type="button" onClick={canEditStage ? () => setShowLeadStage(s => !s) : undefined}
+                    className={`w-full px-3 py-2 flex items-center justify-between gap-1.5 rounded-xl border border-edge dark:border-edge-dark bg-transparent ${canEditStage ? 'cursor-pointer' : 'cursor-default'}`}
+                    aria-haspopup={canEditStage ? 'menu' : undefined} aria-expanded={showLeadStage}>
+                    <span className="min-w-0 text-start">
+                      <span className="block text-[9px] uppercase tracking-wide text-content-muted dark:text-content-muted-dark">{isRTL ? 'المرحلة' : 'Stage'}</span>
+                      <span className="block text-[12.5px] font-bold truncate" style={{ color: curStage?.color || undefined }}>
+                        {curStage ? (isRTL ? curStage.ar : curStage.en) : (isRTL ? 'غير محددة' : '—')}
+                      </span>
+                    </span>
+                    {canEditStage && <ChevronDown size={13} className="opacity-50 shrink-0" />}
+                  </button>
+                  {showLeadStage && (
+                    <>
+                      <div className="fixed inset-0 z-[60]" onClick={() => setShowLeadStage(false)} />
+                      <div role="menu" className="absolute top-full mt-1.5 start-0 z-[61] min-w-[200px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden">
+                        {CONTACT_STAGE_ORDER.map(key => {
+                          const st = CONTACT_STAGE[key];
+                          const isCurrent = key === contact.stage;
+                          return (
+                            <button key={key} role="menuitem"
+                              onClick={() => { setShowLeadStage(false); handleLeadStageChange(key); }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start hover:bg-brand-500/10 ${isCurrent ? 'font-bold' : ''}`}
+                              style={isCurrent ? { color: st.color, background: st.color + '12' } : undefined}>
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: st.color }} />
+                              <span className="flex-1">{isRTL ? st.ar : st.en}</span>
+                              {isCurrent && <Check size={12} style={{ color: st.color }} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             {(() => {
               const STATUS_OPTS = [
                 { v: 'new', label: isRTL ? 'جديد' : 'New', color: '#2F6BD3' },

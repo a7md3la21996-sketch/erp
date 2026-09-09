@@ -8,6 +8,15 @@ export async function getTeamMemberIds(role, teamId) {
   if (!teamId) return [];
   const cacheKey = `${role}:${teamId}`;
   if (_teamCache.key === cacheKey && _teamCache.ids && Date.now() - _teamCache.ts < TEAM_CACHE_TTL) return _teamCache.ids;
+  // FAIL-CLOSED (mirrors the DB get_team_member_ids guard): a ROOT department
+  // (parent_id IS NULL) is an org container, not a real team. Being scoped to
+  // one must NOT expand to everyone parked on the root — collapse to self only
+  // (an empty member list, same as the no-team case above).
+  const { data: dept } = await supabase.from('departments').select('parent_id').eq('id', teamId).maybeSingle();
+  if (!dept || dept.parent_id == null) {
+    _teamCache.key = cacheKey; _teamCache.ids = []; _teamCache.names = []; _teamCache.ts = Date.now();
+    return [];
+  }
   const teamIds = [teamId];
   if (role === 'sales_manager' || role === 'team_leader') {
     const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);

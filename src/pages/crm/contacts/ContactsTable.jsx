@@ -7,7 +7,7 @@ import {
   TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, getDeptStages, deptStageLabel,
-  agentInitials, NextActionBadge,
+  agentInitials, NextActionBadge, CONTACT_STAGE,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -380,6 +380,18 @@ export default function ContactsTable({
                         ); })()}
                         {isPinned && <Pin size={10} color="#C9860A" className="shrink-0" />}
                       </div>
+                      {/* Stage badge (lead lifecycle) — always shown here under
+                          the name so it survives whatever column set is active. */}
+                      {c.stage && CONTACT_STAGE[c.stage] && (
+                        <div className="mb-0.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
+                            style={{ color: CONTACT_STAGE[c.stage].color, background: CONTACT_STAGE[c.stage].color + '18' }}
+                            title={isRTL ? 'المرحلة' : 'Stage'}>
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
+                            {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}
+                          </span>
+                        </div>
+                      )}
                       {/* Status + temperature moved OUT of this column into their
                           own dedicated columns (contact_status / temperature) so
                           each field lives in one column. Only the recency badge
