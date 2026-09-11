@@ -368,51 +368,51 @@ export default function ContactsCardList({
 
                 </div>
 
-                {/* Meta row — status · follow-up · owner · campaign · last activity. */}
-                <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap text-[10.5px] text-content-muted dark:text-content-muted-dark">
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
-                    style={{ color: statusColor, background: statusColor + '18' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
-                    {statusLabels[status] || status}
-                  </span>
-                  {c.stage && CONTACT_STAGE[c.stage] && (
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
-                      style={{ color: CONTACT_STAGE[c.stage].color, background: CONTACT_STAGE[c.stage].color + '18' }}
-                      title={isRTL ? 'المرحلة' : 'Stage'}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
-                      {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}
-                    </span>
-                  )}
-                  <span onClick={e => e.stopPropagation()} className="inline-flex [&>button]:!min-h-0 [&>button]:!min-w-0">
-                    <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
-                  </span>
-                  {(() => {
-                    const liveOwnerName = (c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name;
-                    const ownerIsViewer = agentName && liveOwnerName === agentName;
-                    const showOwner = !liveOwnerName || !(isSalesAgent && ownerIsViewer);
-                    return showOwner ? (
-                      <span className="inline-flex items-center gap-1 min-w-0">
-                        <Users size={11} className="shrink-0" />
-                        <span className="truncate max-w-[120px]">{liveOwnerName || (isRTL ? 'غير معين' : 'Unassigned')}</span>
+                {/* Redesign — quiet info line + the NEXT ACTION as the hero.
+                    color = signal: state is a quiet dot+label (not a filled
+                    chip); saturated color is reserved for the follow-up state. */}
+                <div className="flex flex-col gap-2">
+                  {/* Quiet info line: state · owner · campaign · last activity */}
+                  <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap text-[11px] text-content-muted dark:text-content-muted-dark">
+                    {(c.stage && CONTACT_STAGE[c.stage]) ? (
+                      <span className="inline-flex items-center gap-1.5 font-semibold" title={isRTL ? 'المرحلة' : 'Stage'}>
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
+                        {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}
                       </span>
-                    ) : null;
-                  })()}
-                  {c.campaign_name && (
-                    <span className="inline-flex items-center gap-1 min-w-0 text-brand-500 dark:text-brand-400">
-                      <Megaphone size={10} className="shrink-0" />
-                      <span className="truncate max-w-[110px]">{c.campaign_name}</span>
-                    </span>
-                  )}
-                  {last && lastTone && (
-                    <span className={`ms-auto shrink-0 whitespace-nowrap font-semibold px-1.5 py-0.5 rounded-full ${lastTone.bg} ${lastTone.fg}`}
-                      title={isRTL ? `آخر نشاط: ${last}` : `Last activity: ${last}`}>
-                      {last}
-                    </span>
-                  )}
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusColor }} aria-hidden="true" />
+                        {statusLabels[status] || status}
+                      </span>
+                    )}
+                    {(() => {
+                      const liveOwnerName = (c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name;
+                      const ownerIsViewer = agentName && liveOwnerName === agentName;
+                      const showOwner = !liveOwnerName || !(isSalesAgent && ownerIsViewer);
+                      return showOwner ? (
+                        <span className="inline-flex items-center gap-1 min-w-0">
+                          <Users size={11} className="shrink-0 opacity-70" />
+                          <span className="truncate max-w-[120px]">{liveOwnerName || (isRTL ? 'غير معين' : 'Unassigned')}</span>
+                        </span>
+                      ) : null;
+                    })()}
+                    {c.campaign_name && (
+                      <span className="inline-flex items-center gap-1 min-w-0">
+                        <Megaphone size={10} className="shrink-0 opacity-70" />
+                        <span className="truncate max-w-[110px]">{c.campaign_name}</span>
+                      </span>
+                    )}
+                    {last && (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap ms-auto shrink-0"
+                        title={isRTL ? `آخر نشاط: ${last}` : `Last activity: ${last}`}>
+                        <span className="w-1 h-1 rounded-full bg-current opacity-40 shrink-0" aria-hidden="true" /> {last}
+                      </span>
+                    )}
+                  </div>
+                  {/* Hero — the next action to take on this lead */}
+                  <div onClick={e => e.stopPropagation()} className="self-start inline-flex [&>button]:!min-h-0 [&>button]:!min-w-0">
+                    <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
+                  </div>
                 </div>
 
                 {/* Actions row — Call + WhatsApp along the bottom. With >1 number

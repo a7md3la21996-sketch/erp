@@ -384,8 +384,7 @@ export default function ContactsTable({
                           the name so it survives whatever column set is active. */}
                       {c.stage && CONTACT_STAGE[c.stage] && (
                         <div className="mb-0.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-[2px] rounded-full"
-                            style={{ color: CONTACT_STAGE[c.stage].color, background: CONTACT_STAGE[c.stage].color + '18' }}
+                          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-content-muted dark:text-content-muted-dark"
                             title={isRTL ? 'المرحلة' : 'Stage'}>
                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
                             {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}
@@ -500,8 +499,8 @@ export default function ContactsTable({
                       if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
                       const info = STATUS_STYLES[s];
                       return info ? (
-                        <span className="text-[11px] px-2.5 py-[3px] rounded-full font-semibold inline-flex items-center gap-1.5" style={{ color: info.color, background: info.color + '1A' }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: info.color }} />
+                        <span className="text-[11px] font-semibold inline-flex items-center gap-1.5 text-content-muted dark:text-content-muted-dark">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: info.color }} />
                           {isRTL ? info.label : info.labelEn}
                         </span>
                       ) : (
