@@ -2055,15 +2055,21 @@ export default function ContactsPage() {
 
         return (
           <div className="order-last flex gap-2 mb-3 mt-1 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-            {/* Follow-up (daily driver) */}
-            {followupChips.map(c => {
-              const active = followupFilterValue === c.key;
-              return (
-                <button key={`fu-${c.key}`} onClick={() => setFollowupFilter(active ? 'all' : c.key)} className={chipCls(active)} style={chipStyle(active, c.color)}>
-                  {dot(c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
-                </button>
-              );
-            })}
+            {/* Follow-up (daily driver) — connected segment so the primary,
+                most-used lens reads as one control, distinct from the
+                secondary status/category chips beside it. */}
+            <div className="shrink-0 inline-flex rounded-full border border-edge dark:border-edge-dark overflow-hidden bg-surface-card dark:bg-surface-card-dark shadow-sm">
+              {followupChips.map((c, i) => {
+                const active = followupFilterValue === c.key;
+                return (
+                  <button key={`fu-${c.key}`} onClick={() => setFollowupFilter(active ? 'all' : c.key)}
+                    className={`whitespace-nowrap px-3.5 py-1.5 text-[12.5px] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${i > 0 ? 'border-s border-edge dark:border-edge-dark' : ''} ${active ? 'text-white' : 'text-[#39424E] dark:text-[#B4BDCA]'}`}
+                    style={active ? { background: c.color } : undefined}>
+                    {dot(active ? '#ffffff' : c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
+                  </button>
+                );
+              })}
+            </div>
             <Divider />
             {/* Status (active pipeline) */}
             {statusChips.map(s => {
