@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, X as XIcon } from 'lucide-react';
+import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, Clock, X as XIcon } from 'lucide-react';
 import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge, CONTACT_STAGE } from './constants';
 import { Pagination } from '../../../components/ui';
 
@@ -329,7 +329,7 @@ export default function ContactsCardList({
                   <div className="flex-1 min-w-0">
                     {/* Name + temperature + markers */}
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-bold text-sm text-content dark:text-content-dark truncate">
+                      <span className="font-bold text-[15px] text-content dark:text-content-dark truncate">
                         {c.full_name || (isRTL ? '— بدون اسم —' : '— No Name —')}
                       </span>
                       {tempData?.Icon && (
@@ -409,8 +409,14 @@ export default function ContactsCardList({
                       </span>
                     )}
                   </div>
-                  {/* Hero — the next action to take on this lead */}
-                  <div onClick={e => e.stopPropagation()} className="self-start inline-flex [&>button]:!min-h-0 [&>button]:!min-w-0">
+                  {/* Hero — the next action, given real weight so it's the
+                      first thing the eye lands on. */}
+                  <div onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-2 self-start max-w-full rounded-lg bg-brand-500/[0.06] dark:bg-brand-500/[0.14] ps-2.5 pe-2 py-1.5 [&>button]:!min-h-0 [&>button]:!min-w-0">
+                    <Clock size={13} className="shrink-0 text-brand-500 dark:text-brand-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-content-muted dark:text-content-muted-dark shrink-0">
+                      {isRTL ? 'التالي' : 'Next'}
+                    </span>
                     <NextActionBadge nextFollowup={c._nextFollowup} isRTL={isRTL} onClick={() => setReminderTarget?.(c)} />
                   </div>
                 </div>
