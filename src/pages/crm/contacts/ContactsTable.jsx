@@ -372,7 +372,7 @@ export default function ContactsTable({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                        <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                        <span className={`font-bold text-[15px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
                         {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
