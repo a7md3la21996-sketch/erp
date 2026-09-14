@@ -35,7 +35,7 @@ import useCrmPermissions from '../hooks/useCrmPermissions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 
-import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone, CONTACT_STAGE, CONTACT_STAGE_ORDER } from './crm/contacts/constants';
+import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone, CONTACT_STAGE, CONTACT_STAGE_ORDER, STAGE_UI_ENABLED } from './crm/contacts/constants';
 import AddLeadModal from './crm/contacts/AddLeadModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
@@ -1456,7 +1456,7 @@ export default function ContactsPage() {
           // duplicate. An explicit search always spans the archive too.
           excludeDisqualified: (filterStatus === 'all' && !myStatusFilter && !statusFilter && !search) ? true : undefined,
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
-          stage: filterStage !== 'all' ? filterStage : undefined,
+          stage: (STAGE_UI_ENABLED && filterStage !== 'all') ? filterStage : undefined,
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
           contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
           agentNameForStatus: myStatusFilter
@@ -2090,8 +2090,9 @@ export default function ContactsPage() {
                 </button>
               );
             })}
+            {STAGE_UI_ENABLED && (<>
             <Divider />
-            {/* Stage (lead lifecycle) — preview feature */}
+            {/* Stage (lead lifecycle) — preview feature (flag-gated, off in prod) */}
             {stageChips.map(s => {
               const active = filterStage === s.key;
               return (
@@ -2100,6 +2101,7 @@ export default function ContactsPage() {
                 </button>
               );
             })}
+            </>)}
             <Divider />
             {/* Archive + Unassigned */}
             <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}

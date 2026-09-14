@@ -49,7 +49,7 @@ import {
   TEMP, TYPE, fmtBudget, daysSince, initials,
   Chip, getDeptStages, deptStageLabel,
   agentInitials, normalizePhone,
-  CONTACT_STAGE, CONTACT_STAGE_ORDER,
+  CONTACT_STAGE, CONTACT_STAGE_ORDER, STAGE_UI_ENABLED,
 } from './constants';
 import { generateWhatsAppLink } from '../../../services/whatsappService';
 
@@ -1647,8 +1647,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* ═══ STATE BAR — Status · Temperature · Score in one structured,
                 bordered row (matching the fields grid). Segments open a change
                 popover; non-editors see them read-only. ═══ */}
-            {/* ═══ Lead lifecycle STAGE (contacts.stage) — preview feature ═══ */}
-            {(() => {
+            {/* ═══ Lead lifecycle STAGE (contacts.stage) — preview feature (flag-gated, off in prod) ═══ */}
+            {STAGE_UI_ENABLED && (() => {
               const curStage = CONTACT_STAGE[contact.stage];
               const canEditStage = (isOwner || isManagerViewer) && canEditContact;
               return (

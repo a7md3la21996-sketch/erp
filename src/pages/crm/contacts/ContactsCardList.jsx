@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, Clock, X as XIcon } from 'lucide-react';
-import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge, CONTACT_STAGE } from './constants';
+import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED } from './constants';
 import { Pagination } from '../../../components/ui';
 
 // Mobile-first card view of the contacts list. Same data and handlers as
@@ -374,7 +374,7 @@ export default function ContactsCardList({
                 <div className="flex flex-col gap-2">
                   {/* Quiet info line: state · owner · campaign · last activity */}
                   <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap text-[11px] text-content-muted dark:text-content-muted-dark">
-                    {(c.stage && CONTACT_STAGE[c.stage]) ? (
+                    {(STAGE_UI_ENABLED && c.stage && CONTACT_STAGE[c.stage]) ? (
                       <span className="inline-flex items-center gap-1.5 font-semibold" title={isRTL ? 'المرحلة' : 'Stage'}>
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: CONTACT_STAGE[c.stage].color }} aria-hidden="true" />
                         {isRTL ? CONTACT_STAGE[c.stage].ar : CONTACT_STAGE[c.stage].en}

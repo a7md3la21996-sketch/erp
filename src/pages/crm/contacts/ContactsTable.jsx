@@ -7,7 +7,7 @@ import {
   TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, getDeptStages, deptStageLabel,
-  agentInitials, NextActionBadge, CONTACT_STAGE,
+  agentInitials, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -382,7 +382,7 @@ export default function ContactsTable({
                       </div>
                       {/* Stage badge (lead lifecycle) — always shown here under
                           the name so it survives whatever column set is active. */}
-                      {c.stage && CONTACT_STAGE[c.stage] && (
+                      {STAGE_UI_ENABLED && c.stage && CONTACT_STAGE[c.stage] && (
                         <div className="mb-0.5">
                           <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-content-muted dark:text-content-muted-dark"
                             title={isRTL ? 'المرحلة' : 'Stage'}>
