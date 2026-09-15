@@ -568,7 +568,13 @@ export default function ContactsTable({
                 {hasCol('last_feedback') && <td className={`${tdCls} hidden lg:table-cell`}>
                   {c._lastNote ? (
                     <div className="max-w-[180px]">
-                      <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}>{c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}</p>
+                      {/* Feedback is mixed content (an English result label like
+                          "No Answer —" + an Arabic note). Auto/plaintext direction
+                          picks LTR from the English prefix and then truncates the
+                          MIDDLE/END of the Arabic note. Force RTL base (business
+                          notes are Arabic) + isolate so the note reads from its
+                          start and clips its end. */}
+                      <p dir="rtl" style={{ unicodeBidi: 'isolate' }} className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}>{c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}</p>
                       <div className="flex items-center gap-1 mt-0.5 text-[10px] text-content-muted dark:text-content-muted-dark">
                         <span>{c._lastNote.user_name_en || c._lastNote.user_name_ar || ''}</span>
                         {c._lastNote.created_at && <span>· {new Date(c._lastNote.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
