@@ -413,15 +413,15 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', minWidth: 760, tableLayout: 'fixed', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   <th style={tableHeaderStyle}>{lang === 'ar' ? 'المهمة' : 'Task'}</th>
-                  <th style={tableHeaderStyle}>{lang === 'ar' ? 'التكرار' : 'Frequency'}</th>
-                  <th style={tableHeaderStyle}>{lang === 'ar' ? 'المسؤول' : 'Assignee'}</th>
-                  <th style={tableHeaderStyle}>{lang === 'ar' ? 'القادم' : 'Next Due'}</th>
-                  <th style={tableHeaderStyle}>{lang === 'ar' ? 'الحالة' : 'Status'}</th>
-                  <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>{lang === 'ar' ? 'إجراءات' : 'Actions'}</th>
+                  <th style={{ ...tableHeaderStyle, width: 120 }}>{lang === 'ar' ? 'التكرار' : 'Frequency'}</th>
+                  <th style={{ ...tableHeaderStyle, width: 150 }}>{lang === 'ar' ? 'المسؤول' : 'Assignee'}</th>
+                  <th style={{ ...tableHeaderStyle, width: 150 }}>{lang === 'ar' ? 'القادم' : 'Next Due'}</th>
+                  <th style={{ ...tableHeaderStyle, width: 110 }}>{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                  <th style={{ ...tableHeaderStyle, width: 110, textAlign: 'center' }}>{lang === 'ar' ? 'إجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,13 +438,13 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
                           }}>
                             <Repeat size={13} color={priColor} />
                           </div>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lang === 'ar' ? (task.titleAr || task.title) : task.title}>
                               {lang === 'ar' ? (task.titleAr || task.title) : task.title}
                             </div>
                             {task.description && (
-                              <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>
-                                {task.description.length > 50 ? task.description.slice(0, 50) + '...' : task.description}
+                              <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {task.description}
                               </div>
                             )}
                           </div>

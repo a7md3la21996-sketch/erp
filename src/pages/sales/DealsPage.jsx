@@ -21,7 +21,7 @@ import { useEscClose, useFocusTrap } from '../../utils/hooks';
 import { fmtMoney } from '../../utils/formatting';
 import CustomFieldsRenderer from '../../components/ui/CustomFieldsRenderer';
 import CommentsSection from '../../components/ui/CommentsSection';
-import { thCls } from '../../utils/tableStyles';
+import { thCls, tableFixedCls, cellText } from '../../utils/tableStyles';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 
 // ── Status Config ────────────────────────────────────────────────
@@ -303,19 +303,19 @@ export default function DealsPage() {
 
       {/* ═══ Desktop Table ═══ */}
       <div className="hidden md:block overflow-x-auto bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark mb-4">
-        <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[1100px]">
+        <table dir={isRTL ? 'rtl' : 'ltr'} className={`${tableFixedCls} min-w-[1100px]`}>
           <thead>
             <tr>
-              <th className={thCls}>{isRTL ? 'رقم الصفقة' : 'Deal #'}</th>
-              <th className={thCls}>{isRTL ? 'العميل' : 'Client'}</th>
-              <th className={thCls}>{isRTL ? 'المشروع / الوحدة' : 'Project / Unit'}</th>
-              <th className={thCls}>{isRTL ? 'الموظف' : 'Agent'}</th>
-              <th className={thCls}>{isRTL ? 'القيمة' : 'Value'}</th>
-              <th className={thCls}>{isRTL ? 'المقدم' : 'Down Payment'}</th>
-              <th className={thCls}>{isRTL ? 'الحالة' : 'Status'}</th>
-              <th className={thCls}>{isRTL ? 'المستندات' : 'Documents'}</th>
-              <th className={thCls}>{isRTL ? 'التاريخ' : 'Date'}</th>
-              <th className={thCls} />
+              <th className={`${thCls} w-[110px]`}>{isRTL ? 'رقم الصفقة' : 'Deal #'}</th>
+              <th className={`${thCls} w-[180px]`}>{isRTL ? 'العميل' : 'Client'}</th>
+              <th className={`${thCls} w-[180px]`}>{isRTL ? 'المشروع / الوحدة' : 'Project / Unit'}</th>
+              <th className={`${thCls} w-[130px]`}>{isRTL ? 'الموظف' : 'Agent'}</th>
+              <th className={`${thCls} w-[120px]`}>{isRTL ? 'القيمة' : 'Value'}</th>
+              <th className={`${thCls} w-[120px]`}>{isRTL ? 'المقدم' : 'Down Payment'}</th>
+              <th className={`${thCls} w-[110px]`}>{isRTL ? 'الحالة' : 'Status'}</th>
+              <th className={`${thCls} w-[120px]`}>{isRTL ? 'المستندات' : 'Documents'}</th>
+              <th className={`${thCls} w-[110px]`}>{isRTL ? 'التاريخ' : 'Date'}</th>
+              <th className={`${thCls} w-[56px]`} />
             </tr>
           </thead>
           <tbody>
@@ -328,15 +328,15 @@ export default function DealsPage() {
                 <tr key={deal.id} onClick={() => openDrawer(deal)} className="cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/[0.04] border-b border-edge/50 dark:border-edge-dark/50 transition-colors">
                   <td className="px-4 py-3 text-xs font-mono font-semibold text-brand-500">{deal.deal_number}</td>
                   <td className="px-4 py-3">
-                    <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? deal.client_ar : deal.client_en}</div>
-                    {deal.phone && <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 font-mono">{deal.phone}</div>}
+                    <div className={`text-xs font-semibold text-content dark:text-content-dark ${cellText}`} title={lang === 'ar' ? deal.client_ar : deal.client_en}>{lang === 'ar' ? deal.client_ar : deal.client_en}</div>
+                    {deal.phone && <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 font-mono truncate">{deal.phone}</div>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? deal.project_ar : deal.project_en || '—'}</div>
-                    {deal.unit_code && <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5">{deal.unit_code} {lang === 'ar' ? deal.unit_type_ar : deal.unit_type_en}</div>}
+                    <div className={`text-xs text-content dark:text-content-dark ${cellText}`} title={lang === 'ar' ? deal.project_ar : deal.project_en || ''}>{lang === 'ar' ? deal.project_ar : deal.project_en || '—'}</div>
+                    {deal.unit_code && <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 truncate">{deal.unit_code} {lang === 'ar' ? deal.unit_type_ar : deal.unit_type_en}</div>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-content dark:text-content-dark">{lang === 'ar' ? deal.agent_ar : deal.agent_en}</td>
-                  <td className="px-4 py-3 text-xs font-bold text-content dark:text-content-dark">{fmtMoney(deal.deal_value)} EGP</td>
+                  <td className="px-4 py-3 text-xs text-content dark:text-content-dark"><span className={cellText} title={lang === 'ar' ? deal.agent_ar : deal.agent_en}>{lang === 'ar' ? deal.agent_ar : deal.agent_en}</span></td>
+                  <td className="px-4 py-3 text-xs font-bold text-content dark:text-content-dark whitespace-nowrap">{fmtMoney(deal.deal_value)} EGP</td>
                   <td className="px-4 py-3 text-xs text-content dark:text-content-dark">{deal.down_payment ? fmtMoney(deal.down_payment) + ' EGP' : '—'}</td>
                   <td className="px-4 py-3">
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: status.color, backgroundColor: status.color + '18' }}>
