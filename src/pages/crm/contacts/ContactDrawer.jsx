@@ -39,6 +39,7 @@ import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
 import DealEventModal from './DealEventModal';
 import MeetingModal from './MeetingModal';
+import CompleteTaskModal from './CompleteTaskModal';
 import { reportError } from '../../../utils/errorReporter';
 import supabase from '../../../lib/supabase';
 import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
@@ -137,6 +138,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [dealLoading, setDealLoading] = useState(false);
   // Meetings tab: { mode: 'happened' | 'scheduled' } | null
   const [meetingModal, setMeetingModal] = useState(null);
+  const [completeTask, setCompleteTask] = useState(null); // task being closed via the shared modal
   // Quick status change popover anchored on the hero status chip — lets the
   // viewer flip their own status without opening the full TakeActionForm.
   const [showQuickStatus, setShowQuickStatus] = useState(false);
@@ -1149,6 +1151,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </span>
               )}
             </div>
+            {/* Close the next-step via the shared outcome flow (result + note +
+                next step) — not a bare "done" flip. */}
+            {item.status !== 'done' && item.status !== 'cancelled' && canEditContact && (
+              <button onClick={(e) => { e.stopPropagation(); setCompleteTask({ ...item, contact_id: item.contact_id || contact.id, contact_name: item.contact_name || contact.full_name }); }}
+                className="mt-1.5 flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0"
+                style={{ background: '#158A5722', color: '#158A57' }}>
+                <Check size={10} /> {isRTL ? 'إنهاء' : 'Complete'}
+              </button>
+            )}
           </>
         );
       }
@@ -2737,6 +2748,22 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         isRTL={isRTL}
         onClose={() => setMeetingModal(null)}
         onSaved={handleMeetingSaved}
+      />
+    )}
+
+    {/* Close a next-step (task) via the shared outcome flow */}
+    {completeTask && (
+      <CompleteTaskModal
+        task={completeTask}
+        profile={profile}
+        isRTL={isRTL}
+        onClose={() => setCompleteTask(null)}
+        onDone={() => {
+          setCompleteTask(null);
+          toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
+          setDrawerRefresh(n => n + 1);
+          onUpdate?.({ ...contact, last_activity_at: new Date().toISOString(), _skipDbUpdate: true });
+        }}
       />
     )}
 
