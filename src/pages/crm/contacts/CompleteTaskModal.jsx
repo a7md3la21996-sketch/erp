@@ -4,7 +4,9 @@ import { X, Check, Calendar, User } from 'lucide-react';
 import { Button, Textarea } from '../../../components/ui';
 import { useFocusTrap } from '../../../utils/hooks';
 import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
-import { updateTask } from '../../../services/tasksService';
+import { updateTask, createTask } from '../../../services/tasksService';
+import { updateActivity } from '../../../services/activitiesService';
+import { updateContact } from '../../../services/contactsService';
 import { ACTIVITY_RESULT_BADGES } from './constants';
 
 // ── Shared "close a next-step" modal ────────────────────────────────────────
@@ -46,8 +48,12 @@ const toLocalInput = (d) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-export default function CompleteTaskModal({ task, onClose, onDone, profile, isRTL }) {
-  const seedType = ACT_TYPES.some(t => t.key === task?.type) ? task.type : 'call';
+export default function CompleteTaskModal({ task, activity = null, onClose, onDone, profile, isRTL }) {
+  // `activity` (optional) = a SCHEDULED activity (e.g. a meeting) to close IN
+  // PLACE — its own row transitions scheduled→completed with the outcome,
+  // instead of logging a new row. Without it, we close a task via logInteraction.
+  const seedType = activity ? (ACT_TYPES.some(t => t.key === activity.type) ? activity.type : 'meeting')
+    : (ACT_TYPES.some(t => t.key === task?.type) ? task.type : 'call');
   const [actType, setActType] = useState(seedType);
   const [actResult, setActResult] = useState('');
   const [actNotes, setActNotes] = useState('');
@@ -81,21 +87,41 @@ export default function CompleteTaskModal({ task, onClose, onDone, profile, isRT
     if (!canSave || saving) return;
     setSaving(true); setError('');
     try {
-      if (task.contact_id) {
-        await logInteraction(task.contact_id, {
-          type: actType,
-          result: actResult || null,
-          description: actNotes || null,       // PURE note — no label jamming
-          followUp: (followUpRequired && followUpDate)
-            ? { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`, dueAt: followUpDate, notes: followUpNotes || '', contactName: task.contact_name || '' }
-            : null,
-          statusChange: (changeStatus && newStatus) ? { from: null, to: newStatus } : null,
-          actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
-        });
+      if (activity) {
+        // Close the scheduled activity IN PLACE (one row: scheduled→completed
+        // + outcome), then open the next step. Creating the next follow-up
+        // task fires supersede_prior_followups, which cancels the paired
+        // scheduled task — so no dangling open loop remains.
+        await updateActivity(activity.id, { status: 'completed', result: actResult || null, description: actNotes || null });
+        if (followUpRequired && followUpDate && task.contact_id) {
+          await createTask({
+            type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`,
+            notes: followUpNotes || '', priority: 'medium', status: 'pending',
+            due_date: new Date(followUpDate).toISOString(), contact_id: task.contact_id, contact_name: task.contact_name || null,
+            dept: 'sales', assigned_to: profile?.id || null,
+            assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '',
+          });
+        }
+        if (changeStatus && newStatus && task.contact_id) {
+          await updateContact(task.contact_id, { contact_status: newStatus });
+        }
+      } else {
+        if (task.contact_id) {
+          await logInteraction(task.contact_id, {
+            type: actType,
+            result: actResult || null,
+            description: actNotes || null,       // PURE note — no label jamming
+            followUp: (followUpRequired && followUpDate)
+              ? { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`, dueAt: followUpDate, notes: followUpNotes || '', contactName: task.contact_name || '' }
+              : null,
+            statusChange: (changeStatus && newStatus) ? { from: null, to: newStatus } : null,
+            actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
+          });
+        }
+        // Assert THIS task is closed (logInteraction auto-dones matching past-due
+        // tasks + supersede cancels the rest, but close the exact one to be sure).
+        if (task.id) await updateTask(task.id, { status: 'done' });
       }
-      // Assert THIS task is closed (logInteraction auto-dones matching past-due
-      // tasks + supersede cancels the rest, but close the exact one to be sure).
-      if (task.id) await updateTask(task.id, { status: 'done' });
       onDone?.();
     } catch (err) {
       setError(err?.message === 'FOLLOWUP_REQUIRED' ? (isRTL ? 'حدّد موعد المتابعة' : 'A follow-up date is required')
@@ -210,6 +236,7 @@ export default function CompleteTaskModal({ task, onClose, onDone, profile, isRT
 
 CompleteTaskModal.propTypes = {
   task: PropTypes.object.isRequired,   // { id, contact_id, contact_name, title, type }
+  activity: PropTypes.object,          // optional scheduled activity to close in place
   onClose: PropTypes.func.isRequired,
   onDone: PropTypes.func,              // called after a successful close (refresh)
   profile: PropTypes.object,

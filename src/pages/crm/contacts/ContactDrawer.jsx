@@ -139,6 +139,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Meetings tab: { mode: 'happened' | 'scheduled' } | null
   const [meetingModal, setMeetingModal] = useState(null);
   const [completeTask, setCompleteTask] = useState(null); // task being closed via the shared modal
+  const [closeMeeting, setCloseMeeting] = useState(null); // scheduled meeting activity being closed in place
   // Quick status change popover anchored on the hero status chip — lets the
   // viewer flip their own status without opening the full TakeActionForm.
   const [showQuickStatus, setShowQuickStatus] = useState(false);
@@ -1103,7 +1104,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             )}
             {actStatus === 'scheduled' && (
               <div className="flex gap-1.5 mt-1.5">
-                <button onClick={(e) => { e.stopPropagation(); handleUpdateActivityStatus(item.id, 'completed'); }}
+                <button onClick={(e) => { e.stopPropagation(); setCloseMeeting(item); }}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0 transition-colors"
                   style={{ background: '#158A5722', color: '#158A57' }}>
                   <Check size={10} /> {isRTL ? 'اكتمل' : 'Complete'}
@@ -2761,6 +2762,23 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         onDone={() => {
           setCompleteTask(null);
           toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
+          setDrawerRefresh(n => n + 1);
+          onUpdate?.({ ...contact, last_activity_at: new Date().toISOString(), _skipDbUpdate: true });
+        }}
+      />
+    )}
+
+    {/* Close a SCHEDULED meeting in place (same shared flow, activity mode) */}
+    {closeMeeting && (
+      <CompleteTaskModal
+        task={{ contact_id: contact.id, contact_name: contact.full_name, title: isRTL ? 'إغلاق الاجتماع' : 'Close meeting', type: closeMeeting.type }}
+        activity={closeMeeting}
+        profile={profile}
+        isRTL={isRTL}
+        onClose={() => setCloseMeeting(null)}
+        onDone={() => {
+          setCloseMeeting(null);
+          toast.success(isRTL ? 'تم إغلاق الاجتماع' : 'Meeting closed');
           setDrawerRefresh(n => n + 1);
           onUpdate?.({ ...contact, last_activity_at: new Date().toISOString(), _skipDbUpdate: true });
         }}
