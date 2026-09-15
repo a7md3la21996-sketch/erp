@@ -7,7 +7,7 @@ import { logInteraction, isNoteRequired } from '../../../services/interactionsSe
 import { updateTask, createTask } from '../../../services/tasksService';
 import { updateActivity } from '../../../services/activitiesService';
 import { updateContact } from '../../../services/contactsService';
-import { ACTIVITY_RESULT_BADGES } from './constants';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE } from './constants';
 
 // ── Shared "close a next-step" modal ────────────────────────────────────────
 // The ONE way to close any task / meeting / next-step across the app: record
@@ -24,15 +24,6 @@ const ACT_TYPES = [
   { key: 'meeting', ar: 'مقابلة', en: 'Meeting' },
   { key: 'note', ar: 'ملاحظة', en: 'Note' },
 ];
-
-// Per-type result enums — read labels/colours from the shared badge map.
-const RESULT_KEYS = {
-  call: ['answered', 'no_answer', 'busy', 'switched_off', 'wrong_number'],
-  whatsapp: ['replied', 'seen', 'delivered', 'not_delivered', 'blocked'],
-  email: ['replied', 'opened', 'sent', 'bounced'],
-  meeting: ['attended', 'no_show', 'rescheduled', 'cancelled'],
-  visit: ['visited', 'no_show', 'rescheduled', 'cancelled'],
-};
 
 // Quick lead-status options (disqualify is intentionally excluded — it needs a
 // reason and belongs in the dedicated DQ flow, not a quick toggle here).
@@ -73,7 +64,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
     return () => document.removeEventListener('keydown', h);
   }, [onClose]);
 
-  const currentResults = (RESULT_KEYS[actType] || []).map(k => ({ value: k, ...ACTIVITY_RESULT_BADGES[k] }));
+  const currentResults = (ACTIVITY_RESULTS_BY_TYPE[actType] || []).map(k => ({ value: k, ...ACTIVITY_RESULT_BADGES[k] }));
   const resultRequired = currentResults.length > 0;
   const noteRequired = isNoteRequired(actType, actResult); // engaged result → note mandatory
   // Closing a call/whatsapp/meeting/email opens the next step (mirrors the RPC's

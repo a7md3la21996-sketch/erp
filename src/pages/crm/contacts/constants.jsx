@@ -81,6 +81,17 @@ export const ACTIVITY_RESULT_BADGES = {
   completed:     { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
 };
 
+// The allowed result keys per activity type — ONE source of truth for the
+// result pickers (drawer form, meeting modal, complete-task modal). Labels +
+// colours come from ACTIVITY_RESULT_BADGES above.
+export const ACTIVITY_RESULTS_BY_TYPE = {
+  call: ['answered', 'no_answer', 'busy', 'switched_off', 'wrong_number'],
+  whatsapp: ['replied', 'seen', 'delivered', 'not_delivered', 'blocked'],
+  email: ['replied', 'opened', 'sent', 'bounced'],
+  meeting: ['attended', 'no_show', 'rescheduled', 'cancelled'],
+  visit: ['visited', 'no_show', 'rescheduled', 'cancelled'],
+};
+
 // Shared coloured result badge — the ONE way an activity result renders across
 // the app (leads table, drawer timeline, …), so a change is made once here.
 // Returns null for a missing/unknown result so callers can drop it cleanly.

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button, Input, Textarea } from '../../../components/ui';
 import { logInteraction } from '../../../services/interactionsService';
-import { ACTIVITY_RESULT_BADGES } from './constants';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE } from './constants';
 
 // Meeting result is a fixed enum (same as every other activity) — NOT free text.
-const MEETING_RESULTS = ['attended', 'no_show', 'rescheduled', 'cancelled'];
+const MEETING_RESULTS = ACTIVITY_RESULTS_BY_TYPE.meeting;
 
 // Log a meeting on a lead. Two modes:
 //   • happened  → status='completed', captures the outcome (result)
