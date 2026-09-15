@@ -12,6 +12,7 @@ import {
   Edit3, Calendar, AlertCircle
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
+import CompleteTaskModal from './crm/contacts/CompleteTaskModal';
 import supabase from '../lib/supabase';
 import ContactSearch from './crm/opportunities/ContactSearch';
 import { createActivity } from '../services/contactsService';
@@ -628,222 +629,6 @@ function CalendarView({ tasks, lang, isRTL, isDark, onTaskClick }) {
 }
 
 // ── Complete Task Modal ──────────────────────────────────────────────
-function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) {
-  const [actType, setActType] = useState('call');
-  const [actResult, setActResult] = useState('');
-  const [actNotes, setActNotes] = useState('');
-  const [addFollowUp, setAddFollowUp] = useState(false);
-  const [followUpDate, setFollowUpDate] = useState('');
-  const [followUpNotes, setFollowUpNotes] = useState('');
-  const [changeContactStatus, setChangeContactStatus] = useState(false);
-  const [newContactStatus, setNewContactStatus] = useState('');
-  const [saving, setSaving] = useState(false);
-  const dialogRef = useRef(null);
-  useFocusTrap(dialogRef);
-
-  const ACT_TYPES = [
-    { key: 'call', ar: 'مكالمة', en: 'Call' },
-    { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
-    { key: 'email', ar: 'إيميل', en: 'Email' },
-    { key: 'meeting', ar: 'مقابلة', en: 'Meeting' },
-    { key: 'note', ar: 'ملاحظة', en: 'Note' },
-  ];
-
-  const RESULTS = {
-    call: [
-      { value: 'answered', ar: 'رد', en: 'Answered', color: '#158A57' },
-      { value: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#C9860A' },
-      { value: 'busy', ar: 'مشغول', en: 'Busy', color: '#D6403B' },
-      { value: 'switched_off', ar: 'مغلق', en: 'Switched Off', color: '#6b7280' },
-    ],
-    whatsapp: [
-      { value: 'replied', ar: 'رد', en: 'Replied', color: '#158A57' },
-      { value: 'seen', ar: 'شاف', en: 'Seen', color: '#2F6BD3' },
-      { value: 'delivered', ar: 'وصلت', en: 'Delivered', color: '#C9860A' },
-    ],
-    email: [
-      { value: 'replied', ar: 'رد', en: 'Replied', color: '#158A57' },
-      { value: 'sent', ar: 'تم الإرسال', en: 'Sent', color: '#2F6BD3' },
-    ],
-  };
-  const currentResults = RESULTS[actType] || [];
-  const resultRequired = currentResults.length > 0;
-  const canSave = (!resultRequired || actResult) && (actNotes.trim() || actResult);
-
-  const handleSave = async () => {
-    if (!canSave) return;
-    setSaving(true);
-    try {
-      const resultLabel = currentResults.find(r => r.value === actResult);
-      const desc = resultLabel ? `${isRTL ? resultLabel.ar : resultLabel.en}${actNotes ? ' — ' + actNotes : ''}` : actNotes;
-      await onComplete({
-        activity: {
-          type: actType,
-          description: desc,
-          notes: actNotes,
-          result: actResult || null,
-          contact_id: task.contact_id || null,
-          user_id: profile?.id || null,
-          user_name_ar: profile?.full_name_ar || '',
-          user_name_en: profile?.full_name_en || '',
-          dept: 'sales',
-          created_at: new Date().toISOString(),
-        },
-        followUp: addFollowUp && followUpDate ? {
-          title: task.title ? `${isRTL ? 'متابعة' : 'Follow-up'}: ${task.title}` : (isRTL ? 'متابعة' : 'Follow-up'),
-          due_date: followUpDate,
-          notes: followUpNotes,
-          contact_id: task.contact_id || null,
-          contact_name: task.contact_name || null,
-          dept: 'sales',
-          priority: 'medium',
-          status: 'pending',
-          assigned_to: profile?.id || null,
-          assigned_to_name_ar: profile?.full_name_ar || '',
-          assigned_to_name_en: profile?.full_name_en || '',
-        } : null,
-        contactStatus: changeContactStatus && newContactStatus ? newContactStatus : null,
-      });
-    } finally { setSaving(false); }
-  };
-
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="complete-task-title"
-        onClick={e => e.stopPropagation()}
-        className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[85vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-edge dark:border-edge-dark">
-          <div>
-            <h3 id="complete-task-title" className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'إنهاء المهمة' : 'Complete Task'}</h3>
-            <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark truncate max-w-[300px]">{task.title}</p>
-            {task.contact_name && <p className="m-0 mt-0.5 text-[11px] text-brand-500 font-medium">{task.contact_name}</p>}
-          </div>
-          <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
-            className="bg-transparent border-none cursor-pointer w-11 h-11 md:w-9 md:h-9 flex items-center justify-center text-content-muted dark:text-content-muted-dark hover:text-red-500">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-5 py-4">
-          {/* Activity Type */}
-          <div className="mb-3">
-            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'نوع النشاط' : 'Activity Type'} <span className="text-red-500">*</span></label>
-            <div className="flex gap-1.5 flex-wrap">
-              {ACT_TYPES.map(t => (
-                <button key={t.key} onClick={() => { setActType(t.key); setActResult(''); }}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
-                    actType === t.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-                  }`}>
-                  {isRTL ? t.ar : t.en}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Result */}
-          {currentResults.length > 0 && (
-            <div className="mb-3">
-              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'النتيجة' : 'Result'}</label>
-              <div className="flex gap-1.5 flex-wrap">
-                {currentResults.map(r => (
-                  <button key={r.value} onClick={() => setActResult(actResult === r.value ? '' : r.value)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
-                      actResult === r.value ? 'font-bold text-white border-transparent' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-                    }`}
-                    style={actResult === r.value ? { background: r.color } : {}}>
-                    {isRTL ? r.ar : r.en}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div className="mb-3">
-            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
-            <Textarea value={actNotes} onChange={e => setActNotes(e.target.value)} rows={2} size="sm"
-              placeholder={isRTL ? 'ملاحظات عن النشاط...' : 'Activity notes...'} dir={isRTL ? 'rtl' : 'ltr'} />
-          </div>
-
-          {/* Follow-up toggle */}
-          <div className="border-t border-edge dark:border-edge-dark pt-3 mt-3">
-            <button onClick={() => setAddFollowUp(!addFollowUp)}
-              className={`flex items-center gap-2 text-xs font-semibold cursor-pointer bg-transparent border-none p-0 transition-colors ${
-                addFollowUp ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'
-              }`}>
-              <Calendar size={13} />
-              {isRTL ? (addFollowUp ? 'إلغاء المتابعة' : '+ إضافة مهمة متابعة') : (addFollowUp ? 'Cancel follow-up' : '+ Add follow-up task')}
-            </button>
-            {addFollowUp && (
-              <div className="mt-2.5 p-3 bg-brand-500/[0.04] border border-brand-500/10 rounded-xl">
-                <div className="mb-2">
-                  <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} <span className="text-red-500">*</span></label>
-                  <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                  <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">
-                    {isRTL ? '⏱ بتوقيت' : '⏱ Time zone:'} {Intl.DateTimeFormat().resolvedOptions().timeZone || (isRTL ? 'محلي' : 'local')}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظة المتابعة' : 'Follow-up note'}</label>
-                  <input type="text" value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)}
-                    placeholder={isRTL ? 'اختياري...' : 'Optional...'}
-                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Contact Status Change */}
-          <div className="border-t border-edge dark:border-edge-dark pt-3 mt-3">
-            <button onClick={() => setChangeContactStatus(!changeContactStatus)}
-              className={`flex items-center gap-2 text-xs font-semibold cursor-pointer bg-transparent border-none p-0 transition-colors ${
-                changeContactStatus ? 'text-purple-500' : 'text-content-muted dark:text-content-muted-dark'
-              }`}>
-              <User size={13} />
-              {isRTL ? (changeContactStatus ? 'إلغاء تغيير الحالة' : '+ تغيير حالة العميل') : (changeContactStatus ? 'Cancel status change' : '+ Change lead status')}
-            </button>
-            {changeContactStatus && (
-              <div className="mt-2.5 flex gap-1.5 flex-wrap">
-                {[
-                  { value: 'new', ar: 'جديد', en: 'New', color: '#2F6BD3' },
-                  { value: 'following', ar: 'متابعة', en: 'Following', color: '#158A57' },
-                  { value: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#C9860A' },
-                  { value: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opp', color: '#117049' },
-                  { value: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#D6403B' },
-                ].map(s => (
-                  <button key={s.value} onClick={() => setNewContactStatus(newContactStatus === s.value ? '' : s.value)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
-                      newContactStatus === s.value ? 'text-white border-transparent' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-                    }`}
-                    style={newContactStatus === s.value ? { background: s.color } : {}}>
-                    {isRTL ? s.ar : s.en}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className={`flex gap-2 px-5 py-4 border-t border-edge dark:border-edge-dark ${isRTL ? 'justify-start' : 'justify-end'}`}>
-          <Button variant="secondary" size="sm" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving || !canSave}>
-            <Check size={13} /> {saving ? '...' : (isRTL ? 'إنهاء المهمة' : 'Complete Task')}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Page ────────────────────────────────────────────────────────
 export default function TasksPage() {
   const { i18n } = useTranslation();
@@ -1669,36 +1454,16 @@ export default function TasksPage() {
       {completeTask && (
         <CompleteTaskModal
           task={completeTask}
-          lang={lang}
           isRTL={isRTL}
           profile={profile}
           onClose={() => setCompleteTask(null)}
-          onComplete={async ({ activity, followUp, contactStatus }) => {
-            try {
-              // 1. Create activity
-              await createActivity(activity);
-              // 2. Mark task as done
-              await updateTask(completeTask.id, { status: 'done' });
-              setTasks(prev => prev.map(t => t.id === completeTask.id ? { ...t, status: 'done' } : t));
-              // 3. Create follow-up task if requested
-              if (followUp) {
-                const newTask = await createTask(followUp);
-                setTasks(prev => [newTask, ...prev]);
-                toast.success(isRTL ? 'تم إنهاء المهمة وإنشاء متابعة جديدة' : 'Task completed & follow-up created');
-              } else {
-                toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
-              }
-              // 4. Update contact status if requested
-              if (contactStatus && completeTask.contact_id) {
-                const { updateContact } = await import('../services/contactsService');
-                await updateContact(completeTask.contact_id, { contact_status: contactStatus });
-              }
-              logAction({ action: 'complete_task', entity: 'task', entityId: completeTask.id, entityName: completeTask.title, description: `Completed task: ${completeTask.title}`, userName: profile?.full_name_ar || '' });
-              setCompleteTask(null);
-            } catch (err) {
-              console.error('Complete task error:', err);
-              toast.error(isRTL ? 'حدث خطأ: ' + (err?.message || '') : 'Error: ' + (err?.message || ''));
-            }
+          onDone={() => {
+            // The shared modal saved atomically (activity + task close + next
+            // step) via logInteraction; just refresh and toast.
+            logAction({ action: 'complete_task', entity: 'task', entityId: completeTask.id, entityName: completeTask.title, description: `Completed task: ${completeTask.title}`, userName: profile?.full_name_ar || '' });
+            toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
+            setCompleteTask(null);
+            loadTasks();
           }}
         />
       )}
