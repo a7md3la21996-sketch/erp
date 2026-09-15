@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { Button, Input } from '../../../components/ui';
+import { Button, Input, Textarea } from '../../../components/ui';
 import { logInteraction } from '../../../services/interactionsService';
+import { ACTIVITY_RESULT_BADGES } from './constants';
+
+// Meeting result is a fixed enum (same as every other activity) — NOT free text.
+const MEETING_RESULTS = ['attended', 'no_show', 'rescheduled', 'cancelled'];
 
 // Log a meeting on a lead. Two modes:
 //   • happened  → status='completed', captures the outcome (result)
@@ -20,8 +24,8 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
   const [subtype, setSubtype] = useState('site_visit');
   const [location, setLocation] = useState('');
   const [when, setWhen] = useState('');
-  const [outcome, setOutcome] = useState('');
-  const [note, setNote] = useState('');
+  const [result, setResult] = useState('');   // enum outcome (attended/no_show/…)
+  const [note, setNote] = useState('');       // free-text feedback (what happened)
   const [followupAt, setFollowupAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -43,16 +47,17 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     // A logged (happened) meeting must set the next step. A scheduled meeting IS
     // the next step, so its follow-up is auto-derived from the meeting date.
     if (!scheduled && !followupAt) { setError(isRTL ? 'حدّد موعد المتابعة' : 'Pick a follow-up date'); return; }
-    // A meeting that happened = the lead engaged, so its outcome is mandatory.
-    if (!scheduled && !outcome.trim()) { setError(isRTL ? 'اكتب نتيجة الاجتماع' : 'Write the meeting outcome'); return; }
+    // A happened meeting must record its result (enum), and — when the lead
+    // actually attended — a written feedback note (same engaged rule as calls).
+    if (!scheduled && !result) { setError(isRTL ? 'اختر نتيجة الاجتماع' : 'Pick the meeting result'); return; }
+    if (!scheduled && result === 'attended' && !note.trim()) { setError(isRTL ? 'اكتب اللي حصل في الاجتماع' : 'Write what happened'); return; }
     setSaving(true); setError('');
     const typeLabel = (TYPES.find(t => t.key === subtype) || {})[isRTL ? 'ar' : 'en'];
-    // Store the PURE note — subtype (meetingSubtype), location (notes) and the
-    // outcome (result) are all passed as their own structured fields below.
+    // Feedback note → description (pure). result is the structured enum.
     const desc = note || null;
     const followUp = scheduled
       ? { type: 'meeting', title: `${typeLabel} - ${contact.full_name}`, dueAt: new Date(when).toISOString(), contactName: contact.full_name, notes: location || '' }
-      : { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${contact.full_name}`, dueAt: new Date(followupAt).toISOString(), contactName: contact.full_name, notes: outcome || '' };
+      : { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${contact.full_name}`, dueAt: new Date(followupAt).toISOString(), contactName: contact.full_name, notes: note || '' };
     try {
       await logInteraction(contact.id, {
         type: 'meeting',
@@ -60,7 +65,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
         meetingSubtype: subtype,
         scheduledDate: scheduled ? new Date(when).toISOString() : null,
         occurredAt: (!scheduled && when) ? new Date(when).toISOString() : null,
-        result: scheduled ? null : (outcome || null),
+        result: scheduled ? null : (result || null),
         notes: location || null,
         description: desc,
         followUp,
@@ -71,6 +76,8 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     } catch (err) {
       setError(err?.message === 'FOLLOWUP_REQUIRED'
         ? (isRTL ? 'حدّد موعد المتابعة' : 'A follow-up date is required')
+        : err?.message === 'NOTE_REQUIRED'
+        ? (isRTL ? 'اكتب اللي حصل في الاجتماع' : 'Write what happened')
         : (err?.message || (isRTL ? 'فشل الحفظ' : 'Save failed')));
       setSaving(false);
     }
@@ -124,8 +131,25 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
 
           {!scheduled && (
             <div>
-              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Outcome'} <span className="text-red-500">*</span></label>
-              <Input value={outcome} onChange={e => setOutcome(e.target.value)} placeholder={isRTL ? 'مهتم / طلب عرض / ...' : 'Interested / wants offer / ...'} />
+              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'} <span className="text-red-500">*</span></label>
+              <div className="flex gap-1.5 flex-wrap mt-1">
+                {MEETING_RESULTS.map(k => {
+                  const b = ACTIVITY_RESULT_BADGES[k];
+                  const active = result === k;
+                  return (
+                    <button key={k} type="button" onClick={() => setResult(active ? '' : k)}
+                      className="px-3 py-1.5 rounded-full text-xs cursor-pointer border transition-colors"
+                      style={{
+                        borderColor: active ? b.color : 'var(--border-edge, #E2E8F0)',
+                        background: active ? b.color + '18' : 'transparent',
+                        color: active ? b.color : undefined,
+                        fontWeight: active ? 700 : 400,
+                      }}>
+                      {isRTL ? b.ar : b.en}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -137,8 +161,11 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
           )}
 
           <div>
-            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظة (اختياري)' : 'Note (optional)'}</label>
-            <Input value={note} onChange={e => setNote(e.target.value)} placeholder="..." />
+            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">
+              {isRTL ? 'اللي حصل في الاجتماع' : 'What happened'}{!scheduled && result === 'attended' && <span className="text-red-500"> *</span>}{scheduled && (isRTL ? ' (اختياري)' : ' (optional)')}
+            </label>
+            <Textarea size="sm" rows={2} value={note} onChange={e => setNote(e.target.value)}
+              placeholder={isRTL ? 'تفاصيل / اللي اتقال...' : 'Details / what was said...'} />
           </div>
 
           {error && <div className="text-[11px] text-red-500">{error}</div>}
