@@ -2077,17 +2077,11 @@ export default function ContactsPage() {
             })}
             </>)}
             <Divider />
-            {/* Archive + Unassigned */}
+            {/* Archive (Unassigned moved into the Assignee dropdown above) */}
             <button onClick={() => setFilterStatus(filterStatus === 'disqualified' ? 'all' : 'disqualified')}
               className={chipCls(filterStatus === 'disqualified')} style={chipStyle(filterStatus === 'disqualified', '#6b7280')}>
               <Archive size={12} /> {isRTL ? 'الأرشيف' : 'Archive'} <span className={countCls(filterStatus === 'disqualified')}>{(stats.disqualified || 0).toLocaleString()}</span>
             </button>
-            {profile?.role !== 'sales_agent' && (
-              <button onClick={() => setShowUnassigned(v => !v)}
-                className={chipCls(showUnassigned)} style={chipStyle(showUnassigned, '#C9860A')}>
-                <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={countCls(showUnassigned)}>{stats.unassigned || 0}</span>
-              </button>
-            )}
           </div>
         );
       })()}
@@ -2122,7 +2116,7 @@ export default function ContactsPage() {
           const assigneeNames = [...new Set([...userMap.values()].filter(Boolean))].sort((a, b) => a.localeCompare(b, isRTL ? 'ar' : 'en'));
           const agentF = smartFilters.find(f => f.field === 'assigned_to_name' && f.operator === 'is');
           const curAssignee = typeof agentF?.value === 'string' ? agentF.value : '';
-          const showAssignee = profile?.role !== 'sales_agent' && assigneeNames.length > 0;
+          const showAssignee = profile?.role !== 'sales_agent';
           return (
             <>
               {/* Status — primary pipeline filter, always visible as a dropdown
@@ -2147,20 +2141,23 @@ export default function ContactsPage() {
                   ))}
                 </select>{chev}
               </div>
-              {/* Assignee (managers/admins) — filter by the agent a lead is on. */}
+              {/* Assignee (managers/admins) — filter by the agent a lead is on.
+                  Includes an "Unassigned" option (leads with no owner). */}
               {showAssignee && (
                 <div className="relative inline-block">
-                  <select value={curAssignee}
+                  <select value={showUnassigned ? '__unassigned' : curAssignee}
                     onChange={e => {
                       const v = e.target.value;
+                      setShowUnassigned(v === '__unassigned');
                       setSmartFilters(prev => {
                         const rest = prev.filter(f => f.field !== 'assigned_to_name');
-                        return v ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest;
+                        return (v && v !== '__unassigned') ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest;
                       });
                       setPage(1);
                     }}
-                    className={ddCls} style={curAssignee ? { borderColor: '#2F6BD3', color: '#2F6BD3' } : undefined}>
+                    className={ddCls} style={(curAssignee || showUnassigned) ? { borderColor: '#2F6BD3', color: '#2F6BD3' } : undefined}>
                     <option value="">{isRTL ? 'كل الموظفين' : 'All Assignees'}</option>
+                    <option value="__unassigned">{isRTL ? 'غير معيّن' : 'Unassigned'} ({stats.unassigned || 0})</option>
                     {assigneeNames.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>{chev}
                 </div>
@@ -2211,22 +2208,110 @@ export default function ContactsPage() {
         quickFilters={[]}
       />
 
-      {/* Active advanced-filter pills — surface what's applied (type / activity /
-          temperature, hidden behind the Filters toggle) and clear it in one tap. */}
+      {/* Active filters bar — ONE place above the table that surfaces EVERY
+          applied filter (search, status, category, assignee, unassigned,
+          follow-up, stage, type, temp, activity, dates, archive, and any
+          advanced smart filter) as a removable chip, so anyone opening the page
+          sees exactly what it's filtered on. Single source of truth. */}
       {(() => {
-        if (filterType === 'all' && filterActivity === 'all' && filterTemp === 'all') return null;
-        const actLabel = { active_3d: isRTL ? 'نشط' : 'Active', moderate_7d: isRTL ? 'متوسط' : 'Moderate', stale: isRTL ? 'مهمل' : 'Stale', never: isRTL ? 'لم يتواصل' : 'Never' }[filterActivity];
-        const actColor = { active_3d: '#158A57', moderate_7d: '#C9860A', stale: '#D6403B', never: '#6b7280' }[filterActivity];
+        const BRAND = '#2F6BD3';
         const pill = (key, label, color, onClear) => (
-          <button key={key} onClick={onClear} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer border-none" style={{ color, background: (color || '#2F6BD3') + '20' }}>
-            {label} <XIcon size={11} />
+          <button key={key} onClick={onClear} title={isRTL ? 'إزالة الفلتر' : 'Remove filter'}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer border-none max-w-[240px]"
+            style={{ color: color || BRAND, background: (color || BRAND) + '20' }}>
+            <span className="truncate">{label}</span> <XIcon size={11} className="shrink-0" />
           </button>
         );
+        const chips = [];
+
+        // Search
+        if (searchInput) chips.push(pill('f-search', `${isRTL ? 'بحث' : 'Search'}: "${searchInput}"`, BRAND, () => { setSearchInput(''); setSearch(''); }));
+
+        // Status vs Archive (disqualified is surfaced as its own "Archive" chip)
+        if (filterStatus === 'disqualified') {
+          chips.push(pill('f-archive', isRTL ? 'الأرشيف' : 'Archive', '#6b7280', () => setFilterStatus('all')));
+        } else if (filterStatus !== 'all') {
+          const sd = STATUS_DEFS.find(s => s.value === filterStatus);
+          chips.push(pill('f-status', `${isRTL ? 'الحالة' : 'Status'}: ${sd ? (isRTL ? sd.label : sd.labelEn) : filterStatus}`, sd?.color, () => setFilterStatus('all')));
+        }
+
+        // Category
+        if (categoryFilter !== 'all') {
+          const cd = leadCategoryDefs.find(c => c.key === categoryFilter);
+          chips.push(pill('f-cat', `${isRTL ? 'التصنيف' : 'Category'}: ${cd ? (isRTL ? cd.label_ar : cd.label_en) : categoryFilter}`, cd?.color, () => setCategoryFilter('all')));
+        }
+
+        // Assignee (stored as an assigned_to_name smart filter)
+        const agentF = smartFilters.find(f => f.field === 'assigned_to_name' && f.operator === 'is');
+        if (typeof agentF?.value === 'string' && agentF.value) {
+          chips.push(pill('f-agent', `${isRTL ? 'الموظف' : 'Assignee'}: ${agentF.value}`, BRAND, () => setSmartFilters(prev => prev.filter(f => f.field !== 'assigned_to_name'))));
+        }
+
+        // Unassigned
+        if (showUnassigned) chips.push(pill('f-unassigned', isRTL ? 'غير معيّن' : 'Unassigned', '#C9860A', () => setShowUnassigned(false)));
+
+        // Follow-up (overdue / today / upcoming)
+        if (followupFilterValue !== 'all') {
+          const fu = { overdue: { ar: 'متأخرة', en: 'Overdue', color: '#D6403B' }, today: { ar: 'النهاردة', en: 'Today', color: '#C9860A' }, upcoming: { ar: 'قادمة', en: 'Upcoming', color: BRAND } }[followupFilterValue];
+          chips.push(pill('f-followup', `${isRTL ? 'المتابعة' : 'Follow-up'}: ${isRTL ? fu.ar : fu.en}`, fu.color, () => setFollowupFilter('all')));
+        }
+
+        // Stage
+        if (STAGE_UI_ENABLED && filterStage !== 'all') {
+          const st = CONTACT_STAGE[filterStage];
+          chips.push(pill('f-stage', `${isRTL ? 'المرحلة' : 'Stage'}: ${st ? (isRTL ? st.ar : st.en) : filterStage}`, st?.color, () => setFilterStage('all')));
+        }
+
+        // Type
+        if (filterType !== 'all') chips.push(pill('f-type', `${isRTL ? 'النوع' : 'Type'}: ${isRTL ? TYPE[filterType]?.label : TYPE[filterType]?.labelEn}`, TYPE[filterType]?.color, () => setFilterType('all')));
+
+        // Temperature
+        if (filterTemp !== 'all') chips.push(pill('f-temp', `${isRTL ? 'الحرارة' : 'Temp'}: ${isRTL ? TEMP[filterTemp]?.labelAr : TEMP[filterTemp]?.label}`, TEMP[filterTemp]?.color, () => setFilterTemp('all')));
+
+        // Activity
+        if (filterActivity !== 'all') {
+          const actLabel = { active_3d: isRTL ? 'نشط' : 'Active', moderate_7d: isRTL ? 'متوسط' : 'Moderate', stale: isRTL ? 'مهمل' : 'Stale', never: isRTL ? 'لم يتواصل' : 'Never' }[filterActivity];
+          const actColor = { active_3d: '#158A57', moderate_7d: '#C9860A', stale: '#D6403B', never: '#6b7280' }[filterActivity];
+          chips.push(pill('f-act', `${isRTL ? 'النشاط' : 'Activity'}: ${actLabel}`, actColor, () => setFilterActivity('all')));
+        }
+
+        // Date range
+        if (dateFrom || dateTo) {
+          const label = `${isRTL ? 'التاريخ' : 'Date'}: ${dateFrom || '…'} → ${dateTo || '…'}`;
+          chips.push(pill('f-date', label, BRAND, () => { setDateFrom(''); setDateTo(''); }));
+        }
+
+        // Any other advanced smart filter (source, campaign, custom…), excluding
+        // the ones already surfaced above (assignee + follow-up specials).
+        smartFilters.forEach((f, i) => {
+          if (f.field === 'assigned_to_name') return;
+          if (f.field === 'contact_status' && typeof f.value === 'string' && f.value.startsWith('__')) return;
+          if (typeof f.value === 'string' && f.value.startsWith('__')) return;
+          const fld = (SMART_FIELDS || []).find(sf => sf.id === f.field);
+          const fldLabel = fld ? (isRTL ? fld.label : (fld.labelEn || fld.label)) : f.field;
+          const valLabel = Array.isArray(f.value)
+            ? f.value.map(v => fld?.options?.find(o => o.value === v)?.[isRTL ? 'label' : 'labelEn'] || fld?.options?.find(o => o.value === v)?.label || v).join(isRTL ? '، ' : ', ')
+            : (fld?.options?.find(o => o.value === f.value)?.[isRTL ? 'label' : 'labelEn'] || fld?.options?.find(o => o.value === f.value)?.label || f.value);
+          chips.push(pill(`f-smart-${i}`, `${fldLabel}: ${valLabel}`, BRAND, () => setSmartFilters(prev => prev.filter((_, idx) => idx !== i))));
+        });
+
+        if (chips.length === 0) return null;
         return (
           <div className="flex gap-2 items-center flex-wrap mt-2 px-1">
-            {filterType !== 'all' && pill('p-type', `${isRTL ? 'النوع' : 'Type'}: ${isRTL ? TYPE[filterType]?.label : TYPE[filterType]?.labelEn}`, TYPE[filterType]?.color, () => setFilterType('all'))}
-            {filterActivity !== 'all' && pill('p-act', `${isRTL ? 'النشاط' : 'Activity'}: ${actLabel}`, actColor, () => setFilterActivity('all'))}
-            {filterTemp !== 'all' && pill('p-temp', `${isRTL ? 'الحرارة' : 'Temp'}: ${isRTL ? TEMP[filterTemp]?.labelAr : TEMP[filterTemp]?.label}`, TEMP[filterTemp]?.color, () => setFilterTemp('all'))}
+            <span className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'مفلتر على:' : 'Filtered by:'}</span>
+            {chips}
+            {chips.length > 1 && (
+              <button onClick={() => {
+                setSearchInput(''); setSearch('');
+                setFilterStatus('all'); setCategoryFilter('all'); setFilterStage('all');
+                setFilterType('all'); setFilterTemp('all'); setFilterActivity('all');
+                setShowUnassigned(false); setDateFrom(''); setDateTo('');
+                setSmartFilters([]); setPage(1);
+              }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer border border-red-500/30 text-red-500 bg-red-500/[0.06] hover:bg-red-500/[0.12] transition-colors">
+                {isRTL ? 'مسح الكل' : 'Clear all'} <XIcon size={11} />
+              </button>
+            )}
           </div>
         );
       })()}
