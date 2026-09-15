@@ -65,35 +65,12 @@ export async function checkContactBirthdays(userId) {
     });
   });
 
-  // Check employee birthdays too
-  let employees = [];
-  try {
-    const { data } = await supabase
-      .from('employees')
-      .select('id, full_name_ar, full_name_en, birth_date')
-      .not('birth_date', 'is', null)
-      .range(0, 499);
-    if (data) employees = data;
-  } catch {}
-
-  const birthdayEmployees = employees.filter(e => {
-    const bd = new Date(e.birth_date);
-    return bd.getMonth() + 1 === month && bd.getDate() === day;
-  });
-
-  birthdayEmployees.forEach(e => {
-    createNotification({
-      type: 'reminder',
-      title_ar: '🎂 عيد ميلاد موظف',
-      title_en: '🎂 Employee Birthday',
-      body_ar: `النهاردة عيد ميلاد "${e.full_name_ar || e.full_name_en}"`,
-      body_en: `Today is "${e.full_name_en || e.full_name_ar}"'s birthday`,
-      for_user_id: 'all',
-      entity_type: 'employee',
-      entity_id: e.id,
-    });
-  });
+  // NOTE: the employees table has no date-of-birth column, so there are no
+  // employee birthdays to check. (An earlier version queried employees.birth_date,
+  // which does not exist — that produced a 400 on every dashboard load and lit up
+  // the "server connection failed" banner.) If a DOB column is added later,
+  // re-introduce the check here against that real column.
 
   markChecked();
-  return [...birthdayContacts, ...birthdayEmployees];
+  return birthdayContacts;
 }
