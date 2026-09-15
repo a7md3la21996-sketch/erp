@@ -81,6 +81,20 @@ export const ACTIVITY_RESULT_BADGES = {
   completed:     { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
 };
 
+// Shared coloured result badge — the ONE way an activity result renders across
+// the app (leads table, drawer timeline, …), so a change is made once here.
+// Returns null for a missing/unknown result so callers can drop it cleanly.
+export function ResultBadge({ result, isRTL, className = '' }) {
+  const b = result && ACTIVITY_RESULT_BADGES[result];
+  if (!b) return null;
+  return (
+    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap align-middle ${className}`}
+      style={{ background: b.color + '18', color: b.color }}>
+      {isRTL ? b.ar : b.en}
+    </span>
+  );
+}
+
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [

@@ -8,7 +8,7 @@ import {
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, getDeptStages, deptStageLabel,
   agentInitials, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED,
-  ACTIVITY_RESULT_BADGES,
+  ACTIVITY_RESULT_BADGES, ResultBadge,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -570,12 +570,9 @@ export default function ContactsTable({
                     its OWN column so the feedback stays a pure note (no English
                     label jammed in front of the Arabic, which broke truncation). */}
                 {hasCol('result') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  {(() => {
-                    const b = c._lastNote?.result && ACTIVITY_RESULT_BADGES[c._lastNote.result];
-                    return b
-                      ? <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap" style={{ background: b.color + '18', color: b.color }}>{isRTL ? b.ar : b.en}</span>
-                      : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                  })()}
+                  {(c._lastNote?.result && ACTIVITY_RESULT_BADGES[c._lastNote.result])
+                    ? <ResultBadge result={c._lastNote.result} isRTL={isRTL} />
+                    : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
                 </td>}
 
                 {/* Last Feedback — pure note (the result label is stripped since

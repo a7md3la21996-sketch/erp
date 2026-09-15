@@ -50,6 +50,7 @@ import {
   Chip, getDeptStages, deptStageLabel,
   agentInitials, normalizePhone,
   CONTACT_STAGE, CONTACT_STAGE_ORDER, STAGE_UI_ENABLED,
+  ACTIVITY_RESULT_BADGES, ResultBadge,
 } from './constants';
 import { generateWhatsAppLink } from '../../../services/whatsappService';
 
@@ -725,18 +726,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
 
-  const { drawerFields: df, activityResults } = useSystemConfig();
-  // Result-key → {ar,en} lookup across every activity type. Lets the timeline
-  // re-translate a stored `result` at display time instead of trusting the
-  // baked `description`, which was written in the LOGGER's UI language (so a
-  // call logged in Arabic used to read "لم يرد …" even for an English viewer).
-  const resultLabels = useMemo(() => {
-    const m = {};
-    Object.values(activityResults || {}).forEach((arr) => (arr || []).forEach((r) => {
-      if (r?.value) m[r.value] = { ar: r.label_ar, en: r.label_en };
-    }));
-    return m;
-  }, [activityResults]);
+  const { drawerFields: df } = useSystemConfig();
+  // The timeline renders the result via the shared <ResultBadge> from the
+  // structured `result` key (translated + coloured there) — no need to
+  // re-derive a label map from config here.
   // No `if (!contact) return null` here — it sat between hooks (a Rules-of-Hooks
   // violation). The drawer is only ever mounted via `{selected && <ContactDrawer
   // contact={selected}/>}`, so contact is always defined; hooks above already
@@ -1069,24 +1062,25 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     || (item.notes ? item.notes.split('→')[1]?.split(':')[0]?.trim() : '');
                   return `${fromName || '—'} → ${toName || '—'}`;
                 }
-                // Re-translate a stored result KEY to the viewer's language and
-                // keep the free note. The baked description was "<label> — <note>",
-                // so strip the label prefix and re-prepend the translated one.
-                const rl = item.result && resultLabels[item.result];
-                if (rl) {
-                  const label = (isRTL ? rl.ar : rl.en) || item.result;
+                // Result → coloured badge (shared ResultBadge) + the pure note.
+                // New rows store the pure note; old rows baked "<label> — <note>"
+                // (or a bare label) — strip that so only the note is shown.
+                const b = item.result && ACTIVITY_RESULT_BADGES[item.result];
+                if (b) {
                   let note = item.notes;
                   if (!note && item.description) {
-                    // New rows store the PURE note. Old rows baked "<label> — <note>"
-                    // (or just "<label>"). Split the old form; otherwise the
-                    // description IS the note — unless it's just an old bare label.
                     const d = item.description;
                     const sep = d.indexOf(' — ');
                     if (sep >= 0) note = d.slice(sep + 3);
-                    else if (rl.en && d.includes(rl.en)) note = '';
+                    else if (b.en && d.includes(b.en)) note = '';
                     else note = d;
                   }
-                  return note ? `${label} — ${note}` : label;
+                  return (
+                    <span className="inline-flex items-baseline gap-1.5 flex-wrap">
+                      <ResultBadge result={item.result} isRTL={isRTL} />
+                      {note && <span dir="auto">{note}</span>}
+                    </span>
+                  );
                 }
                 return item.notes || item.description || (isRTL ? 'نشاط' : 'Activity');
               })()}</div>
