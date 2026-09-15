@@ -18,6 +18,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Bidi-correct truncation (app-wide).
+   Tailwind's `truncate` / `text-ellipsis` clip text at the END of the element's
+   `direction`. So an Arabic (RTL) name inside an LTR context — e.g. an English
+   UI, or an LTR cell — got clipped from its START, showing the LAST words of a
+   4-part name instead of the first. `unicode-bidi: plaintext` makes each
+   clamped line pick its direction from its own first strong character, so the
+   ellipsis always lands at the text's LOGICAL end and the START (first words)
+   stays visible — for Arabic and Latin alike, in either UI direction. One rule
+   fixes every truncated name/feedback/label/cell across the whole site. */
+.truncate,
+.text-ellipsis {
+  unicode-bidi: plaintext;
+}
+
 :root {
   /* iOS safe-area insets (notch / status bar / home indicator). Real values
      only once viewport-fit=cover is set on the viewport meta; otherwise 0.
