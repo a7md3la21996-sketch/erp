@@ -1077,8 +1077,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   const label = (isRTL ? rl.ar : rl.en) || item.result;
                   let note = item.notes;
                   if (!note && item.description) {
-                    const sep = item.description.indexOf(' — ');
-                    note = sep >= 0 ? item.description.slice(sep + 3) : '';
+                    // New rows store the PURE note. Old rows baked "<label> — <note>"
+                    // (or just "<label>"). Split the old form; otherwise the
+                    // description IS the note — unless it's just an old bare label.
+                    const d = item.description;
+                    const sep = d.indexOf(' — ');
+                    if (sep >= 0) note = d.slice(sep + 3);
+                    else if (rl.en && d.includes(rl.en)) note = '';
+                    else note = d;
                   }
                   return note ? `${label} — ${note}` : label;
                 }

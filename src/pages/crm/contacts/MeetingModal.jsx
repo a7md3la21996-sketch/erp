@@ -47,7 +47,9 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     if (!scheduled && !outcome.trim()) { setError(isRTL ? 'اكتب نتيجة الاجتماع' : 'Write the meeting outcome'); return; }
     setSaving(true); setError('');
     const typeLabel = (TYPES.find(t => t.key === subtype) || {})[isRTL ? 'ar' : 'en'];
-    const desc = [typeLabel, location && (isRTL ? `المكان: ${location}` : `at ${location}`), note].filter(Boolean).join(' — ');
+    // Store the PURE note — subtype (meetingSubtype), location (notes) and the
+    // outcome (result) are all passed as their own structured fields below.
+    const desc = note || null;
     const followUp = scheduled
       ? { type: 'meeting', title: `${typeLabel} - ${contact.full_name}`, dueAt: new Date(when).toISOString(), contactName: contact.full_name, notes: location || '' }
       : { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${contact.full_name}`, dueAt: new Date(followupAt).toISOString(), contactName: contact.full_name, notes: outcome || '' };
@@ -60,7 +62,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
         occurredAt: (!scheduled && when) ? new Date(when).toISOString() : null,
         result: scheduled ? null : (outcome || null),
         notes: location || null,
-        description: desc || (isRTL ? 'اجتماع' : 'Meeting'),
+        description: desc,
         followUp,
         currentStatus: contact.contact_status,
         actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },

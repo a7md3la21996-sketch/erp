@@ -382,8 +382,8 @@ export default function BatchCallModal({
                     setBatchCallStatus(''); setBatchDqReason('');
                     return;
                   }
-                  const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
-                  const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
+                  // Store the pure note — type + result are structured columns.
+                  const activity = { type: 'call', result: batchCallResult, description: batchCallNotes || null, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
                   try {
                     await createActivity(activity);
                   } catch (err) {

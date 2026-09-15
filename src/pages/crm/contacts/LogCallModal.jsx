@@ -91,7 +91,6 @@ export default function LogCallModal({ contact, onClose }) {
     if (!followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
     setSaving(true);
 
-    const resultLabel = CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult;
     const followupTypeLabel = FOLLOWUP_TYPES.find(t => t.value === followupType)?.[isRTL ? 'ar' : 'en'] || followupType;
     try {
       // One unified path: writes the call activity + the mandatory follow-up
@@ -99,7 +98,8 @@ export default function LogCallModal({ contact, onClose }) {
       await logInteraction(contact.id, {
         type: 'call',
         result: callResult,
-        description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${callNotes ? ' — ' + callNotes : ''}`,
+        // Store the pure note — type ('call') + result are structured columns.
+        description: callNotes || null,
         followUp: {
           type: followupType,
           title: `${followupTypeLabel} - ${contact.full_name}`,

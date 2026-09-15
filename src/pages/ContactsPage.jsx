@@ -523,10 +523,8 @@ export default function ContactsPage() {
     }
 
     setSavingQuickAction(true);
-    const results = QUICK_RESULTS[type] || [];
-    const resultObj = results.find(r => r.value === result);
-    const resultLabel = resultObj ? (isRTL ? resultObj.label_ar : resultObj.label_en) : '';
-    const desc = resultLabel ? `${resultLabel}${quickActionForm.description ? ' — ' + quickActionForm.description : ''}` : quickActionForm.description;
+    // Store the PURE note — the `result` key is passed structured below.
+    const desc = quickActionForm.description || null;
 
     // Auto-derive status from the result (same rules as before).
     let newStatus = null;
@@ -542,7 +540,7 @@ export default function ContactsPage() {
       await logInteraction(contact.id, {
         type,
         result: result || null,
-        description: desc || (isRTL ? 'إجراء سريع' : 'Quick action'),
+        description: desc,
         currentStatus,
         statusChange: (newStatus && newStatus !== currentStatus) ? { from: currentStatus, to: newStatus } : null,
         followUp: quickActionForm.followupDate

@@ -132,20 +132,11 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
     if (!canSave) return;
     setSaving(true);
 
-    // Compose the display description exactly as before (meeting subtype label
-    // + result label prefix) — this is UI-layer text with i18n context, so it
-    // stays here; the structured `result` KEY is passed separately for the
-    // timeline's re-translation.
-    let description = actForm.description;
-    if (actForm.type === 'meeting' && actForm.meeting_subtype && MEETING_SUBTYPES[actForm.meeting_subtype]) {
-      const subtypeLabel = isRTL ? MEETING_SUBTYPES[actForm.meeting_subtype].ar : MEETING_SUBTYPES[actForm.meeting_subtype].en;
-      description = `[${subtypeLabel}]${actForm.description ? ' ' + actForm.description : ''}`;
-    }
-    if (actForm.result && currentResults.length > 0) {
-      const found = currentResults.find(r => r.value === actForm.result);
-      const resultLabel = found ? found.label : actForm.result;
-      description = `${resultLabel}${description ? ' — ' + description : ''}`;
-    }
+    // ROOT FIX: store the PURE note only. type / result / meeting_subtype are
+    // separate structured columns already — jamming their (English) labels into
+    // the free-text description is what broke bidi truncation everywhere the
+    // note is shown. Displays render the badges from the structured fields.
+    const description = actForm.description || null;
 
     // Follow-up task — omitted entirely when disqualifying (a closed lead needs
     // no next step; this also prevents the old orphan-task-on-DQ case).
