@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil } from 'lucide-react';
+import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil, Mail, Users, MapPin, FileText } from 'lucide-react';
+
+// Activity type → icon for the "Last interaction" column.
+const TYPE_ICON = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, visit: MapPin, note: FileText };
 import {
   SOURCE_LABELS, SOURCE_EN,
   TYPE, TEMP,
@@ -310,7 +313,7 @@ export default function ContactsTable({
               {hasCol('contact_status') && <th className={`${thCls} w-[130px] hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
               {hasCol('source') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
               {hasCol('date') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
-              {hasCol('result') && <th className={`${thCls} w-[110px] hidden lg:table-cell`}>{isRTL ? 'النتيجة' : 'Result'}</th>}
+              {hasCol('result') && <th className={`${thCls} w-[130px] hidden lg:table-cell`}>{isRTL ? 'آخر تفاعل' : 'Last interaction'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} w-[180px] hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
               {hasCol('next_action') && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
               {hasCol('actions') && <th className={`${thCls} w-[110px] text-center`}>{t('common.actions')}</th>}
@@ -570,9 +573,20 @@ export default function ContactsTable({
                     its OWN column so the feedback stays a pure note (no English
                     label jammed in front of the Arabic, which broke truncation). */}
                 {hasCol('result') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  {(c._lastNote?.result && ACTIVITY_RESULT_BADGES[c._lastNote.result])
-                    ? <ResultBadge result={c._lastNote.result} isRTL={isRTL} />
-                    : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                  {(() => {
+                    const ln = c._lastNote;
+                    if (!ln) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                    const Icon = TYPE_ICON[ln.type];
+                    const badge = ln.result && ACTIVITY_RESULT_BADGES[ln.result];
+                    return (
+                      <span className="inline-flex items-center gap-1.5">
+                        {Icon && <Icon size={13} className="shrink-0 text-content-muted dark:text-content-muted-dark" />}
+                        {badge
+                          ? <ResultBadge result={ln.result} isRTL={isRTL} />
+                          : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                      </span>
+                    );
+                  })()}
                 </td>}
 
                 {/* Last Feedback — pure note (the result label is stripped since
