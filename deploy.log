@@ -1,0 +1,495 @@
+<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />
+Retrieving project…
+Deploying a7md3la21996-6026s-projects/platform-erp-v2
+Inspect: https://vercel.com/a7md3la21996-6026s-projects/platform-erp-v2/9KZGQ3LVgutsfRgo6JSgF2eJBZMw [2s]
+Production: https://platform-erp-v2-df4mn1k4g-a7md3la21996-6026s-projects.vercel.app [2s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 809 deployment files...
+Building: Restored build cache from previous deployment (Dhq496ueyVrY9SsTCBGdhEPCYhjT)
+Building: Running "vercel build"
+Building: Vercel CLI 58.1.0
+Building: Installing dependencies...
+Building: up to date in 1s
+Building: 123 packages are looking for funding
+Building: run `npm fund` for details
+Building: Running "npm run build"
+Building: > platform-erp@1.0.0 build
+Building: > vite build
+Building: vite v5.4.21 building for production...
+Building: transforming...
+Building: Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+Building: npx update-browserslist-db@latest
+Building: Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Building: ✓ 3011 modules transformed.
+Building: rendering chunks...
+Building: [plugin:vite:reporter] [plugin vite:reporter]
+Building: (!) /vercel/path0/src/utils/errorReporter.js is dynamically imported by /vercel/path0/src/lib/supabase.js, /vercel/path0/src/lib/supabase.js, /vercel/path0/src/lib/supabase.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/services/notificationsService.js, /vercel/path0/src/services/rbacService.js but also statically imported by /vercel/path0/src/components/layout/MainLayout.jsx, /vercel/path0/src/pages/ContactsPage.jsx, /vercel/path0/src/pages/crm/BulkDistributeMasterModal.jsx, /vercel/path0/src/pages/crm/CrmDashboardPage.jsx, /vercel/path0/src/pages/crm/contacts/BatchCallModal.jsx, /vercel/path0/src/pages/crm/contacts/BulkModals.jsx, /vercel/path0/src/pages/crm/contacts/ContactDrawer.jsx, /vercel/path0/src/pages/hr/DisciplinaryPage.jsx, /vercel/path0/src/pages/hr/RecruitmentPage.jsx, /vercel/path0/src/pages/hr/TrainingPage.jsx, /vercel/path0/src/services/activitiesService.js, /vercel/path0/src/services/announcementService.js, /vercel/path0/src/services/approvalService.js, /vercel/path0/src/services/attendanceService.js, /vercel/path0/src/services/auditService.js, /vercel/path0/src/services/backupService.js, /vercel/path0/src/services/chartBuilderService.js, /vercel/path0/src/services/chatService.js, /vercel/path0/src/services/commissionInstallmentsService.js, /vercel/path0/src/services/contactsService.js, /vercel/path0/src/services/dashboardService.js, /vercel/path0/src/services/dealsService.js, /vercel/path0/src/services/developersService.js, /vercel/path0/src/services/documentService.js, /vercel/path0/src/services/emailService.js, /vercel/path0/src/services/employeesService.js, /vercel/path0/src/services/expenseClaimService.js, /vercel/path0/src/services/favoritesService.js, /vercel/path0/src/services/financeService.js, /vercel/path0/src/services/interactionsService.js, /vercel/path0/src/services/knowledgeBaseService.js, /vercel/path0/src/services/kpiTargetsService.js, /vercel/path0/src/services/leadRecyclingService.js, /vercel/path0/src/services/leaveService.js, /vercel/path0/src/services/marketingService.js, /vercel/path0/src/services/masterLeadsService.js, /vercel/path0/src/services/notificationService.js, /vercel/path0/src/services/okrService.js, /vercel/path0/src/services/operationsService.js, /vercel/path0/src/services/opportunitiesService.js, /vercel/path0/src/services/pushService.js, /vercel/path0/src/services/recentItemsService.js, /vercel/path0/src/services/recurringTaskService.js, /vercel/path0/src/services/remindersService.js, /vercel/path0/src/services/resaleUnitsService.js, /vercel/path0/src/services/scheduledReportService.js, /vercel/path0/src/services/sessionService.js, /vercel/path0/src/services/smsTemplateService.js, /vercel/path0/src/services/tasksService.js, /vercel/path0/src/services/whatsappService.js, /vercel/path0/src/services/widgetService.js, /vercel/path0/src/utils/batchOperations.js, /vercel/path0/src/utils/retryWithBackoff.js, dynamic import will not move module into another chunk.
+Building: [plugin:vite:reporter] [plugin vite:reporter]
+Building: (!) /vercel/path0/src/lib/supabase.js is dynamically imported by /vercel/path0/src/components/layout/MainLayout.jsx, /vercel/path0/src/components/layout/MainLayout.jsx, /vercel/path0/src/components/layout/MainLayout.jsx, /vercel/path0/src/pages/ContactsPage.jsx, /vercel/path0/src/pages/ReportsPage.jsx, /vercel/path0/src/pages/ReportsPage.jsx, /vercel/path0/src/pages/ReportsPage.jsx, /vercel/path0/src/pages/crm/contacts/BulkModals.jsx, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/crm/opportunities/constants.js, /vercel/path0/src/pages/finance/FinancePage.jsx, /vercel/path0/src/pages/settings/SystemConfigPage.jsx, /vercel/path0/src/pages/settings/SystemConfigPage.jsx, /vercel/path0/src/pages/settings/SystemConfigPage.jsx, /vercel/path0/src/pages/settings/SystemConfigPage.jsx, /vercel/path0/src/services/customFieldsService.js, /vercel/path0/src/services/rbacService.js, /vercel/path0/src/services/securityService.js, /vercel/path0/src/services/securityService.js, /vercel/path0/src/services/systemConfigService.js, /vercel/path0/src/services/systemConfigService.js, /vercel/path0/src/utils/supabaseSync.js but also statically imported by /vercel/path0/src/components/hr/ImportAttendanceModal.jsx, /vercel/path0/src/components/layout/GlobalFilterBar.jsx, /vercel/path0/src/components/layout/GlobalSearch.jsx, /vercel/path0/src/config/payrollConfig.js, /vercel/path0/src/contexts/AuthContext.jsx, /vercel/path0/src/contexts/SystemConfigContext.jsx, /vercel/path0/src/hooks/useRealtimeSubscription.js, /vercel/path0/src/pages/ActivitiesPage.jsx, /vercel/path0/src/pages/ContactsPage.jsx, /vercel/path0/src/pages/PerformancePage.jsx, /vercel/path0/src/pages/TasksPage.jsx, /vercel/path0/src/pages/auth/LoginPage.jsx, /vercel/path0/src/pages/crm/CrmDashboardPage.jsx, /vercel/path0/src/pages/crm/ImportModal.jsx, /vercel/path0/src/pages/crm/LeadPoolPage.jsx, /vercel/path0/src/pages/crm/MasterLeadsPage.jsx, /vercel/path0/src/pages/crm/contacts/ContactDrawer.jsx, /vercel/path0/src/pages/dashboard/DashboardPage.jsx, /vercel/path0/src/pages/hr/ATSPage.jsx, /vercel/path0/src/pages/hr/AdminHubOverview.jsx, /vercel/path0/src/pages/hr/AttendancePage.jsx, /vercel/path0/src/pages/hr/CompetenciesPage.jsx, /vercel/path0/src/pages/hr/ContractsPage.jsx, /vercel/path0/src/pages/hr/DepartmentsPage.jsx, /vercel/path0/src/pages/hr/DevelopmentHubOverview.jsx, /vercel/path0/src/pages/hr/DisciplinaryPage.jsx, /vercel/path0/src/pages/hr/DocumentsPage.jsx, /vercel/path0/src/pages/hr/EmployeeAttendanceSummary.jsx, /vercel/path0/src/pages/hr/EmployeeCompensationTab.jsx, /vercel/path0/src/pages/hr/EmployeeDisciplinaryTab.jsx, /vercel/path0/src/pages/hr/EmployeeDocumentsTab.jsx, /vercel/path0/src/pages/hr/EmployeePerformanceTab.jsx, /vercel/path0/src/pages/hr/EmployeeTimeTab.jsx, /vercel/path0/src/pages/hr/HRHomePage.jsx, /vercel/path0/src/pages/hr/HRReportsPage.jsx, /vercel/path0/src/pages/hr/LeaveCarryoverPage.jsx, /vercel/path0/src/pages/hr/ManagerDashboardPage.jsx, /vercel/path0/src/pages/hr/OvertimePage.jsx, /vercel/path0/src/pages/hr/PayrollBreakdownModal.jsx, /vercel/path0/src/pages/hr/PayrollClose.jsx, /vercel/path0/src/pages/hr/PayrollPage.jsx, /vercel/path0/src/pages/hr/PayrollRunWizard.jsx, /vercel/path0/src/pages/hr/PerformanceReviewPage.jsx, /vercel/path0/src/pages/hr/RecruitmentPage.jsx, /vercel/path0/src/pages/hr/SelfServicePage.jsx, /vercel/path0/src/pages/hr/TalentHubOverview.jsx, /vercel/path0/src/pages/hr/TrainingPage.jsx, /vercel/path0/src/pages/reports/AgentActivityTab.jsx, /vercel/path0/src/pages/reports/AgentBreakdownTab.jsx, /vercel/path0/src/pages/reports/DuplicatesTab.jsx, /vercel/path0/src/pages/reports/MeetingsTab.jsx, /vercel/path0/src/pages/reports/ReassignmentsTab.jsx, /vercel/path0/src/pages/reports/StatusTransitionsTab.jsx, /vercel/path0/src/pages/sales/CommissionsPage.jsx, /vercel/path0/src/pages/settings/AuditLogPage.jsx, /vercel/path0/src/pages/settings/ImportExportLogPage.jsx, /vercel/path0/src
+Building: [plugin:vite:reporter] [plugin vite:reporter]
+Building: (!) /vercel/path0/src/pages/ChangelogPage.jsx is dynamically imported by /vercel/path0/src/App.jsx but also statically imported by /vercel/path0/src/components/layout/Header.jsx, dynamic import will not move module into another chunk.
+Building: computing gzip size...
+Building: dist/index.html                                      1.70 kB │ gzip:   0.76 kB
+Building: dist/assets/index-D6HQ_bNA.css                     104.21 kB │ gzip:  17.72 kB
+Building: dist/assets/formatting-D76sS-5F.js                   0.16 kB │ gzip:   0.15 kB
+Building: dist/assets/sentry-DaT4-OGv.js                       0.22 kB │ gzip:   0.15 kB
+Building: dist/assets/useDebouncedSearch-CDkKUNtP.js           0.25 kB │ gzip:   0.19 kB
+Building: dist/assets/minus-B9U-XZEp.js                        0.29 kB │ gzip:   0.24 kB
+Building: dist/assets/chevron-left-B9_yIy7m.js                 0.30 kB │ gzip:   0.25 kB
+Building: dist/assets/chevron-right-Ba3S9fgc.js                0.30 kB │ gzip:   0.24 kB
+Building: dist/assets/play-CadE8bK9.js                         0.30 kB │ gzip:   0.25 kB
+Building: dist/assets/square-C2W_uZGh.js                       0.32 kB │ gzip:   0.25 kB
+Building: dist/assets/crown-DStxky2I.js                        0.32 kB │ gzip:   0.26 kB
+Building: dist/assets/tableStyles-BZHL1NTe.js                  0.32 kB │ gzip:   0.21 kB
+Building: dist/assets/pen-CmszciGU.js                          0.32 kB │ gzip:   0.26 kB
+Building: dist/assets/arrow-up-BwmowfyO.js                     0.33 kB │ gzip:   0.26 kB
+Building: dist/assets/arrow-down-JLVVVYrZ.js                   0.33 kB │ gzip:   0.26 kB
+Building: dist/assets/arrow-up-right-Cfn4Gimr.js               0.33 kB │ gzip:   0.26 kB
+Building: dist/assets/arrow-down-right-DtcDACCN.js             0.34 kB │ gzip:   0.27 kB
+Building: dist/assets/send-DtEoDVU3.js                         0.34 kB │ gzip:   0.27 kB
+Building: dist/assets/ban-CbFMNo6X.js                          0.34 kB │ gzip:   0.27 kB
+Building: dist/assets/attendanceStore-DyXvu06i.js              0.35 kB │ gzip:   0.27 kB
+Building: dist/assets/check-circle-D19IrTFz.js                 0.36 kB │ gzip:   0.28 kB
+Building: dist/assets/pen-line-CZrvY5nW.js                     0.36 kB │ gzip:   0.28 kB
+Building: dist/assets/skip-forward-DvyG2QMD.js                 0.37 kB │ gzip:   0.29 kB
+Building: dist/assets/pencil-vpymT-XR.js                       0.37 kB │ gzip:   0.28 kB
+Building: dist/assets/graduation-cap-CrVZsvno.js               0.37 kB │ gzip:   0.29 kB
+Building: dist/assets/rotate-ccw-Brh8GUqO.js                   0.37 kB │ gzip:   0.28 kB
+Building: dist/assets/pie-chart-BvYhSfQ-.js                    0.37 kB │ gzip:   0.28 kB
+Building: dist/assets/lock-Bjk5fAzY.js                         0.38 kB │ gzip:   0.29 kB
+Building: dist/assets/credit-card-CpXmGHCw.js                  0.38 kB │ gzip:   0.29 kB
+Building: dist/assets/arrow-down-to-line-B0M5cVk4.js           0.38 kB │ gzip:   0.28 kB
+Building: dist/assets/trending-down-Cc9IW-FT.js                0.38 kB │ gzip:   0.28 kB
+Building: dist/assets/home-vGLm5gYL.js                         0.38 kB │ gzip:   0.29 kB
+Building: dist/assets/key-round-Ds6JmFXH.js                    0.39 kB │ gzip:   0.31 kB
+Building: dist/assets/tag-DBIeYxuu.js                          0.39 kB │ gzip:   0.30 kB
+Building: dist/assets/copy-DJeFY0Cu.js                         0.40 kB │ gzip:   0.31 kB
+Building: dist/assets/percent-Do2RetUv.js                      0.41 kB │ gzip:   0.29 kB
+Building: dist/assets/timer-BXyoaL-I.js                        0.41 kB │ gzip:   0.29 kB
+Building: dist/assets/link-2-DfJu-qZ5.js                       0.41 kB │ gzip:   0.31 kB
+Building: dist/assets/database-CD8onDJB.js                     0.41 kB │ gzip:   0.30 kB
+Building: dist/assets/banknote-CJ847NAr.js                     0.41 kB │ gzip:   0.31 kB
+Building: dist/assets/arrow-right-left-BoYGY4PJ.js             0.42 kB │ gzip:   0.30 kB
+Building: dist/assets/bar-chart-2-jVYrRHcS.js                  0.42 kB │ gzip:   0.28 kB
+Building: dist/assets/archive-D41IMe3E.js                      0.42 kB │ gzip:   0.31 kB
+Building: dist/assets/monitor-65C7iCMw.js                      0.43 kB │ gzip:   0.31 kB
+Building: dist/assets/repeat-CSN2naPH.js                       0.44 kB │ gzip:   0.30 kB
+Building: dist/assets/git-branch-C8CmxKAX.js                   0.44 kB │ gzip:   0.32 kB
+Building: dist/assets/file-check-eiQpJqi6.js                   0.45 kB │ gzip:   0.32 kB
+Building: dist/assets/list-checks-KsecJeFK.js                  0.45 kB │ gzip:   0.29 kB
+Building: dist/assets/external-link-DuA1NuyA.js                0.45 kB │ gzip:   0.33 kB
+Building: dist/assets/save-BL-r1QQN.js                         0.45 kB │ gzip:   0.32 kB
+Building: dist/assets/lightbulb-ZIjh4UUI.js                    0.46 kB │ gzip:   0.33 kB
+Building: dist/assets/hash-DgnEG9t5.js                         0.47 kB │ gzip:   0.30 kB
+Building: dist/assets/maximize-2-BeCE2wKN.js                   0.47 kB │ gzip:   0.31 kB
+Building: dist/assets/printer-C24y1iba.js                      0.47 kB │ gzip:   0.34 kB
+Building: dist/assets/pin-BZuwqmjZ.js                          0.48 kB │ gzip:   0.34 kB
+Building: dist/assets/file-down-D2i_887P.js                    0.48 kB │ gzip:   0.33 kB
+Building: dist/assets/calendar-B15btk3_.js                     0.49 kB │ gzip:   0.32 kB
+Building: dist/assets/dateTime-Dy7yRGTL.js                     0.51 kB │ gzip:   0.26 kB
+Building: dist/assets/pin-off-CdJ_ENkH.js                      0.51 kB │ gzip:   0.35 kB
+Building: dist/assets/package-CWuLO7WJ.js                      0.53 kB │ gzip:   0.35 kB
+Building: dist/assets/layers-BeSnpHJ-.js                       0.53 kB │ gzip:   0.34 kB
+Building: dist/assets/grip-vertical-DvDRknWX.js                0.53 kB │ gzip:   0.30 kB
+Building: dist/assets/git-compare-arrows-DXVLov3J.js           0.54 kB │ gzip:   0.35 kB
+Building: dist/assets/Card-D36Ios43.js                         0.55 kB │ gzip:   0.30 kB
+Building: dist/assets/calendar-clock-BaM3RnQb.js               0.57 kB │ gzip:   0.36 kB
+Building: dist/assets/calendar-off-CW7NZnf6.js                 0.57 kB │ gzip:   0.37 kB
+Building: dist/assets/phone-call-BHLYF-Zf.js                   0.67 kB │ gzip:   0.41 kB
+Building: dist/assets/useRealtimeSubscription-FV78G32w.js      0.69 kB │ gzip:   0.42 kB
+Building: dist/assets/toggle-right-BMsU6_tB.js                 0.70 kB │ gzip:   0.32 kB
+Building: dist/assets/FilterPill-BCn0dBJu.js                   0.70 kB │ gzip:   0.40 kB
+Building: dist/assets/calendar-days-DzfobGC7.js                0.72 kB │ gzip:   0.40 kB
+Building: dist/assets/Badge-DUoClZ1r.js                        0.74 kB │ gzip:   0.44 kB
+Building: dist/assets/merge-BbA1DcUT.js                        0.75 kB │ gzip:   0.38 kB
+Building: dist/assets/CampaignHistoryChart-Bqi5x5r6.js         0.78 kB │ gzip:   0.53 kB
+Building: dist/assets/optimisticLock-ZTZfLMDr.js               0.87 kB │ gzip:   0.57 kB
+Building: dist/assets/party-popper-Cy1SCo7E.js                 0.90 kB │ gzip:   0.53 kB
+Building: dist/assets/supabaseSync-BnVKY0ww.js                 0.96 kB │ gzip:   0.55 kB
+Building: dist/assets/payrollRulesService-nbREaquM.js          1.00 kB │ gzip:   0.55 kB
+Building: dist/assets/Table-DWmg7gWs.js                        1.06 kB │ gzip:   0.45 kB
+Building: dist/assets/holidaysService-eVLshFH0.js              1.08 kB │ gzip:   0.49 kB
+Building: dist/assets/thumbs-down-kxQuK3Hr.js                  1.18 kB │ gzip:   0.51 kB
+Building: dist/assets/batchOperations-ByjQr0Ze.js              1.37 kB │ gzip:   0.67 kB
+Building: dist/assets/shiftsService-BUizZgSq.js                1.40 kB │ gzip:   0.52 kB
+Building: dist/assets/viewTrackingService-DbmJi8_q.js          1.44 kB │ gzip:   0.73 kB
+Building: dist/assets/attendanceService-CrxUoa6f.js            1.58 kB │ gzip:   0.74 kB
+Building: dist/assets/KpiCard-CM7l-AZo.js                      1.66 kB │ gzip:   0.84 kB
+Building: dist/assets/employeeShiftsService-1VwWxxTU.js        1.69 kB │ gzip:   0.68 kB
+Building: dist/assets/onboardingService-CcsAFBzR.js            1.70 kB │ gzip:   0.64 kB
+Building: dist/assets/Pagination-CN-0xCVL.js                   1.87 kB │ gzip:   0.75 kB
+Building: dist/assets/Modal-C1KPe2l3.js                        1.94 kB │ gzip:   1.02 kB
+Building: dist/assets/useAuditFilter-CfhiHh2A.js               2.23 kB │ gzip:   1.14 kB
+Building: dist/assets/exportUtils-D565X04Y.js                  2.27 kB │ gzip:   1.17 kB
+Building: dist/assets/customFieldsService-CKZ1SGHO.js          2.52 kB │ gzip:   1.19 kB
+Building: dist/assets/marketingService-CjLBbbRf.js             2.75 kB │ gzip:   1.07 kB
+Building: dist/assets/ContactSearch-BFy2XuVL.js                2.81 kB │ gzip:   1.32 kB
+Building: dist/assets/chatService-DitKvpBt.js                  2.98 kB │ gzip:   1.33 kB
+Building: dist/assets/ExportButton-Dtl4vWzf.js                 3.12 kB │ gzip:   1.59 kB
+Building: dist/assets/PrintPreview-CfCmuy3m.js                 3.16 kB │ gzip:   1.21 kB
+Building: dist/assets/backupService-DNfzp2Br.js                3.23 kB │ gzip:   1.50 kB
+Building: dist/assets/kpiTargetsService-BlPuw1TW.js            3.76 kB │ gzip:   1.70 kB
+Building: dist/assets/TalentHubPage-BqvIiq0O.js                3.84 kB │ gzip:   1.78 kB
+Building: dist/assets/DevelopmentHubPage-qOEYbzxj.js           4.09 kB │ gzip:   1.78 kB
+Building: dist/assets/financeService-Cxl8ymvh.js               4.10 kB │ gzip:   1.15 kB
+Building: dist/assets/dealsService-DbeFvmpI.js                 4.15 kB │ gzip:   1.69 kB
+Building: dist/assets/okrService-DKd7Bpze.js                   4.20 kB │ gzip:   1.75 kB
+Building: dist/assets/CustomFieldsRenderer-CK3mNOS9.js         4.23 kB │ gzip:   1.78 kB
+Building: dist/assets/PayrollRulesPage-FBJaUYUd.js             4.46 kB │ gzip:   1.99 kB
+Building: dist/assets/TimeHubPage-ecXxvfnx.js                  4.92 kB │ gzip:   2.09 kB
+Building: dist/assets/triggerService-BzT67G81.js               4.92 kB │ gzip:   1.97 kB
+Building: dist/assets/smsTemplateService-PcfP_JDJ.js           5.02 kB │ gzip:   1.98 kB
+Building: dist/assets/leaveService-bukY4sk6.js                 5.05 kB │ gzip:   1.70 kB
+Building: dist/assets/AdminHubPage-DXanDnbD.js                 5.16 kB │ gzip:   2.24 kB
+Building: dist/assets/DepartmentsPage-C-8svLDU.js              5.39 kB │ gzip:   2.06 kB
+Building: dist/assets/recurringTaskService-Bcpn4pRL.js         5.51 kB │ gzip:   2.07 kB
+Building: dist/assets/PrintSettingsPage-dqqpfmMw.js            5.82 kB │ gzip:   2.50 kB
+Building: dist/assets/LauncherPage-DVA2vaS2.js                 5.93 kB │ gzip:   2.54 kB
+Building: dist/assets/reportExportService-BvzHOCjL.js          6.10 kB │ gzip:   2.41 kB
+Building: dist/assets/finance_mock_data-MQ-TtdMl.js            6.25 kB │ gzip:   1.96 kB
+Building: dist/assets/OrgChartPage-DCMhFNoO.js                 6.47 kB │ gzip:   2.12 kB
+Building: dist/assets/heatmapService-BUNSchqQ.js               7.00 kB │ gzip:   3.08 kB
+Building: dist/assets/HeatmapPage-DKR_Yn5a.js                  7.15 kB │ gzip:   2.41 kB
+Building: dist/assets/ImportExportLogPage-CblDHC0H.js          7.41 kB │ gzip:   2.31 kB
+Building: dist/assets/operationsService-CSbzBSAy.js            7.46 kB │ gzip:   2.49 kB
+Building: dist/assets/ChatInboxPage-tT6NLAFX.js                7.51 kB │ gzip:   3.01 kB
+Building: dist/assets/payrollService-CDxptt8v.js               7.53 kB │ gzip:   2.19 kB
+Building: dist/assets/dashboardService-Ba8-mIM_.js             7.56 kB │ gzip:   2.58 kB
+Building: dist/assets/whatsappService-BQK4HoRp.js              8.16 kB │ gzip:   3.07 kB
+Building: dist/assets/MasterProfilePage-DukgGj-l.js            8.21 kB │ gzip:   2.82 kB
+Building: dist/assets/TimeHubOverview-23v-0En8.js              9.10 kB │ gzip:   2.67 kB
+Building: dist/assets/HandOffLeadModal-KWFChv27.js             9.30 kB │ gzip:   2.91 kB
+Building: dist/assets/BonusesPage-CbOO1BzM.js                  9.46 kB │ gzip:   3.25 kB
+Building: dist/assets/LeaveCarryoverPage-CnDBxFrl.js           9.50 kB │ gzip:   3.27 kB
+Building: dist/assets/AdsIntegrationPage-FV5hvZDy.js           9.78 kB │ gzip:   3.80 kB
+Building: dist/assets/DevelopmentHubOverview-CVuGzCVq.js       9.90 kB │ gzip:   2.75 kB
+Building: dist/assets/LoansPage-CrWT2OeN.js                    9.91 kB │ gzip:   3.00 kB
+Building: dist/assets/HolidaysPage-Cl-TjtFD.js                10.03 kB │ gzip:   3.50 kB
+Building: dist/assets/AdminHubOverview-C8lkJdas.js            10.28 kB │ gzip:   2.97 kB
+Building: dist/assets/SelfServicePage-Bv1voDaR.js             10.34 kB │ gzip:   3.89 kB
+Building: dist/assets/HRReportsPage-BoezjU8I.js               10.41 kB │ gzip:   3.44 kB
+Building: dist/assets/OvertimePage-G7pvWAnr.js                10.67 kB │ gzip:   3.56 kB
+Building: dist/assets/HRHomePage-BVMo5VtV.js                  11.18 kB │ gzip:   3.72 kB
+Building: dist/assets/expenseClaimService-C-ouhRjU.js         11.28 kB │ gzip:   3.37 kB
+Building: dist/assets/DocumentsPage-CIlsqjsF.js               11.43 kB │ gzip:   3.97 kB
+Building: dist/assets/TalentHubOverview-CfGSqQyp.js           11.76 kB │ gzip:   3.01 kB
+Building: dist/assets/ShiftsPage-BCN_8F-G.js                  11.92 kB │ gzip:   3.35 kB
+Building: dist/assets/ManagerDashboardPage-DaVkrSFr.js        12.29 kB │ gzip:   4.14 kB
+Building: dist/assets/ContractsPage-DTdEEdXU.js               12.69 kB │ gzip:   3.80 kB
+Building: dist/assets/RecruitmentPage-BTb8r5i8.js             13.18 kB │ gzip:   4.17 kB
+Building: dist/assets/CompetenciesPage-Bg9MjeAw.js            13.89 kB │ gzip:   4.39 kB
+Building: dist/assets/DevelopersPage-DBd80E0g.js              14.06 kB │ gzip:   4.77 kB
+Building: dist/assets/TrainingPage-Df5wJPZI.js                14.34 kB │ gzip:   4.32 kB
+Building: dist/assets/DisciplinaryPage-BOYFSv9m.js            14.43 kB │ gzip:   4.69 kB
+Building: dist/assets/AssetsPage-Ds7M9vJ9.js                  15.50 kB │ gzip:   4.83 kB
+Building: dist/assets/LeavePage-BdR8s_I5.js                   16.21 kB │ gzip:   5.10 kB
+Building: dist/assets/OnboardingPage-BA3pU1b0.js              16.43 kB │ gzip:   5.59 kB
+Building: dist/assets/PerformanceReviewPage-YwMSz6PK.js       16.52 kB │ gzip:   4.87 kB
+Building: dist/assets/printService-CIju6_Kc.js                16.57 kB │ gzip:   4.63 kB
+Building: dist/assets/CustomFieldsPage-ON9hqx_L.js            16.74 kB │ gzip:   4.97 kB
+Building: dist/assets/reportsDataService-n0k7t22-.js          16.80 kB │ gzip:   5.59 kB
+Building: dist/assets/BackupPage-DOZXFOFo.js                  16.86 kB │ gzip:   5.39 kB
+Building: dist/assets/UserTrackingPage-BbMBZTkg.js            16.92 kB │ gzip:   4.27 kB
+Building: dist/assets/SalesForecastPage-ClGzADEh.js           16.99 kB │ gzip:   6.23 kB
+Building: dist/assets/SecurityPage-CGpuNnlw.js                17.00 kB │ gzip:   5.59 kB
+Building: dist/assets/PayrollHubPage-K7YmzOdQ.js              17.64 kB │ gzip:   4.96 kB
+Building: dist/assets/SmartFilter-DO06ygl4.js                 17.66 kB │ gzip:   5.28 kB
+Building: dist/assets/NotificationsPage-CGYYbxZr.js           17.96 kB │ gzip:   6.20 kB
+Building: dist/assets/TeamHierarchyPage-_KANkN92.js           18.11 kB │ gzip:   5.51 kB
+Building: dist/assets/PayrollClose-B9dJp5TG.js                18.67 kB │ gzip:   7.02 kB
+Building: dist/assets/UsersPage-pfwnyE56.js                   18.70 kB │ gzip:   6.52 kB
+Building: dist/assets/SystemHealthPage-BaJQkCSR.js            18.89 kB │ gzip:   6.07 kB
+Building: dist/assets/ComparisonReportsPage-Blz4ZcU5.js       19.21 kB │ gzip:   5.54 kB
+Building: dist/assets/LeadPoolPage-BJaptv9g.js                19.75 kB │ gzip:   6.93 kB
+Building: dist/assets/AuditLogPage-qdzzAX5f.js                19.76 kB │ gzip:   5.33 kB
+Building: dist/assets/PayrollPage-F4QtTOww.js                 19.87 kB │ gzip:   7.33 kB
+Building: dist/assets/TriggersPage-D1gjWSMj.js                20.04 kB │ gzip:   5.43 kB
+Building: dist/assets/SettingsPage-DN48rDjV.js                20.08 kB │ gzip:   6.46 kB
+Building: dist/assets/CommentsSection-BIT0EQbH.js             20.15 kB │ gzip:   6.73 kB
+Building: dist/assets/ChartBuilderPage-DVKlZ1nC.js            20.39 kB │ gzip:   6.51 kB
+Building: dist/assets/CalendarPage-vbadXi4i.js                20.43 kB │ gzip:   5.27 kB
+Building: dist/assets/ATSPage-DPxEn9GM.js                     20.45 kB │ gzip:   4.96 kB
+Building: dist/assets/ProfilePage-Dna_0IOB.js                 20.57 kB │ gzip:   5.72 kB
+Building: dist/assets/GoalsPage-DC6x07-9.js                   20.64 kB │ gzip:   5.70 kB
+Building: dist/assets/ExpenseClaimsPage-B79EK7B4.js           21.16 kB │ gzip:   6.02 kB
+Building: dist/assets/PayrollBreakdownModal-Dp-IRoYk.js       21.18 kB │ gzip:   6.88 kB
+Building: dist/assets/ApprovalsPage-Cw-fvCSq.js               21.26 kB │ gzip:   6.01 kB
+Building: dist/assets/AnnouncementsPage-DFfU0J1o.js           21.31 kB │ gzip:   5.72 kB
+Building: dist/assets/RolesPage-ChytIDUZ.js                   22.67 kB │ gzip:   6.69 kB
+Building: dist/assets/EmailPage-ruwhb73N.js                   23.02 kB │ gzip:   5.98 kB
+Building: dist/assets/PayrollRunWizard-C_PMa3kV.js            23.26 kB │ gzip:   6.65 kB
+Building: dist/assets/DealsPage-DZjwr2eC.js                   23.39 kB │ gzip:   6.73 kB
+Building: dist/assets/HRPoliciesPage-BrRCpzRi.js              24.23 kB │ gzip:   9.68 kB
+Building: dist/assets/AddContactModal-C_mcq6EX.js             24.96 kB │ gzip:   7.72 kB
+Building: dist/assets/KnowledgeBasePage-pLmCNgyQ.js           26.34 kB │ gzip:   7.10 kB
+Building: dist/assets/ProjectsPage-1HAIDSpk.js                27.71 kB │ gzip:   6.99 kB
+Building: dist/assets/PerformancePage-DL2lOUfF.js             29.45 kB │ gzip:   8.46 kB
+Building: dist/assets/WhatsAppPage-BEn2ZSiy.js                29.84 kB │ gzip:   7.10 kB
+Building: dist/assets/ActivitiesPage-7iqnt2Jy.js              29.94 kB │ gzip:   8.89 kB
+Building: dist/assets/ScheduledReportsPage-CU8PDMpz.js        30.97 kB │ gzip:   9.05 kB
+Building: dist/assets/SMSTemplatesPage-CRh8QGad.js            31.21 kB │ gzip:   7.49 kB
+Building: dist/assets/EmployeeAttendanceSummary-BBGTQWlm.js   31.92 kB │ gzip:   8.14 kB
+Building: dist/assets/UnitsPage-0pYa1CtG.js                   33.14 kB │ gzip:   8.21 kB
+Building: dist/assets/WorkflowBuilderPage-DqAkNNtm.js         33.32 kB │ gzip:   8.95 kB
+Building: dist/assets/APIDocsPage-6Xfi3s_t.js                 34.27 kB │ gzip:  10.80 kB
+Building: dist/assets/SLAManagementPage-BV2t-zpf.js           36.10 kB │ gzip:  10.03 kB
+Building: dist/assets/MasterLeadsPage-_Kcz_snK.js             36.13 kB │ gzip:  11.53 kB
+Building: dist/assets/OperationsPage-r2bvNRPC.js              36.97 kB │ gzip:   9.77 kB
+Building: dist/assets/AnalyticsPage-fAnOmmbP.js               41.55 kB │ gzip:  10.44 kB
+Building: dist/assets/CommissionsPage-B4eb1ei6.js             43.20 kB │ gzip:   9.54 kB
+Building: dist/assets/EmployeesPage-CCb1QkYW.js               43.89 kB │ gzip:  10.59 kB
+Building: dist/assets/AttendancePage-BXUMeCUK.js              51.79 kB │ gzip:  14.80 kB
+Building: dist/assets/HelpCenterPage-B3bhdDn2.js              52.49 kB │ gzip:  19.47 kB
+Building: dist/assets/vendor-i18n-qZYAfCm2.js                 53.22 kB │ gzip:  16.40 kB
+Building: dist/assets/EmployeeDetailPage-DNcSNgrN.js          53.77 kB │ gzip:  12.79 kB
+Building: dist/assets/TasksPage-Bhit1wnl.js                   56.23 kB │ gzip:  16.08 kB
+Building: dist/assets/FinancePage-BRdSfHna.js                 61.78 kB │ gzip:  14.34 kB
+Building: dist/assets/CrmDashboardPage-DT5Dazlm.js            64.46 kB │ gzip:  18.84 kB
+Building: dist/assets/SystemConfigPage-DFBydYO4.js            65.00 kB │ gzip:  15.24 kB
+Building: dist/assets/MarketingPage-Gh9K_aJT.js               66.79 kB │ gzip:  15.24 kB
+Building: dist/assets/firebase-DaJ0-W3w.js                    80.36 kB │ gzip:  15.28 kB
+Building: dist/assets/DashboardPage-DoNEFszc.js               83.93 kB │ gzip:  22.93 kB
+Building: dist/assets/ReportsPage-B9c9UhSA.js                 95.37 kB │ gzip:  23.44 kB
+Building: dist/assets/vendor-react-CUeFU1cA.js               163.24 kB │ gzip:  53.29 kB
+Building: dist/assets/vendor-supabase-vVB5Zwva.js            174.99 kB │ gzip:  46.18 kB
+Building: dist/assets/ContactsPage-Cjb_YkEE.js               408.91 kB │ gzip: 108.86 kB
+Building: dist/assets/xlsx-D_0l8YDs.js                       429.03 kB │ gzip: 143.08 kB
+Building: dist/assets/vendor-recharts-DkoAkONI.js            434.16 kB │ gzip: 114.90 kB
+Building: dist/assets/index-BOnS0rcF.js                      523.23 kB │ gzip: 148.64 kB
+Building: dist/assets/exceljs.min-DYWM6Mwx.js                938.57 kB │ gzip: 271.04 kB
+Building: ✓ built in 22.19s
+Building: ✨ [vite-plugin-compression]:algorithm=gzip - compressed file successfully:
+Building: dist//vercel/path0/assets/APIDocsPage-6Xfi3s_t.js.gz                 36.62kb / gzip: 10.54kb
+Building: dist//vercel/path0/assets/ATSPage-DPxEn9GM.js.gz                     20.68kb / gzip: 4.83kb
+Building: dist//vercel/path0/assets/ActivitiesPage-7iqnt2Jy.js.gz              30.05kb / gzip: 8.67kb
+Building: dist//vercel/path0/assets/AdminHubOverview-C8lkJdas.js.gz            10.40kb / gzip: 2.90kb
+Building: dist//vercel/path0/assets/AddContactModal-C_mcq6EX.js.gz             25.18kb / gzip: 7.52kb
+Building: dist//vercel/path0/assets/AnalyticsPage-fAnOmmbP.js.gz               41.98kb / gzip: 10.16kb
+Building: dist//vercel/path0/assets/AnnouncementsPage-DFfU0J1o.js.gz           21.23kb / gzip: 5.56kb
+Building: dist//vercel/path0/assets/ApprovalsPage-Cw-fvCSq.js.gz               21.24kb / gzip: 5.86kb
+Building: dist//vercel/path0/assets/AssetsPage-Ds7M9vJ9.js.gz                  15.70kb / gzip: 4.70kb
+Building: dist//vercel/path0/assets/AttendancePage-BXUMeCUK.js.gz              52.33kb / gzip: 14.41kb
+Building: dist//vercel/path0/assets/BackupPage-DOZXFOFo.js.gz                  17.26kb / gzip: 5.25kb
+Building: dist//vercel/path0/assets/CalendarPage-vbadXi4i.js.gz                20.30kb / gzip: 5.13kb
+Building: dist//vercel/path0/assets/AuditLogPage-qdzzAX5f.js.gz                19.88kb / gzip: 5.19kb
+Building: dist//vercel/path0/assets/ChartBuilderPage-DVKlZ1nC.js.gz            20.58kb / gzip: 6.35kb
+Building: dist//vercel/path0/assets/CommissionsPage-B4eb1ei6.js.gz             43.37kb / gzip: 9.28kb
+Building: dist//vercel/path0/assets/CompetenciesPage-Bg9MjeAw.js.gz            14.08kb / gzip: 4.28kb
+Building: dist//vercel/path0/assets/ComparisonReportsPage-Blz4ZcU5.js.gz       19.30kb / gzip: 5.41kb
+Building: dist//vercel/path0/assets/ContractsPage-DTdEEdXU.js.gz               12.82kb / gzip: 3.71kb
+Building: dist//vercel/path0/assets/CustomFieldsPage-ON9hqx_L.js.gz            16.76kb / gzip: 4.85kb
+Building: dist//vercel/path0/assets/DealsPage-DZjwr2eC.js.gz                   23.44kb / gzip: 6.56kb
+Building: dist//vercel/path0/assets/DevelopersPage-DBd80E0g.js.gz              14.14kb / gzip: 4.65kb
+Building: dist//vercel/path0/assets/DisciplinaryPage-BOYFSv9m.js.gz            14.73kb / gzip: 4.57kb
+Building: dist//vercel/path0/assets/DocumentsPage-CIlsqjsF.js.gz               11.63kb / gzip: 3.87kb
+Building: dist//vercel/path0/assets/EmailPage-ruwhb73N.js.gz                   22.77kb / gzip: 5.83kb
+Building: dist//vercel/path0/assets/EmployeeAttendanceSummary-BBGTQWlm.js.gz   32.39kb / gzip: 7.93kb
+Building: dist//vercel/path0/assets/ExpenseClaimsPage-B79EK7B4.js.gz           21.24kb / gzip: 5.86kb
+Building: dist//vercel/path0/assets/EmployeeDetailPage-DNcSNgrN.js.gz          54.26kb / gzip: 12.43kb
+Building: dist//vercel/path0/assets/EmployeesPage-CCb1QkYW.js.gz               44.69kb / gzip: 10.31kb
+Building: dist//vercel/path0/assets/FinancePage-BRdSfHna.js.gz                 62.60kb / gzip: 13.95kb
+Building: dist//vercel/path0/assets/HRHomePage-BVMo5VtV.js.gz                  11.26kb / gzip: 3.63kb
+Building: dist//vercel/path0/assets/HRPoliciesPage-BrRCpzRi.js.gz              27.44kb / gzip: 9.43kb
+Building: dist//vercel/path0/assets/HRReportsPage-BoezjU8I.js.gz               10.77kb / gzip: 3.36kb
+Building: dist//vercel/path0/assets/CommentsSection-BIT0EQbH.js.gz             19.96kb / gzip: 6.56kb
+Building: dist//vercel/path0/assets/HolidaysPage-Cl-TjtFD.js.gz                10.27kb / gzip: 3.42kb
+Building: dist//vercel/path0/assets/KnowledgeBasePage-pLmCNgyQ.js.gz           26.21kb / gzip: 6.91kb
+Building: dist//vercel/path0/assets/LeadPoolPage-BJaptv9g.js.gz                19.76kb / gzip: 6.76kb
+Building: dist//vercel/path0/assets/LeavePage-BdR8s_I5.js.gz                   16.41kb / gzip: 4.98kb
+Building: dist//vercel/path0/assets/LoansPage-CrWT2OeN.js.gz                   10.00kb / gzip: 2.92kb
+Building: dist//vercel/path0/assets/ManagerDashboardPage-DaVkrSFr.js.gz        12.36kb / gzip: 4.04kb
+Building: dist//vercel/path0/assets/MarketingPage-Gh9K_aJT.js.gz               67.06kb / gzip: 14.81kb
+Building: dist//vercel/path0/assets/NotificationsPage-CGYYbxZr.js.gz           18.11kb / gzip: 6.05kb
+Building: dist//vercel/path0/assets/OnboardingPage-BA3pU1b0.js.gz              16.66kb / gzip: 5.46kb
+Building: dist//vercel/path0/assets/OperationsPage-r2bvNRPC.js.gz              37.33kb / gzip: 9.51kb
+Building: dist//vercel/path0/assets/OvertimePage-G7pvWAnr.js.gz                10.83kb / gzip: 3.47kb
+Building: dist//vercel/path0/assets/PayrollBreakdownModal-Dp-IRoYk.js.gz       21.35kb / gzip: 6.71kb
+Building: dist//vercel/path0/assets/PayrollClose-B9dJp5TG.js.gz                18.72kb / gzip: 6.85kb
+Building: dist//vercel/path0/assets/GoalsPage-DC6x07-9.js.gz                   20.51kb / gzip: 5.55kb
+Building: dist//vercel/path0/assets/PayrollPage-F4QtTOww.js.gz                 20.06kb / gzip: 7.15kb
+Building: dist//vercel/path0/assets/PayrollRunWizard-C_PMa3kV.js.gz            23.70kb / gzip: 6.48kb
+Building: dist//vercel/path0/assets/PerformancePage-DL2lOUfF.js.gz             29.86kb / gzip: 8.25kb
+Building: dist//vercel/path0/assets/PerformanceReviewPage-YwMSz6PK.js.gz       16.61kb / gzip: 4.74kb
+Building: dist//vercel/path0/assets/ProfilePage-Dna_0IOB.js.gz                 20.55kb / gzip: 5.57kb
+Building: dist//vercel/path0/assets/RecruitmentPage-BTb8r5i8.js.gz             13.42kb / gzip: 4.07kb
+Building: dist//vercel/path0/assets/ProjectsPage-1HAIDSpk.js.gz                28.05kb / gzip: 6.81kb
+Building: dist//vercel/path0/assets/RolesPage-ChytIDUZ.js.gz                   22.83kb / gzip: 6.52kb
+Building: dist//vercel/path0/assets/MasterLeadsPage-_Kcz_snK.js.gz             36.48kb / gzip: 11.24kb
+Building: dist//vercel/path0/assets/SMSTemplatesPage-CRh8QGad.js.gz            31.17kb / gzip: 7.28kb
+Building: dist//vercel/path0/assets/SalesForecastPage-ClGzADEh.js.gz           17.22kb / gzip: 6.08kb
+Building: dist//vercel/path0/assets/SecurityPage-CGpuNnlw.js.gz                17.38kb / gzip: 5.45kb
+Building: dist//vercel/path0/assets/ScheduledReportsPage-CU8PDMpz.js.gz        31.14kb / gzip: 8.83kb
+Building: dist//vercel/path0/assets/SelfServicePage-Bv1voDaR.js.gz             10.39kb / gzip: 3.79kb
+Building: dist//vercel/path0/assets/SettingsPage-DN48rDjV.js.gz                20.12kb / gzip: 6.30kb
+Building: dist//vercel/path0/assets/ShiftsPage-BCN_8F-G.js.gz                  12.19kb / gzip: 3.26kb
+Building: dist//vercel/path0/assets/SmartFilter-DO06ygl4.js.gz                 17.48kb / gzip: 5.15kb
+Building: dist//vercel/path0/assets/SystemHealthPage-BaJQkCSR.js.gz            19.05kb / gzip: 5.92kb
+Building: dist//vercel/path0/assets/TalentHubOverview-CfGSqQyp.js.gz           11.84kb / gzip: 2.94kb
+Building: dist//vercel/path0/assets/SystemConfigPage-DFBydYO4.js.gz            66.49kb / gzip: 14.83kb
+Building: dist//vercel/path0/assets/PayrollHubPage-K7YmzOdQ.js.gz              17.67kb / gzip: 4.83kb
+Building: dist//vercel/path0/assets/TrainingPage-Df5wJPZI.js.gz                14.57kb / gzip: 4.21kb
+Building: dist//vercel/path0/assets/TriggersPage-D1gjWSMj.js.gz                20.08kb / gzip: 5.29kb
+Building: dist//vercel/path0/assets/UnitsPage-0pYa1CtG.js.gz                   33.44kb / gzip: 7.98kb
+Building: dist//vercel/path0/assets/UserTrackingPage-BbMBZTkg.js.gz            16.88kb / gzip: 4.16kb
+Building: dist//vercel/path0/assets/UsersPage-pfwnyE56.js.gz                   19.10kb / gzip: 6.36kb
+Building: dist//vercel/path0/assets/WhatsAppPage-BEn2ZSiy.js.gz                29.67kb / gzip: 6.90kb
+Building: dist//vercel/path0/assets/WorkflowBuilderPage-DqAkNNtm.js.gz         33.48kb / gzip: 8.71kb
+Building: dist//vercel/path0/assets/expenseClaimService-C-ouhRjU.js.gz         11.07kb / gzip: 3.29kb
+Building: dist//vercel/path0/assets/TeamHierarchyPage-_KANkN92.js.gz           18.46kb / gzip: 5.38kb
+Building: dist//vercel/path0/assets/SLAManagementPage-BV2t-zpf.js.gz           36.25kb / gzip: 9.78kb
+Building: dist//vercel/path0/assets/printService-CIju6_Kc.js.gz                16.77kb / gzip: 4.52kb
+Building: dist//vercel/path0/assets/reportsDataService-n0k7t22-.js.gz          17.28kb / gzip: 5.45kb
+Building: dist//vercel/path0/assets/vendor-i18n-qZYAfCm2.js.gz                 51.98kb / gzip: 15.99kb
+Building: dist//vercel/path0/assets/firebase-DaJ0-W3w.js.gz                    78.47kb / gzip: 14.89kb
+Building: dist//vercel/path0/drawer-preview-v2.html.gz                         35.01kb / gzip: 7.39kb
+Building: dist//vercel/path0/drawer-preview-v4-final.html.gz                   31.23kb / gzip: 6.33kb
+Building: dist//vercel/path0/drawer-preview-v3.html.gz                         14.15kb / gzip: 3.88kb
+Building: dist//vercel/path0/drawer-preview.html.gz                            20.33kb / gzip: 4.98kb
+Building: dist//vercel/path0/assets/TasksPage-Bhit1wnl.js.gz                   56.53kb / gzip: 15.66kb
+Building: dist//vercel/path0/drawer-preview-v4.html.gz                         17.05kb / gzip: 4.28kb
+Building: dist//vercel/path0/assets/DashboardPage-DoNEFszc.js.gz               84.45kb / gzip: 22.34kb
+Building: dist//vercel/path0/assets/CrmDashboardPage-DT5Dazlm.js.gz            64.69kb / gzip: 18.36kb
+Building: dist//vercel/path0/assets/HelpCenterPage-B3bhdDn2.js.gz              63.47kb / gzip: 18.97kb
+Building: dist//vercel/path0/assets/ReportsPage-B9c9UhSA.js.gz                 97.47kb / gzip: 22.84kb
+Building: dist//vercel/path0/assets/index-D6HQ_bNA.css.gz                      101.76kb / gzip: 17.11kb
+Building: dist//vercel/path0/assets/vendor-supabase-vVB5Zwva.js.gz             170.89kb / gzip: 44.97kb
+Building: dist//vercel/path0/assets/vendor-react-CUeFU1cA.js.gz                159.41kb / gzip: 51.97kb
+Building: dist//vercel/path0/assets/ContactsPage-Cjb_YkEE.js.gz                411.13kb / gzip: 105.97kb
+Building: dist//vercel/path0/assets/vendor-recharts-DkoAkONI.js.gz             423.99kb / gzip: 111.94kb
+Building: dist//vercel/path0/assets/xlsx-D_0l8YDs.js.gz                        419.42kb / gzip: 139.49kb
+Building: dist//vercel/path0/assets/index-BOnS0rcF.js.gz                       521.57kb / gzip: 144.57kb
+Building: dist//vercel/path0/assets/exceljs.min-DYWM6Mwx.js.gz                 917.14kb / gzip: 263.27kb
+Building: ✨ [vite-plugin-compression]:algorithm=brotliCompress - compressed file successfully:
+Building: dist//vercel/path0/assets/APIDocsPage-6Xfi3s_t.js.br                 36.62kb / brotliCompress: 8.96kb
+Building: dist//vercel/path0/assets/ATSPage-DPxEn9GM.js.br                     20.68kb / brotliCompress: 4.17kb
+Building: dist//vercel/path0/assets/ActivitiesPage-7iqnt2Jy.js.br              30.05kb / brotliCompress: 7.63kb
+Building: dist//vercel/path0/assets/AddContactModal-C_mcq6EX.js.br             25.18kb / brotliCompress: 6.52kb
+Building: dist//vercel/path0/assets/AdminHubOverview-C8lkJdas.js.br            10.40kb / brotliCompress: 2.54kb
+Building: dist//vercel/path0/assets/AnalyticsPage-fAnOmmbP.js.br               41.98kb / brotliCompress: 8.96kb
+Building: dist//vercel/path0/assets/AnnouncementsPage-DFfU0J1o.js.br           21.23kb / brotliCompress: 4.81kb
+Building: dist//vercel/path0/assets/AssetsPage-Ds7M9vJ9.js.br                  15.70kb / brotliCompress: 4.07kb
+Building: dist//vercel/path0/assets/ApprovalsPage-Cw-fvCSq.js.br               21.24kb / brotliCompress: 5.06kb
+Building: dist//vercel/path0/assets/AuditLogPage-qdzzAX5f.js.br                19.88kb / brotliCompress: 4.49kb
+Building: dist//vercel/path0/assets/BackupPage-DOZXFOFo.js.br                  17.26kb / brotliCompress: 4.49kb
+Building: dist//vercel/path0/assets/CalendarPage-vbadXi4i.js.br                20.30kb / brotliCompress: 4.50kb
+Building: dist//vercel/path0/assets/ChartBuilderPage-DVKlZ1nC.js.br            20.58kb / brotliCompress: 5.51kb
+Building: dist//vercel/path0/assets/CommentsSection-BIT0EQbH.js.br             19.96kb / brotliCompress: 5.73kb
+Building: dist//vercel/path0/assets/ComparisonReportsPage-Blz4ZcU5.js.br       19.30kb / brotliCompress: 4.64kb
+Building: dist//vercel/path0/assets/CompetenciesPage-Bg9MjeAw.js.br            14.08kb / brotliCompress: 3.71kb
+Building: dist//vercel/path0/assets/ContractsPage-DTdEEdXU.js.br               12.82kb / brotliCompress: 3.21kb
+Building: dist//vercel/path0/assets/AttendancePage-BXUMeCUK.js.br              52.33kb / brotliCompress: 12.46kb
+Building: dist//vercel/path0/assets/CustomFieldsPage-ON9hqx_L.js.br            16.76kb / brotliCompress: 4.23kb
+Building: dist//vercel/path0/assets/CommissionsPage-B4eb1ei6.js.br             43.37kb / brotliCompress: 8.14kb
+Building: dist//vercel/path0/assets/DealsPage-DZjwr2eC.js.br                   23.44kb / brotliCompress: 5.79kb
+Building: dist//vercel/path0/assets/DevelopersPage-DBd80E0g.js.br              14.14kb / brotliCompress: 4.06kb
+Building: dist//vercel/path0/assets/DisciplinaryPage-BOYFSv9m.js.br            14.73kb / brotliCompress: 3.99kb
+Building: dist//vercel/path0/assets/DocumentsPage-CIlsqjsF.js.br               11.63kb / brotliCompress: 3.31kb
+Building: dist//vercel/path0/assets/EmailPage-ruwhb73N.js.br                   22.77kb / brotliCompress: 5.04kb
+Building: dist//vercel/path0/assets/EmployeeAttendanceSummary-BBGTQWlm.js.br   32.39kb / brotliCompress: 6.82kb
+Building: dist//vercel/path0/assets/ExpenseClaimsPage-B79EK7B4.js.br           21.24kb / brotliCompress: 5.07kb
+Building: dist//vercel/path0/assets/GoalsPage-DC6x07-9.js.br                   20.51kb / brotliCompress: 4.81kb
+Building: dist//vercel/path0/assets/EmployeesPage-CCb1QkYW.js.br               44.69kb / brotliCompress: 8.93kb
+Building: dist//vercel/path0/assets/EmployeeDetailPage-DNcSNgrN.js.br          54.26kb / brotliCompress: 10.66kb
+Building: dist//vercel/path0/assets/HRHomePage-BVMo5VtV.js.br                  11.26kb / brotliCompress: 3.15kb
+Building: dist//vercel/path0/assets/HRReportsPage-BoezjU8I.js.br               10.77kb / brotliCompress: 2.90kb
+Building: dist//vercel/path0/assets/HolidaysPage-Cl-TjtFD.js.br                10.27kb / brotliCompress: 2.97kb
+Building: dist//vercel/path0/assets/HRPoliciesPage-BrRCpzRi.js.br              27.44kb / brotliCompress: 7.65kb
+Building: dist//vercel/path0/assets/FinancePage-BRdSfHna.js.br                 62.60kb / brotliCompress: 11.80kb
+Building: dist//vercel/path0/assets/LeadPoolPage-BJaptv9g.js.br                19.76kb / brotliCompress: 5.98kb
+Building: dist//vercel/path0/assets/LeavePage-BdR8s_I5.js.br                   16.41kb / brotliCompress: 4.36kb
+Building: dist//vercel/path0/assets/KnowledgeBasePage-pLmCNgyQ.js.br           26.21kb / brotliCompress: 5.96kb
+Building: dist//vercel/path0/assets/LoansPage-CrWT2OeN.js.br                   10.00kb / brotliCompress: 2.55kb
+Building: dist//vercel/path0/assets/ManagerDashboardPage-DaVkrSFr.js.br        12.36kb / brotliCompress: 3.51kb
+Building: dist//vercel/path0/assets/HelpCenterPage-B3bhdDn2.js.br              63.47kb / brotliCompress: 15.95kb
+Building: dist//vercel/path0/assets/NotificationsPage-CGYYbxZr.js.br           18.11kb / brotliCompress: 5.17kb
+Building: dist//vercel/path0/assets/OnboardingPage-BA3pU1b0.js.br              16.66kb / brotliCompress: 4.77kb
+Building: dist//vercel/path0/assets/MasterLeadsPage-_Kcz_snK.js.br             36.48kb / brotliCompress: 9.69kb
+Building: dist//vercel/path0/assets/OvertimePage-G7pvWAnr.js.br                10.83kb / brotliCompress: 3.04kb
+Building: dist//vercel/path0/assets/PayrollBreakdownModal-Dp-IRoYk.js.br       21.35kb / brotliCompress: 5.91kb
+Building: dist//vercel/path0/assets/OperationsPage-r2bvNRPC.js.br              37.33kb / brotliCompress: 8.21kb
+Building: dist//vercel/path0/assets/PayrollClose-B9dJp5TG.js.br                18.72kb / brotliCompress: 6.08kb
+Building: dist//vercel/path0/assets/MarketingPage-Gh9K_aJT.js.br               67.06kb / brotliCompress: 12.82kb
+Building: dist//vercel/path0/assets/PayrollHubPage-K7YmzOdQ.js.br              17.67kb / brotliCompress: 4.20kb
+Building: dist//vercel/path0/assets/PayrollPage-F4QtTOww.js.br                 20.06kb / brotliCompress: 6.32kb
+Building: dist//vercel/path0/assets/PayrollRunWizard-C_PMa3kV.js.br            23.70kb / brotliCompress: 5.57kb
+Building: dist//vercel/path0/assets/PerformancePage-DL2lOUfF.js.br             29.86kb / brotliCompress: 7.25kb
+Building: dist//vercel/path0/assets/PerformanceReviewPage-YwMSz6PK.js.br       16.61kb / brotliCompress: 4.13kb
+Building: dist//vercel/path0/assets/ProfilePage-Dna_0IOB.js.br                 20.55kb / brotliCompress: 4.80kb
+Building: dist//vercel/path0/assets/RecruitmentPage-BTb8r5i8.js.br             13.42kb / brotliCompress: 3.55kb
+Building: dist//vercel/path0/assets/ProjectsPage-1HAIDSpk.js.br                28.05kb / brotliCompress: 5.89kb
+Building: dist//vercel/path0/assets/RolesPage-ChytIDUZ.js.br                   22.83kb / brotliCompress: 5.64kb
+Building: dist//vercel/path0/assets/SLAManagementPage-BV2t-zpf.js.br           36.25kb / brotliCompress: 8.45kb
+Building: dist//vercel/path0/assets/SalesForecastPage-ClGzADEh.js.br           17.22kb / brotliCompress: 5.33kb
+Building: dist//vercel/path0/assets/SMSTemplatesPage-CRh8QGad.js.br            31.17kb / brotliCompress: 6.26kb
+Building: dist//vercel/path0/assets/SecurityPage-CGpuNnlw.js.br                17.38kb / brotliCompress: 4.62kb
+Building: dist//vercel/path0/assets/SelfServicePage-Bv1voDaR.js.br             10.39kb / brotliCompress: 3.28kb
+Building: dist//vercel/path0/assets/ScheduledReportsPage-CU8PDMpz.js.br        31.14kb / brotliCompress: 7.73kb
+Building: dist//vercel/path0/assets/ShiftsPage-BCN_8F-G.js.br                  12.19kb / brotliCompress: 2.79kb
+Building: dist//vercel/path0/assets/SettingsPage-DN48rDjV.js.br                20.12kb / brotliCompress: 5.40kb
+Building: dist//vercel/path0/assets/SmartFilter-DO06ygl4.js.br                 17.48kb / brotliCompress: 4.54kb
+Building: dist//vercel/path0/assets/SystemHealthPage-BaJQkCSR.js.br            19.05kb / brotliCompress: 5.09kb
+Building: dist//vercel/path0/assets/TalentHubOverview-CfGSqQyp.js.br           11.84kb / brotliCompress: 2.56kb
+Building: dist//vercel/path0/assets/TeamHierarchyPage-_KANkN92.js.br           18.46kb / brotliCompress: 4.68kb
+Building: dist//vercel/path0/assets/TrainingPage-Df5wJPZI.js.br                14.57kb / brotliCompress: 3.64kb
+Building: dist//vercel/path0/assets/TriggersPage-D1gjWSMj.js.br                20.08kb / brotliCompress: 4.59kb
+Building: dist//vercel/path0/assets/UserTrackingPage-BbMBZTkg.js.br            16.88kb / brotliCompress: 3.61kb
+Building: dist//vercel/path0/assets/UsersPage-pfwnyE56.js.br                   19.10kb / brotliCompress: 5.50kb
+Building: dist//vercel/path0/assets/UnitsPage-0pYa1CtG.js.br                   33.44kb / brotliCompress: 6.93kb
+Building: dist//vercel/path0/assets/SystemConfigPage-DFBydYO4.js.br            66.49kb / brotliCompress: 12.39kb
+Building: dist//vercel/path0/assets/WorkflowBuilderPage-DqAkNNtm.js.br         33.48kb / brotliCompress: 7.56kb
+Building: dist//vercel/path0/assets/expenseClaimService-C-ouhRjU.js.br         11.07kb / brotliCompress: 2.79kb
+Building: dist//vercel/path0/assets/WhatsAppPage-BEn2ZSiy.js.br                29.67kb / brotliCompress: 5.90kb
+Building: dist//vercel/path0/assets/firebase-DaJ0-W3w.js.br                    78.47kb / brotliCompress: 13.04kb
+Building: dist//vercel/path0/assets/printService-CIju6_Kc.js.br                16.77kb / brotliCompress: 3.76kb
+Building: dist//vercel/path0/assets/reportsDataService-n0k7t22-.js.br          17.28kb / brotliCompress: 4.72kb
+Building: dist//vercel/path0/assets/index-D6HQ_bNA.css.br                      101.76kb / brotliCompress: 13.18kb
+Building: dist//vercel/path0/assets/vendor-i18n-qZYAfCm2.js.br                 51.98kb / brotliCompress: 14.28kb
+Building: dist//vercel/path0/assets/TasksPage-Bhit1wnl.js.br                   56.53kb / brotliCompress: 13.64kb
+Building: dist//vercel/path0/drawer-preview-v2.html.br                         35.01kb / brotliCompress: 6.23kb
+Building: dist//vercel/path0/drawer-preview-v3.html.br                         14.15kb / brotliCompress: 3.16kb
+Building: dist//vercel/path0/drawer-preview-v4.html.br                         17.05kb / brotliCompress: 3.49kb
+Building: dist//vercel/path0/drawer-preview-v4-final.html.br                   31.23kb / brotliCompress: 5.20kb
+Building: dist//vercel/path0/drawer-preview.html.br                            20.33kb / brotliCompress: 4.12kb
+Building: dist//vercel/path0/assets/CrmDashboardPage-DT5Dazlm.js.br            64.69kb / brotliCompress: 16.09kb
+Building: dist//vercel/path0/assets/DashboardPage-DoNEFszc.js.br               84.45kb / brotliCompress: 18.83kb
+Building: dist//vercel/path0/assets/ReportsPage-B9c9UhSA.js.br                 97.47kb / brotliCompress: 19.41kb
+Building: dist//vercel/path0/assets/vendor-react-CUeFU1cA.js.br                159.41kb / brotliCompress: 45.49kb
+Building: dist//vercel/path0/assets/vendor-supabase-vVB5Zwva.js.br             170.89kb / brotliCompress: 38.23kb
+Building: dist//vercel/path0/assets/ContactsPage-Cjb_YkEE.js.br                411.13kb / brotliCompress: 83.12kb
+Building: dist//vercel/path0/assets/xlsx-D_0l8YDs.js.br                        419.42kb / brotliCompress: 116.25kb
+Building: dist//vercel/path0/assets/vendor-recharts-DkoAkONI.js.br             423.99kb / brotliCompress: 91.52kb
+Building: dist//vercel/path0/assets/index-BOnS0rcF.js.br                       521.57kb / brotliCompress: 115.73kb
+Building: dist//vercel/path0/assets/exceljs.min-DYWM6Mwx.js.br                 917.14kb / brotliCompress: 212.66kb
+Building: Build Completed in /vercel/output [35s]
+Building: Deploying outputs...
+Building: Deployment completed
+Building: Creating build cache...
+[2K[1A[2K[GProduction: https://platform-erp-v2-df4mn1k4g-a7md3la21996-6026s-projects.vercel.app [56s]
+Completing...
+Aliased: https://platform-erp.com [56s]
+{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_9KZGQ3LVgutsfRgo6JSgF2eJBZMw",
+    "url": "https://platform-erp-v2-df4mn1k4g-a7md3la21996-6026s-projects.vercel.app",
+    "inspectorUrl": "https://vercel.com/a7md3la21996-6026s-projects/platform-erp-v2/9KZGQ3LVgutsfRgo6JSgF2eJBZMw",
+    "readyState": "READY",
+    "target": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_9KZGQ3LVgutsfRgo6JSgF2eJBZMw"
+  },
+  "message": "Deployment platform-erp-v2-df4mn1k4g-a7md3la21996-6026s-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel inspect platform-erp-v2-df4mn1k4g-a7md3la21996-6026s-projects.vercel.app",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod",
+      "when": "Promote to production"
+    }
+  ]
+}

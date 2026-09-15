@@ -300,7 +300,7 @@ export default function ContactsTable({
           <thead>
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
-              {hasCol('contact') && <th className={thCls}>{isRTL ? 'العميل' : 'Lead'}</th>}
+              {hasCol('contact') && <th className={`${thCls} w-[240px]`}>{isRTL ? 'العميل' : 'Lead'}</th>}
               {hasCol('phone') && <th className={`${thCls} w-[150px]`}>{isRTL ? 'الهاتف' : 'Phone'}</th>}
               {hasCol('assigned_to') && !isSalesAgent && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
               {hasCol('temperature') && <th className={`${thCls} w-[120px] hidden md:table-cell`}>{isRTL ? 'الحرارة' : 'Temperature'}</th>}
