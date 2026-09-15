@@ -36,11 +36,10 @@ export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return 
 // the new per-lead journey ladder on contacts.stage (forward-only). Kept here
 // so the card, table and drawer all render it identically.
 //
-// Feature flag: the stage UI (Leads filter chips + drawer stage picker) is
-// parked until we activate auto-advance and the user fills the column. Keep
-// this false in production; flip to true to light up the whole feature at once.
-// This replaces the old per-deploy "checkout the pre-stage files" isolation.
-export const STAGE_UI_ENABLED = false;
+// Feature flag: the stage UI (Leads filter chips + drawer stage picker + the
+// card/table badge). Stages move MANUALLY for now — no auto-advance engine yet
+// (deferred by request). Flip to false to park the whole feature again.
+export const STAGE_UI_ENABLED = true;
 export const CONTACT_STAGE = {
   new:         { ar: 'جديد',         en: 'New',         color: '#8A94A6' },
   contacted:   { ar: 'تم التواصل',   en: 'Contacted',   color: '#2F6BD3' },
