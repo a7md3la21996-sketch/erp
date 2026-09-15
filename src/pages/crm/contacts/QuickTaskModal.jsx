@@ -5,7 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Clock } from 'lucide-react';
 import { Button, Input, Select, DiscardConfirm } from '../../../components/ui/';
-import { createTask } from '../../../services/tasksService';
+import { createTask, TASK_TYPES } from '../../../services/tasksService';
 import { useEscClose, contactPropType } from './constants';
 import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
 
@@ -80,13 +80,9 @@ export default function QuickTaskModal({ contact, onClose }) {
     }
   };
 
-  const taskTypes = [
-    { value: 'followup', ar: 'متابعة', en: 'Follow-up' },
-    { value: 'call', ar: 'مكالمة', en: 'Call' },
-    { value: 'meeting', ar: 'اجتماع', en: 'Meeting' },
-    { value: 'email', ar: 'إيميل', en: 'Email' },
-    { value: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
-  ];
+  // One source of truth for task types — the shared TASK_TYPES map (was a
+  // hand-duplicated list here, which had drifted: it was missing 'general').
+  const taskTypes = Object.entries(TASK_TYPES).map(([value, v]) => ({ value, ...v }));
   const priorities = [
     { value: 'high', ar: 'عالية', en: 'High', color: '#D6403B' },
     { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#C9860A' },

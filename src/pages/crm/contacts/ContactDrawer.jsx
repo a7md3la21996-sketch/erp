@@ -822,12 +822,27 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   //   • audit field-edits + deals — Audit tab / deal record.
   const HIDDEN_TIMELINE_ACTIVITY_TYPES = new Set(['status_change', 'temperature_change', 'reassignment']);
   const timeline = useMemo(() => {
-    const items = [];
-    (activities || []).forEach(a => {
-      if (HIDDEN_TIMELINE_ACTIVITY_TYPES.has(a.type)) return;
-      items.push({ ...a, _type: 'activity', _date: a.created_at });
+    const acts = (activities || []).filter(a => !HIDDEN_TIMELINE_ACTIVITY_TYPES.has(a.type));
+    // A follow-up task created in the SAME log_interaction transaction as its
+    // activity shares its created_at to the millisecond (verified on live data:
+    // it's either an exact match or weeks apart — never a fuzzy few-seconds gap).
+    // Pair them so ONE action renders as ONE card: the follow-up shows as a
+    // compact "next step" line on the activity instead of a second full row that
+    // repeats the same actor + time.
+    const actByTs = new Map();
+    acts.forEach(a => {
+      const ts = a.created_at ? new Date(a.created_at).getTime() : null;
+      if (ts != null && !actByTs.has(ts)) actByTs.set(ts, a);
     });
-    (tasks || []).forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
+    const nextStepByActId = new Map();
+    const items = [];
+    (tasks || []).forEach(t => {
+      const ts = t.created_at ? new Date(t.created_at).getTime() : null;
+      const parent = ts != null ? actByTs.get(ts) : null;
+      if (parent) { nextStepByActId.set(parent.id, t); return; } // merged into its activity's card
+      items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date });
+    });
+    acts.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at, _nextStep: nextStepByActId.get(a.id) || null }));
     return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activities, tasks]);
@@ -1116,6 +1131,32 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 › {item.next_action}{item.next_action_date ? ` — ${item.next_action_date}` : ''}
               </div>
             )}
+            {/* Merged follow-up: the next-step task spawned by THIS activity in
+                the same instant. Shown as a compact line here (not a duplicate
+                row) — no repeated actor/time. Skipped for scheduled activities,
+                which already surface their own date + Complete/Cancel controls. */}
+            {item._nextStep && actStatus !== 'scheduled' && item._nextStep.status !== 'done' && item._nextStep.status !== 'cancelled' && (() => {
+              const ns = item._nextStep;
+              const due = ns.due_date ? new Date(ns.due_date) : null;
+              const overdue = due && due < new Date();
+              return (
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap px-2.5 py-1 rounded-md bg-brand-500/[0.06]">
+                  <span className="text-[10px] font-bold text-brand-500">{isRTL ? 'الخطوة الجاية' : 'Next step'}</span>
+                  {due && (
+                    <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                      <Clock size={9} /> {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}{overdue && (isRTL ? ' (متأخر)' : ' (Overdue)')}
+                    </span>
+                  )}
+                  {canEditContact && (
+                    <button onClick={(e) => { e.stopPropagation(); setCompleteTask({ ...ns, contact_id: ns.contact_id || contact.id, contact_name: ns.contact_name || contact.full_name }); }}
+                      className={`${isRTL ? 'me-0' : 'ms-auto'} flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0`}
+                      style={{ background: '#158A5722', color: '#158A57', marginInlineStart: 'auto' }}>
+                      <Check size={10} /> {isRTL ? 'إنهاء' : 'Complete'}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </>
         );
       }
