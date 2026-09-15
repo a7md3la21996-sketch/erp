@@ -563,6 +563,8 @@ export default function ContactsPage() {
     } catch (err) {
       if (err?.message === 'FOLLOWUP_REQUIRED') {
         toast.warning(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else if (err?.message === 'NOTE_REQUIRED') {
+        toast.warning(isRTL ? 'اكتب اللي اتقال (الملاحظة إجبارية)' : 'A note is required');
       } else {
         reportError('ContactsPage', 'handleQuickAction', err);
         toast.error(translateErr(err));

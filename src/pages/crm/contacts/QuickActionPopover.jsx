@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import { Zap } from 'lucide-react';
-import { isFollowUpRequired } from '../../../services/interactionsService';
+import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
 
 // datetime-local wants a LOCAL wall-clock string (avoid the UTC-offset shift).
 const toLocalInput = (d) => {
@@ -26,6 +26,9 @@ export default function QuickActionPopover({
   const closing = quickActionForm.result === 'not_interested';
   const followUpRequired = !closing && isFollowUpRequired(quickActionForm.type, quickActionTarget.contact_status);
   const resultMissing = (QUICK_RESULTS[quickActionForm.type] || []).length > 0 && !quickActionForm.result;
+  // An engaged result (answered / replied) must carry a written note here too.
+  const noteRequired = isNoteRequired(quickActionForm.type, quickActionForm.result);
+  const noteMissing = noteRequired && !(quickActionForm.description || '').trim();
 
   return (
     <div className="fixed inset-0 z-[150]" onClick={() => setQuickActionTarget(null)}>
@@ -80,13 +83,16 @@ export default function QuickActionPopover({
           </div>
         )}
 
-        {/* Notes */}
+        {/* Notes — mandatory after an engaged result (answered / replied) */}
+        {noteRequired && (
+          <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اكتب اللي اتقال' : 'What was said'} <span className="text-red-500">*</span></div>
+        )}
         <textarea
           rows={2}
           placeholder={isRTL ? 'ملاحظات...' : 'Notes...'}
           value={quickActionForm.description}
           onChange={e => setQuickActionForm(f => ({ ...f, description: e.target.value }))}
-          className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none mb-3 box-border"
+          className={`w-full px-3 py-2 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none mb-3 box-border ${noteMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`}
         />
 
         {/* Follow-up — mandatory for call/whatsapp/email (matches everywhere else) */}
@@ -113,7 +119,7 @@ export default function QuickActionPopover({
           <button onClick={() => setQuickActionTarget(null)} className="px-3 py-1.5 rounded-lg text-xs border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
-          <button onClick={() => handleQuickAction(quickActionTarget)} disabled={savingQuickAction || resultMissing || (followUpRequired && !quickActionForm.followupDate)}
+          <button onClick={() => handleQuickAction(quickActionTarget)} disabled={savingQuickAction || resultMissing || noteMissing || (followUpRequired && !quickActionForm.followupDate)}
             className="px-3 py-1.5 rounded-lg text-xs bg-brand-500 text-white border border-brand-500 cursor-pointer hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
             <Zap size={11} />
             {savingQuickAction ? '...' : (isRTL ? 'حفظ' : 'Save')}
