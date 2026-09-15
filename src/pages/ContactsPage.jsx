@@ -28,7 +28,7 @@ import { validateAgentNames } from '../utils/agentValidation';
 import { getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input } from '../components/ui';
+import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input, getSmartFilterChipLabel } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useContactsFilters } from '../hooks/useContactsFilters';
 import useCrmPermissions from '../hooks/useCrmPermissions';
@@ -150,6 +150,7 @@ export default function ContactsPage() {
 
   const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
   const [saveFilterModalOpen, setSaveFilterModalOpen] = useState(false);
+  const [savedFiltersOpen, setSavedFiltersOpen] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -2203,6 +2204,48 @@ export default function ContactsPage() {
                 </select>{chev}
               </div>
               </>)}
+              {/* Saved filters — tucked into a bookmark dropdown (was a permanent
+                  row above the table). Shows when there's something to save or
+                  saved filters exist. */}
+              {(savedFilters.length > 0 || smartFilters.length > 0) && (
+                <div className="relative inline-block">
+                  <button type="button" onClick={() => setSavedFiltersOpen(v => !v)}
+                    className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs cursor-pointer border ${savedFiltersOpen ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
+                    <Bookmark size={13} /> {isRTL ? 'المحفوظة' : 'Saved'}
+                    {savedFilters.length > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-[#6B8DB5] text-white text-[9px] font-bold flex items-center justify-center">{savedFilters.length}</span>}
+                  </button>
+                  {savedFiltersOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[199]" onClick={() => setSavedFiltersOpen(false)} />
+                      <div className="absolute top-full mt-1.5 start-0 z-[200] min-w-[230px] max-h-[320px] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg p-1.5" dir={isRTL ? 'rtl' : 'ltr'}>
+                        {smartFilters.length > 0 && (
+                          <button onClick={() => { setSaveFilterModalOpen(true); setSavedFiltersOpen(false); }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs cursor-pointer border-none bg-transparent text-brand-500 hover:bg-brand-500/10 font-semibold">
+                            <Save size={12} /> {isRTL ? 'حفظ الفلتر الحالي' : 'Save current filter'}
+                          </button>
+                        )}
+                        {savedFilters.length > 0 && smartFilters.length > 0 && <div className="h-px bg-edge dark:bg-edge-dark my-1" />}
+                        {savedFilters.length > 0 ? savedFilters.map((sf) => {
+                          const isActive = JSON.stringify(smartFilters) === JSON.stringify(sf.filters) && filterType === sf.filterType && showBlacklisted === sf.showBlacklisted && sortBy === sf.sortBy;
+                          return (
+                            <div key={sf.id} className="flex items-center gap-1">
+                              <button
+                                onClick={() => { setSmartFilters(sf.filters); setFilterType(sf.filterType); setShowBlacklisted(sf.showBlacklisted); setSortBy(sf.sortBy); setSavedFiltersOpen(false); }}
+                                className={`flex-1 text-start px-2.5 py-2 rounded-lg text-xs cursor-pointer border-none bg-transparent hover:bg-brand-500/10 truncate ${isActive ? 'text-brand-500 font-semibold' : 'text-content dark:text-content-dark'}`}>
+                                {isActive && '● '}{sf.name}
+                              </button>
+                              <button onClick={() => { const updated = savedFilters.filter(f => f.id !== sf.id); setSavedFilters(updated); localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated)); }}
+                                className="px-2 py-2 bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:text-red-500 leading-none">
+                                <XIcon size={11} />
+                              </button>
+                            </div>
+                          );
+                        }) : (smartFilters.length === 0 && <div className="px-2.5 py-2 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا يوجد فلاتر محفوظة' : 'No saved filters'}</div>)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </>
           );
         })()}
@@ -2288,12 +2331,10 @@ export default function ContactsPage() {
           if (f.field === 'assigned_to_name') return;
           if (f.field === 'contact_status' && typeof f.value === 'string' && f.value.startsWith('__')) return;
           if (typeof f.value === 'string' && f.value.startsWith('__')) return;
-          const fld = (SMART_FIELDS || []).find(sf => sf.id === f.field);
-          const fldLabel = fld ? (isRTL ? fld.label : (fld.labelEn || fld.label)) : f.field;
-          const valLabel = Array.isArray(f.value)
-            ? f.value.map(v => fld?.options?.find(o => o.value === v)?.[isRTL ? 'label' : 'labelEn'] || fld?.options?.find(o => o.value === v)?.label || v).join(isRTL ? '، ' : ', ')
-            : (fld?.options?.find(o => o.value === f.value)?.[isRTL ? 'label' : 'labelEn'] || fld?.options?.find(o => o.value === f.value)?.label || f.value);
-          chips.push(pill(`f-smart-${i}`, `${fldLabel}: ${valLabel}`, BRAND, () => setSmartFilters(prev => prev.filter((_, idx) => idx !== i))));
+          // Use SmartFilter's own labeller so the operator is honoured — an
+          // "is not" reads as a negation, not a plain equals.
+          const label = getSmartFilterChipLabel(f, SMART_FIELDS || [], isRTL);
+          chips.push(pill(`f-smart-${i}`, label, BRAND, () => setSmartFilters(prev => prev.filter((_, idx) => idx !== i))));
         });
 
         if (chips.length === 0) return null;
@@ -2317,61 +2358,7 @@ export default function ContactsPage() {
         );
       })()}
 
-      {/* Saved Filters */}
-      {(savedFilters.length > 0 || smartFilters.length > 0) && (
-        <div className="flex gap-2 items-center flex-wrap mt-2 px-1">
-          {smartFilters.length > 0 && (
-            <button
-              onClick={() => setSaveFilterModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-brand-500/30 bg-brand-500/[0.06] text-brand-500 cursor-pointer hover:bg-brand-500/[0.12] transition-colors font-medium"
-            >
-              <Save size={11} />
-              {isRTL ? 'حفظ الفلتر' : 'Save Filter'}
-            </button>
-          )}
-          {savedFilters.length > 0 && (
-            <>
-              <Bookmark size={12} className="text-[#6B8DB5] shrink-0" />
-              {savedFilters.map((sf) => {
-                const isActive = JSON.stringify(smartFilters) === JSON.stringify(sf.filters) && filterType === sf.filterType && showBlacklisted === sf.showBlacklisted && sortBy === sf.sortBy;
-                return (
-                  <span
-                    key={sf.id}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors ${
-                      isActive
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
-                        : 'border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'
-                    }`}
-                  >
-                    <button
-                      onClick={() => {
-                        setSmartFilters(sf.filters);
-                        setFilterType(sf.filterType);
-                        setShowBlacklisted(sf.showBlacklisted);
-                        setSortBy(sf.sortBy);
-                      }}
-                      className="bg-transparent border-none p-0 cursor-pointer text-inherit font-inherit text-[11px]"
-                    >
-                      {sf.name}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const updated = savedFilters.filter(f => f.id !== sf.id);
-                        setSavedFilters(updated);
-                        localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
-                      }}
-                      className={`bg-transparent border-none p-0 cursor-pointer leading-none ${isActive ? 'text-brand-500 hover:text-red-500' : 'text-content-muted dark:text-content-muted-dark hover:text-red-500'}`}
-                    >
-                      <XIcon size={10} />
-                    </button>
-                  </span>
-                );
-              })}
-            </>
-          )}
-        </div>
-      )}
+      {/* (Saved filters moved into the "Saved" bookmark dropdown in the toolbar.) */}
       </div>
 
       {/* Select All Pages Banner */}

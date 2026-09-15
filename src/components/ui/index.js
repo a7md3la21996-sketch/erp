@@ -9,7 +9,7 @@ export { TableSkeleton, KpiSkeleton, DashboardSkeleton, ListSkeleton, FormSkelet
 export { default as FilterPill } from './FilterPill';
 export { default as EmptyState } from './EmptyState';
 export { default as ExportButton } from './ExportButton';
-export { default as SmartFilter, applySmartFilters } from './SmartFilter';
+export { default as SmartFilter, applySmartFilters, getSmartFilterChipLabel } from './SmartFilter';
 export { default as Pagination } from './Pagination';
 export { default as DocumentsSection } from './DocumentsSection';
 export { default as DiscardConfirm } from './DiscardConfirm';

@@ -53,6 +53,26 @@ const OPERATORS = {
 const NO_VALUE_OPS = ['last_7', 'last_30', 'this_month', 'this_week'];
 const MULTI_OPS = ['in', 'not_in'];
 
+// Human label for one smart filter, INCLUDING its operator (so "is not" reads
+// as a negation, not a plain equals). Exported so a page rendering its own
+// active-filters bar labels advanced filters identically to SmartFilter itself.
+export function getSmartFilterChipLabel(f, fields = [], isRTL = false) {
+  const field = fields.find(x => x.id === f.field);
+  const fLabel = (isRTL ? field?.label : (field?.labelEn || field?.label)) || f.field;
+  const opObj = OPERATORS[field?.type || 'text']?.find(o => o.id === f.operator);
+  const opLabel = (isRTL ? opObj?.ar : opObj?.en) || f.operator || '';
+  const optLabel = (v) => {
+    if (field?.type === 'select' && field.options) {
+      const opt = field.options.find(o => o.value === v);
+      return isRTL ? (opt?.label || v) : (opt?.labelEn || opt?.label || v);
+    }
+    return v;
+  };
+  if (NO_VALUE_OPS.includes(f.operator)) return `${fLabel} ${opLabel}`.trim();
+  if (Array.isArray(f.value)) return `${fLabel} ${opLabel} [${f.value.map(optLabel).join(isRTL ? '، ' : ', ')}]`;
+  return `${fLabel} ${opLabel} "${optLabel(f.value)}"`;
+}
+
 export default function SmartFilter({
   fields = [],
   filters = [],
@@ -215,32 +235,7 @@ export default function SmartFilter({
     );
   };
 
-  const getChipLabel = useCallback((f) => {
-    const field = getField(f.field);
-    const fLabel = isRTL ? field?.label : (field?.labelEn || field?.label);
-    const opObj = OPERATORS[field?.type || 'text']?.find(o => o.id === f.operator);
-    const opLabel = isRTL ? opObj?.ar : opObj?.en;
-
-    if (NO_VALUE_OPS.includes(f.operator)) return `${fLabel} ${opLabel}`;
-
-    if (Array.isArray(f.value)) {
-      const labels = f.value.map(v => {
-        if (field?.type === 'select' && field.options) {
-          const opt = field.options.find(o => o.value === v);
-          return isRTL ? (opt?.label || v) : (opt?.labelEn || opt?.label || v);
-        }
-        return v;
-      });
-      return `${fLabel} ${opLabel} [${labels.join(', ')}]`;
-    }
-
-    let valLabel = f.value;
-    if (field?.type === 'select' && field.options) {
-      const opt = field.options.find(o => o.value === f.value);
-      valLabel = isRTL ? (opt?.label || f.value) : (opt?.labelEn || opt?.label || f.value);
-    }
-    return `${fLabel} ${opLabel} "${valLabel}"`;
-  }, [fields, isRTL]);
+  const getChipLabel = useCallback((f) => getSmartFilterChipLabel(f, fields, isRTL), [fields, isRTL]);
 
   const hasActiveFilters = filters.length > 0 || (search && search.length > 0);
 
