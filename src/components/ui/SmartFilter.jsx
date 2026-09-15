@@ -74,6 +74,9 @@ export default function SmartFilter({
   // this key. Empty key disables the feature so other consumers (e.g.
   // tables that don't want recall) opt-in explicitly.
   recentSearchesKey,
+  // When the page renders its own unified active-filters bar, hide SmartFilter's
+  // built-in chip row so applied filters aren't shown twice.
+  hideActiveChips = false,
 }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -543,7 +546,7 @@ export default function SmartFilter({
       </div>
 
       {/* Active filter chips */}
-      {filters.length > 0 && (
+      {!hideActiveChips && filters.length > 0 && (
         <div className="flex gap-1.5 flex-wrap mt-2 px-1 items-center">
           {filters.map((f, i) => (
             <div key={i} className="inline-flex items-center gap-1">

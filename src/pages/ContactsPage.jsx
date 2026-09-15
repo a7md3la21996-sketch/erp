@@ -2097,6 +2097,7 @@ export default function ContactsPage() {
         filterLabel="متقدم"
         filterLabelEn="Advanced"
         recentSearchesKey="platform_recent_searches_contacts"
+        hideActiveChips
         sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
         onSortChange={setSortBy}
