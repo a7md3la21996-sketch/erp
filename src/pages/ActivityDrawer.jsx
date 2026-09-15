@@ -10,25 +10,12 @@ import {
 import { ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Textarea, Badge } from '../components/ui';
 import { useEscClose, useFocusTrap } from '../utils/hooks';
+import { ResultBadge } from './crm/contacts/constants';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
   RefreshCw, CheckSquare,
-};
-
-const RESULT_LABELS = {
-  answered:      { ar: 'رد',          en: 'Answered',       color: '#158A57' },
-  no_answer:     { ar: 'لم يرد',      en: 'No Answer',      color: '#C9860A' },
-  busy:          { ar: 'مشغول',       en: 'Busy',           color: '#D6403B' },
-  switched_off:  { ar: 'مغلق',        en: 'Switched Off',   color: '#6b7280' },
-  wrong_number:  { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#5A63C4' },
-  interested:    { ar: 'مهتم',        en: 'Interested',     color: '#158A57' },
-  not_interested:{ ar: 'غير مهتم',   en: 'Not Interested', color: '#D6403B' },
-  sent:          { ar: 'تم الإرسال',   en: 'Sent',           color: '#2F6BD3' },
-  completed:     { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
-  cancelled:     { ar: 'ملغي',        en: 'Cancelled',      color: '#D6403B' },
-  rescheduled:   { ar: 'تم التأجيل',  en: 'Rescheduled',    color: '#C9860A' },
 };
 
 const DEPT_LABELS = {
@@ -50,22 +37,23 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
   useEscClose(onClose);
 
   const [editing, setEditing] = useState(false);
-  const [editNotes, setEditNotes] = useState(activity?.notes || '');
+  // The note now lives in `description` (the result/type are structured); edit
+  // that same field the display shows, falling back to legacy `notes`.
+  const [editNotes, setEditNotes] = useState(activity?.description || activity?.notes || '');
   const [saving, setSaving] = useState(false);
-  useEffect(() => { setEditNotes(activity?.notes || ''); setEditing(false); }, [activity?.id]);
+  useEffect(() => { setEditNotes(activity?.description || activity?.notes || ''); setEditing(false); }, [activity?.id]);
 
   if (!activity) return null;
 
   const typeDef = ACTIVITY_TYPES[activity.type] || ACTIVITY_TYPES.note;
   const Ic = ICONS[typeDef.icon] || FileText;
   const deptDef = DEPT_LABELS[activity.dept];
-  const resultDef = activity.result ? RESULT_LABELS[activity.result] : null;
 
   const handleSaveNotes = async () => {
     if (!onUpdate) return;
     setSaving(true);
     try {
-      await onUpdate(activity.id, { notes: editNotes });
+      await onUpdate(activity.id, { description: editNotes });
       setEditing(false);
     } finally {
       setSaving(false);
@@ -154,16 +142,8 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
               <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark mb-1">
                 {isRTL ? 'النتيجة' : 'Result'}
               </p>
-              {resultDef ? (
-                <span
-                  className="text-sm font-bold px-2 py-0.5 rounded-md inline-block"
-                  style={{ background: resultDef.color + '18', color: resultDef.color }}
-                >
-                  {isRTL ? resultDef.ar : resultDef.en}
-                </span>
-              ) : (
-                <span className="text-sm text-content-muted dark:text-content-muted-dark">—</span>
-              )}
+              <ResultBadge result={activity.result} isRTL={isRTL} className="!text-sm !px-2 !py-0.5" />
+              {!activity.result && <span className="text-sm text-content-muted dark:text-content-muted-dark">—</span>}
             </div>
 
             {/* Status */}
@@ -245,7 +225,7 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
               </p>
               {onUpdate && !editing && (
                 <button
-                  onClick={() => { setEditNotes(activity.notes || ''); setEditing(true); }}
+                  onClick={() => { setEditNotes(activity.description || activity.notes || ''); setEditing(true); }}
                   className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark hover:text-brand-500"
                 >
                   <Pencil size={12} />
@@ -271,23 +251,11 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
                 </div>
               </div>
             ) : (
-              <p className="m-0 text-sm text-content dark:text-content-dark leading-relaxed whitespace-pre-wrap">
-                {activity.notes || activity.description || (isRTL ? 'لا توجد ملاحظات' : 'No notes')}
+              <p dir="auto" className="m-0 text-sm text-content dark:text-content-dark leading-relaxed whitespace-pre-wrap">
+                {activity.description || activity.notes || (isRTL ? 'لا توجد ملاحظات' : 'No notes')}
               </p>
             )}
           </div>
-
-          {/* Description (if different from notes) */}
-          {activity.description && activity.description !== activity.notes && (
-            <div className="rounded-xl p-4 bg-surface-bg dark:bg-surface-bg-dark mb-4">
-              <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark mb-2">
-                {isRTL ? 'الوصف' : 'Description'}
-              </p>
-              <p className="m-0 text-sm text-content dark:text-content-dark leading-relaxed">
-                {activity.description}
-              </p>
-            </div>
-          )}
 
           {/* Timestamps */}
           <div className="rounded-xl p-4 bg-surface-bg dark:bg-surface-bg-dark">
