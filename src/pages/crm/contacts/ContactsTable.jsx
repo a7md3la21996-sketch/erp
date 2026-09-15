@@ -292,22 +292,26 @@ export default function ContactsTable({
 
       {/* ═══ DESKTOP TABLE VIEW ═══ */}
       <div className="hidden md:block overflow-x-auto">
-        <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[500px]">
+        {/* table-fixed: columns keep a stable width regardless of cell content
+            (long names no longer widen/shift the table). Every column has an
+            explicit width EXCEPT "Lead", which flexes to fill the remainder;
+            overflowing text is clipped with an ellipsis in the cells. */}
+        <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full table-fixed border-collapse min-w-[720px]">
           <thead>
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
               {hasCol('contact') && <th className={thCls}>{isRTL ? 'العميل' : 'Lead'}</th>}
-              {hasCol('phone') && <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>}
-              {hasCol('assigned_to') && !isSalesAgent && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
-              {hasCol('temperature') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحرارة' : 'Temperature'}</th>}
-              {hasCol('job_title') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</th>}
-              {hasCol('company') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الشركة' : 'Company'}</th>}
-              {hasCol('contact_status') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
-              {hasCol('source') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
-              {hasCol('date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
-              {hasCol('last_feedback') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
-              {hasCol('next_action') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
-              {hasCol('actions') && <th className={`${thCls} text-center`}>{t('common.actions')}</th>}
+              {hasCol('phone') && <th className={`${thCls} w-[150px]`}>{isRTL ? 'الهاتف' : 'Phone'}</th>}
+              {hasCol('assigned_to') && !isSalesAgent && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
+              {hasCol('temperature') && <th className={`${thCls} w-[120px] hidden md:table-cell`}>{isRTL ? 'الحرارة' : 'Temperature'}</th>}
+              {hasCol('job_title') && <th className={`${thCls} w-[140px] hidden md:table-cell`}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</th>}
+              {hasCol('company') && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'الشركة' : 'Company'}</th>}
+              {hasCol('contact_status') && <th className={`${thCls} w-[130px] hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
+              {hasCol('source') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
+              {hasCol('date') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
+              {hasCol('last_feedback') && <th className={`${thCls} w-[180px] hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
+              {hasCol('next_action') && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
+              {hasCol('actions') && <th className={`${thCls} w-[110px] text-center`}>{t('common.actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -478,12 +482,12 @@ export default function ContactsTable({
 
                 {/* Job Title — HR */}
                 {hasCol('job_title') && <td className={`${tdCls} hidden md:table-cell`}>
-                  <span className="text-xs text-content dark:text-content-dark">{c.job_title || '—'}</span>
+                  <span className="text-xs text-content dark:text-content-dark block truncate" title={c.job_title || ''}>{c.job_title || '—'}</span>
                 </td>}
 
                 {/* Company — Finance & Operations */}
                 {hasCol('company') && <td className={`${tdCls} hidden md:table-cell`}>
-                  <span className="text-xs text-content dark:text-content-dark">{c.company || '—'}</span>
+                  <span className="text-xs text-content dark:text-content-dark block truncate" title={c.company || ''}>{c.company || '—'}</span>
                 </td>}
 
                 {/* Contact Status — per-agent only; one chip per assigned sales. */}
@@ -546,7 +550,7 @@ export default function ContactsTable({
 
                 {/* Source (+ campaign) */}
                 {hasCol('source') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  <div className="text-xs text-content dark:text-content-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
+                  <div className="text-xs text-content dark:text-content-dark truncate">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                 </td>}
 
