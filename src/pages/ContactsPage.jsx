@@ -2116,6 +2116,13 @@ export default function ContactsPage() {
           const advCount = [filterType, filterActivity, filterTemp].filter(v => v !== 'all').length;
           const curStatusDef = STATUS_DEFS.find(s => s.value === filterStatus && s.value !== 'disqualified');
           const curCatDef = leadCategoryDefs.find(c => c.key === categoryFilter);
+          // Assignee filter — only for viewers who see more than their own leads.
+          // Names come from the RLS-scoped userMap; filters via the same
+          // assigned_to_name smart-filter the fetch already reads.
+          const assigneeNames = [...new Set([...userMap.values()].filter(Boolean))].sort((a, b) => a.localeCompare(b, isRTL ? 'ar' : 'en'));
+          const agentF = smartFilters.find(f => f.field === 'assigned_to_name' && f.operator === 'is');
+          const curAssignee = typeof agentF?.value === 'string' ? agentF.value : '';
+          const showAssignee = profile?.role !== 'sales_agent' && assigneeNames.length > 0;
           return (
             <>
               {/* Status — primary pipeline filter, always visible as a dropdown
@@ -2140,6 +2147,24 @@ export default function ContactsPage() {
                   ))}
                 </select>{chev}
               </div>
+              {/* Assignee (managers/admins) — filter by the agent a lead is on. */}
+              {showAssignee && (
+                <div className="relative inline-block">
+                  <select value={curAssignee}
+                    onChange={e => {
+                      const v = e.target.value;
+                      setSmartFilters(prev => {
+                        const rest = prev.filter(f => f.field !== 'assigned_to_name');
+                        return v ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest;
+                      });
+                      setPage(1);
+                    }}
+                    className={ddCls} style={curAssignee ? { borderColor: '#2F6BD3', color: '#2F6BD3' } : undefined}>
+                    <option value="">{isRTL ? 'كل الموظفين' : 'All Assignees'}</option>
+                    {assigneeNames.map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>{chev}
+                </div>
+              )}
               {/* "Filters" toggle — reveals the advanced dropdowns (kept hidden
                   so they don't crowd the bar; active ones show as pills below). */}
               <button type="button" onClick={() => setShowAdvanced(v => !v)}
