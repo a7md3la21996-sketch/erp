@@ -2021,9 +2021,8 @@ export default function ContactsPage() {
         )}
       </div>
 
-      {/* Filter toolbar + chips wrapped in a flex-col so the chip row can sit
-          BELOW the search / filter bar (v1 header style: toolbar above, chips
-          just above the list) via `order-last` — no physical JSX reorder. */}
+      {/* Chip row sits ABOVE the search / filter toolbar (chips render first in
+          JSX order; the toolbar + active-filters bar follow below). */}
       <div className="flex flex-col">
       {(() => {
         // Chip visuals match the redesign artifact: pill with a subtle shadow,
@@ -2047,7 +2046,7 @@ export default function ContactsPage() {
         ];
 
         return (
-          <div className="order-last flex gap-2 mb-3 mt-1 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex gap-2 mb-3 mt-1 items-center flex-nowrap overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-visible pb-1 -mx-4 px-4 md:mx-0 md:px-0">
             {/* Follow-up (daily driver) — connected segment so the primary,
                 most-used lens reads as one control, distinct from the
                 secondary status/category chips beside it. */}
