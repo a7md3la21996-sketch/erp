@@ -61,6 +61,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
   const [followUpNotes, setFollowUpNotes] = useState('');
   const [changeStatus, setChangeStatus] = useState(false);
   const [newStatus, setNewStatus] = useState('');
+  const [noNextStep, setNoNextStep] = useState(false); // explicit "close without a next step"
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useRef(null);
@@ -76,8 +77,9 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
   const resultRequired = currentResults.length > 0;
   const noteRequired = isNoteRequired(actType, actResult); // engaged result → note mandatory
   // Closing a call/whatsapp/meeting/email opens the next step (mirrors the RPC's
-  // FOLLOWUP_REQUIRED). A pure note has no next-step requirement.
-  const followUpRequired = actType !== 'note';
+  // FOLLOWUP_REQUIRED) — unless the rep explicitly closes with no next step
+  // (deal done / dead). A pure note never requires one.
+  const followUpRequired = actType !== 'note' && !noNextStep;
   const canSave = (!resultRequired || actResult)
     && (!noteRequired || actNotes.trim())
     && (!followUpRequired || followUpDate)
@@ -102,8 +104,12 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
             assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '',
           });
         }
-        if (changeStatus && newStatus && task.contact_id) {
-          await updateContact(task.contact_id, { contact_status: newStatus });
+        // Bump the lead's last-activity (logInteraction does this on the task
+        // path; the in-place path must do it too) + optional status change.
+        if (task.contact_id) {
+          const cu = { last_activity_at: new Date().toISOString() };
+          if (changeStatus && newStatus) cu.contact_status = newStatus;
+          await updateContact(task.contact_id, cu);
         }
       } else {
         if (task.contact_id) {
@@ -114,6 +120,8 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
             followUp: (followUpRequired && followUpDate)
               ? { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`, dueAt: followUpDate, notes: followUpNotes || '', contactName: task.contact_name || '' }
               : null,
+            // Explicit no-next-step close: tell the gate to allow it.
+            skipFollowUpEnforcement: noNextStep,
             statusChange: (changeStatus && newStatus) ? { from: null, to: newStatus } : null,
             actor: { id: profile?.id || null, name_ar: profile?.full_name_ar || '', name_en: profile?.full_name_en || '' },
           });
@@ -194,15 +202,25 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
               placeholder={isRTL ? 'تفاصيل / اللي اتقال...' : 'Details / what was said...'} />
           </div>
 
-          {/* Next step (follow-up) */}
-          {followUpRequired && (
+          {/* Next step (follow-up) — required unless the rep closes with none */}
+          {actType !== 'note' && (
             <div className="border-t border-edge dark:border-edge-dark pt-3 mt-3">
-              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الخطوة الجاية (موعد المتابعة)' : 'Next step (follow-up)'} <span className="text-red-500">*</span></label>
-              <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-                className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-              <input type="text" value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)}
-                placeholder={isRTL ? 'ملاحظة المتابعة (اختياري)' : 'Follow-up note (optional)'}
-                className="w-full mt-2 px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'الخطوة الجاية (موعد المتابعة)' : 'Next step (follow-up)'} {!noNextStep && <span className="text-red-500">*</span>}</label>
+                <label className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark cursor-pointer select-none">
+                  <input type="checkbox" checked={noNextStep} onChange={e => setNoNextStep(e.target.checked)} className="cursor-pointer" />
+                  {isRTL ? 'مفيش خطوة جاية' : 'No next step'}
+                </label>
+              </div>
+              {!noNextStep && (
+                <>
+                  <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                  <input type="text" value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)}
+                    placeholder={isRTL ? 'ملاحظة المتابعة (اختياري)' : 'Follow-up note (optional)'}
+                    className="w-full mt-2 px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                </>
+              )}
             </div>
           )}
 
