@@ -85,7 +85,9 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
   // sections (schedule, activity notes, task type/priority/notes, change status)
   // collapse behind a "More options" toggle — leaving just result + follow-up
   // date + save for the common case.
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Form is fully expanded by default — every field (schedule / status / task
+  // details / notes) shows at once; no "More options" gate.
+  const [showAdvanced] = useState(true);
   const showAdv = showAdvanced;
 
   // Quick follow-up presets (hours/days). Day presets land at 10:00 AM.
@@ -366,14 +368,6 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
           )}
         </div>
       </>)}
-
-      {/* ── "More options" toggle — reveals schedule / status / task details ── */}
-      {!showAdvanced && (
-        <button type="button" onClick={() => setShowAdvanced(true)}
-          className="text-[11px] font-semibold text-brand-500 hover:text-brand-600 bg-transparent border-none cursor-pointer inline-flex items-center gap-1 px-3 mt-1">
-          <Zap size={11} /> {isRTL ? 'خيارات أكثر' : 'More options'}
-        </button>
-      )}
 
       {/* ── Save / Cancel ── */}
       <div className="flex gap-2 justify-end mt-3 pt-3 border-t border-edge dark:border-edge-dark">
