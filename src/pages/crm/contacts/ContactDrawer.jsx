@@ -546,6 +546,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     } catch (err) {
       if (err?.message === 'FOLLOWUP_REQUIRED') {
         toast.error(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else if (err?.message === 'NOTE_REQUIRED') {
+        toast.error(isRTL ? 'اكتب اللي اتقال (الملاحظة إجبارية)' : 'A note is required');
       } else {
         reportError('ContactDrawer', 'handleLogInteraction', err);
         toast.error(err?.message || (isRTL ? 'فشل الحفظ' : 'Save failed'));

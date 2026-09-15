@@ -25,6 +25,27 @@ export function isFollowUpRequired(type, statusTo) {
   return FOLLOWUP_REQUIRED_TYPES.has(type);
 }
 
+// ── Mandatory note after an ENGAGED result ────────────────────────────────
+// When the contact actually engaged (a call was answered, a WhatsApp/email was
+// replied to, a meeting was attended, a site visit happened) the agent MUST
+// write down what was said — an engaged touch with no note is a lost outcome.
+// Non-engaged results (no answer, seen-only, cancelled, no-show…) stay optional.
+//
+// Hardcoded on purpose (fast, one source of truth); the DB RPC enforces the
+// SAME set so it can't be bypassed from any entry point. Keep the two in sync.
+export const ENGAGED_RESULTS = {
+  call: new Set(['answered']),
+  whatsapp: new Set(['replied']),
+  email: new Set(['replied']),
+  meeting: new Set(['attended']),
+  visit: new Set(['visited']),
+};
+
+export function isNoteRequired(type, result) {
+  if (!type || !result) return false;
+  return ENGAGED_RESULTS[type]?.has(result) || false;
+}
+
 /**
  * Log an interaction on a lead atomically (see log_interaction RPC).
  *
@@ -81,6 +102,7 @@ export async function logInteraction(contactId, payload = {}) {
 
   if (error) {
     if (/FOLLOWUP_REQUIRED/.test(error.message || '')) throw new Error('FOLLOWUP_REQUIRED');
+    if (/NOTE_REQUIRED/.test(error.message || '')) throw new Error('NOTE_REQUIRED');
     reportError('interactionsService', 'logInteraction', error);
     throw new Error(error.message || 'Failed to log interaction');
   }

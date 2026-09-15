@@ -43,6 +43,8 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     // A logged (happened) meeting must set the next step. A scheduled meeting IS
     // the next step, so its follow-up is auto-derived from the meeting date.
     if (!scheduled && !followupAt) { setError(isRTL ? 'حدّد موعد المتابعة' : 'Pick a follow-up date'); return; }
+    // A meeting that happened = the lead engaged, so its outcome is mandatory.
+    if (!scheduled && !outcome.trim()) { setError(isRTL ? 'اكتب نتيجة الاجتماع' : 'Write the meeting outcome'); return; }
     setSaving(true); setError('');
     const typeLabel = (TYPES.find(t => t.key === subtype) || {})[isRTL ? 'ar' : 'en'];
     const desc = [typeLabel, location && (isRTL ? `المكان: ${location}` : `at ${location}`), note].filter(Boolean).join(' — ');
@@ -120,7 +122,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
 
           {!scheduled && (
             <div>
-              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Outcome'}</label>
+              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Outcome'} <span className="text-red-500">*</span></label>
               <Input value={outcome} onChange={e => setOutcome(e.target.value)} placeholder={isRTL ? 'مهتم / طلب عرض / ...' : 'Interested / wants offer / ...'} />
             </div>
           )}

@@ -5,7 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input, Select, Textarea } from '../../../components/ui/';
-import { logInteraction } from '../../../services/interactionsService';
+import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
 import { contactPropType } from './constants';
 
 const CALL_RESULTS = [
@@ -87,6 +87,7 @@ export default function LogCallModal({ contact, onClose }) {
 
   const handleSave = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
+    if (isNoteRequired('call', callResult) && !callNotes.trim()) { toast.warning(isRTL ? 'اكتب اللي اتقال في المكالمة' : 'Write what was said on the call'); return; }
     if (!followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
     setSaving(true);
 
@@ -113,6 +114,8 @@ export default function LogCallModal({ contact, onClose }) {
     } catch (err) {
       if (err?.message === 'FOLLOWUP_REQUIRED') {
         toast.warning(isRTL ? 'لازم تحدّد موعد متابعة' : 'A follow-up date is required');
+      } else if (err?.message === 'NOTE_REQUIRED') {
+        toast.warning(isRTL ? 'اكتب اللي اتقال في المكالمة' : 'Write what was said on the call');
       } else {
         toast.error(isRTL ? `فشل حفظ المكالمة: ${err.message || 'خطأ غير معروف'}` : `Failed to save call: ${err.message || 'Unknown error'}`);
       }
@@ -151,9 +154,9 @@ export default function LogCallModal({ contact, onClose }) {
           }}>{isRTL ? r.ar : r.en}</button>
         ))}
       </div>
-      {/* Notes */}
-      <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}</div>
-      <Textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} className="!resize-none mb-4" placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
+      {/* Notes — mandatory when the call was answered (engaged result) */}
+      <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}{isNoteRequired('call', callResult) && <span className="text-red-500"> *</span>}</div>
+      <Textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} className={`!resize-none mb-4 ${isNoteRequired('call', callResult) && !callNotes.trim() ? 'border-red-500' : ''}`} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
 
       {/* Follow-up Section */}
       <div className={`bg-brand-500/[0.06] dark:bg-brand-500/[0.06] rounded-xl p-3.5 transition-colors ${addFollowup ? 'border border-brand-500/25' : 'border border-edge dark:border-edge-dark'}`}>

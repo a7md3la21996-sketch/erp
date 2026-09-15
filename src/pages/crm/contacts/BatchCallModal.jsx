@@ -3,7 +3,7 @@ import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo
 import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
-import { isFollowUpRequired } from '../../../services/interactionsService';
+import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
 import { LEAD_CATEGORY_MAP } from '../../../config/leadCategories';
 import {
   daysSince, initials, avatarColor, normalizePhone,
@@ -163,7 +163,9 @@ export default function BatchCallModal({
   const followUpRequired = !!batchCallResult && isFollowUpRequired('call', newStatus);
   const dqReasonMissing = isDisqualifying && !batchDqReason;
   const taskMissing = followUpRequired && !batchTaskForm.due;
-  const canSave = !saving && !dqReasonMissing && !taskMissing;
+  // An answered call (engaged) must carry a note — same rule as everywhere else.
+  const noteMissing = isNoteRequired('call', batchCallResult) && !(batchCallNotes || '').trim();
+  const canSave = !saving && !dqReasonMissing && !taskMissing && !noteMissing;
   const catDef = LEAD_CATEGORY_MAP[current.lead_category];
 
   return (
@@ -292,9 +294,12 @@ export default function BatchCallModal({
             </div>
           )}
 
-          {/* Notes */}
+          {/* Notes — mandatory when the call was answered (engaged result) */}
+          {isNoteRequired('call', batchCallResult) && (
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اكتب اللي اتقال' : 'What was said'} <span className="text-red-500">*</span></div>
+          )}
           <textarea value={batchCallNotes} onChange={e => setBatchCallNotes(e.target.value)} placeholder={isRTL ? 'ملاحظات سريعة...' : 'Quick notes...'} rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-3" />
+            className={`w-full px-3 py-2 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-3 ${noteMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} />
 
           {/* Follow-up task — MANDATORY after a logged call (like the drawer),
               exempt only when disqualifying */}

@@ -5,7 +5,7 @@ import { Target, Zap, Check, Calendar } from 'lucide-react';
 import { Button, Select, Textarea } from '../../../components/ui/';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
-import { isFollowUpRequired } from '../../../services/interactionsService';
+import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
 // Assembles a single interaction payload and hands it to onLogInteraction,
@@ -117,10 +117,14 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
   const dqReasonRequired = statusChanged && newStatus === 'disqualified' && !dqReason;
   // A note's body IS its content — don't allow saving an empty note.
   const noteBodyMissing = actForm.type === 'note' && !actForm.description.trim();
+  // An ENGAGED result (call answered / whatsapp replied / meeting attended…)
+  // must carry a written outcome — same rule the DB RPC enforces.
+  const noteRequired = actMode === 'log' && isNoteRequired(actForm.type, actForm.result);
+  const descriptionMissing = noteRequired && !actForm.description.trim();
   const canSave = (actMode === 'schedule'
     ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)
     : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype))
-    && !taskDateRequired && !dqReasonRequired && !noteBodyMissing;
+    && !taskDateRequired && !dqReasonRequired && !noteBodyMissing && !descriptionMissing;
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -266,11 +270,20 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
             </div>
           </div>
         )}
-        {/* Always show the text box for a note — it IS the note's content. */}
-        {(showAdv || actForm.type === 'note') && (
-          <Textarea size="sm" rows={actForm.type === 'note' ? 3 : 2}
-            placeholder={actForm.type === 'note' ? (isRTL ? 'اكتب الملاحظة...' : 'Write the note...') : (isRTL ? 'وصف / ملاحظات...' : 'Description / notes...')}
-            value={actForm.description} onChange={e => setAct('description', e.target.value)} />
+        {/* Text box — always for a note (it IS the note's content), and forced
+            visible + required after an engaged result so the outcome is captured. */}
+        {(showAdv || actForm.type === 'note' || noteRequired) && (
+          <div>
+            {noteRequired && (
+              <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+                {isRTL ? 'اكتب اللي اتقال' : 'What was said'} <span className="text-red-500">*</span>
+              </div>
+            )}
+            <Textarea size="sm" rows={actForm.type === 'note' ? 3 : 2}
+              placeholder={actForm.type === 'note' ? (isRTL ? 'اكتب الملاحظة...' : 'Write the note...') : (isRTL ? 'وصف / ملاحظات...' : 'Description / notes...')}
+              value={actForm.description} onChange={e => setAct('description', e.target.value)}
+              className={descriptionMissing ? 'border-red-500' : ''} />
+          </div>
         )}
       </div>
 

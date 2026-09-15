@@ -81,6 +81,20 @@ BEGIN
     RAISE EXCEPTION 'FOLLOWUP_REQUIRED';
   END IF;
 
+  -- ── The note guard — an ENGAGED result (the lead actually responded) must
+  -- carry a written outcome. Mirrors interactionsService.ENGAGED_RESULTS; keep
+  -- the two in sync. This is the un-bypassable backstop: any direct API call
+  -- that logs an answered call / replied message / attended meeting with an
+  -- empty description is rejected here, not just in the UI.
+  IF ( (p_type = 'call'     AND p_result = 'answered')
+    OR (p_type = 'whatsapp' AND p_result = 'replied')
+    OR (p_type = 'email'    AND p_result = 'replied')
+    OR (p_type = 'meeting'  AND p_result = 'attended')
+    OR (p_type = 'visit'    AND p_result = 'visited') )
+     AND NULLIF(TRIM(COALESCE(p_description, '')), '') IS NULL THEN
+    RAISE EXCEPTION 'NOTE_REQUIRED';
+  END IF;
+
   -- 1) Activity + last_activity_at.
   INSERT INTO activities (
     type, result, description, notes, meeting_subtype, scheduled_date, status,
