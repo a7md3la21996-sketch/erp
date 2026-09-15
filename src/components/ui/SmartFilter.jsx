@@ -545,9 +545,11 @@ export default function SmartFilter({
         )}
       </div>
 
-      {/* Active filter chips */}
+      {/* Active filter chips — "Filtered by:" bar so anyone opening the page
+          sees exactly what's applied, with a one-tap Clear all. */}
       {!hideActiveChips && filters.length > 0 && (
         <div className="flex gap-1.5 flex-wrap mt-2 px-1 items-center">
+          <span className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'مفلتر على:' : 'Filtered by:'}</span>
           {filters.map((f, i) => (
             <div key={i} className="inline-flex items-center gap-1">
               {i > 0 && (
@@ -570,6 +572,12 @@ export default function SmartFilter({
               </span>
             </div>
           ))}
+          {filters.length > 1 && (
+            <button onClick={() => onFiltersChange([])}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer border border-red-500/30 text-red-500 bg-red-500/[0.06] hover:bg-red-500/[0.12] transition-colors">
+              {isRTL ? 'مسح الكل' : 'Clear all'} <X size={11} />
+            </button>
+          )}
         </div>
       )}
     </div>
