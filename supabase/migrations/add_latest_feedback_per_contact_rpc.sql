@@ -14,6 +14,8 @@ RETURNS TABLE(
   id uuid,
   notes text,
   description text,
+  result text,
+  type text,
   created_at timestamptz,
   user_name_ar text,
   user_name_en text
@@ -23,7 +25,7 @@ STABLE
 SECURITY INVOKER
 AS $$
   SELECT DISTINCT ON (contact_id)
-    contact_id, id, notes, description, created_at, user_name_ar, user_name_en
+    contact_id, id, notes, description, result, type, created_at, user_name_ar, user_name_en
   FROM activities
   WHERE contact_id = ANY(p_contact_ids)
     AND (

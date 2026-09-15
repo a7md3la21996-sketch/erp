@@ -8,6 +8,7 @@ import {
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, getDeptStages, deptStageLabel,
   agentInitials, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED,
+  ACTIVITY_RESULT_BADGES,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -128,7 +129,7 @@ export default function ContactsTable({
     (paged || []).forEach(c => map.set(c.id, getAgentsView(c, agentName)));
     return map;
   }, [paged, agentName]);
-  const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'next_action', 'actions'];
+  const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'result', 'last_feedback', 'next_action', 'actions'];
   const hasCol = (id) => cols.includes(id);
   const menuActions = deptView?.menuActions || null;
   const hasMenuAction = (id) => !menuActions || menuActions.includes(id);
@@ -309,6 +310,7 @@ export default function ContactsTable({
               {hasCol('contact_status') && <th className={`${thCls} w-[130px] hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
               {hasCol('source') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
               {hasCol('date') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
+              {hasCol('result') && <th className={`${thCls} w-[110px] hidden lg:table-cell`}>{isRTL ? 'النتيجة' : 'Result'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} w-[180px] hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
               {hasCol('next_action') && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
               {hasCol('actions') && <th className={`${thCls} w-[110px] text-center`}>{t('common.actions')}</th>}
@@ -564,23 +566,39 @@ export default function ContactsTable({
                   ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
                 </td>}
 
-                {/* Last Feedback */}
+                {/* Result — the last activity's outcome as a coloured badge, in
+                    its OWN column so the feedback stays a pure note (no English
+                    label jammed in front of the Arabic, which broke truncation). */}
+                {hasCol('result') && <td className={`${tdCls} hidden lg:table-cell`}>
+                  {(() => {
+                    const b = c._lastNote?.result && ACTIVITY_RESULT_BADGES[c._lastNote.result];
+                    return b
+                      ? <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap" style={{ background: b.color + '18', color: b.color }}>{isRTL ? b.ar : b.en}</span>
+                      : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                  })()}
+                </td>}
+
+                {/* Last Feedback — pure note (the result label is stripped since
+                    it now shows as its own badge above). Arabic-first → RTL. */}
                 {hasCol('last_feedback') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  {c._lastNote ? (
+                  {(() => {
+                    const ln = c._lastNote;
+                    if (!ln) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                    const usedDesc = !(ln.notes && ln.notes.trim()); // _feedback fell back to description
+                    const raw = ln._feedback || ln.notes || ln.description || '';
+                    const hasBadge = ln.result && ACTIVITY_RESULT_BADGES[ln.result];
+                    // The composed `description` prefixes "<result label> — "; drop it.
+                    const note = (hasBadge && usedDesc) ? raw.replace(/^[^—]*—\s*/, '') : raw;
+                    return (
                     <div className="max-w-[180px]">
-                      {/* Feedback is mixed content (an English result label like
-                          "No Answer —" + an Arabic note). Auto/plaintext direction
-                          picks LTR from the English prefix and then truncates the
-                          MIDDLE/END of the Arabic note. Force RTL base (business
-                          notes are Arabic) + isolate so the note reads from its
-                          start and clips its end. */}
-                      <p dir="rtl" style={{ unicodeBidi: 'isolate' }} className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}>{c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}</p>
+                      <p dir="rtl" style={{ unicodeBidi: 'isolate' }} className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={note}>{note || '—'}</p>
                       <div className="flex items-center gap-1 mt-0.5 text-[10px] text-content-muted dark:text-content-muted-dark">
                         <span>{c._lastNote.user_name_en || c._lastNote.user_name_ar || ''}</span>
                         {c._lastNote.created_at && <span>· {new Date(c._lastNote.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
                       </div>
                     </div>
-                  ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                    );
+                  })()}
                 </td>}
 
                 {/* Next Action — earliest pending follow-up (overdue / today /

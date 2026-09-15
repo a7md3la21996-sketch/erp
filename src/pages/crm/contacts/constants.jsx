@@ -52,6 +52,35 @@ export const CONTACT_STAGE = {
 export const CONTACT_STAGE_ORDER = ['new', 'contacted', 'meeting_set', 'met', 'reserved', 'contracted', 'deal_done'];
 export const contactStageLabel = (key, isRTL) => { const s = CONTACT_STAGE[key]; return s ? (isRTL ? s.ar : s.en) : null; };
 
+// ── Activity result badges (shared) ─────────────────────────────────────────
+// One flat key→{ar,en,color} map for every activity result across all types
+// (call / whatsapp / email / meeting / visit), so the result can render as a
+// coloured badge (e.g. its own Leads column) instead of being jammed as an
+// English label prefix into the free-text feedback.
+export const ACTIVITY_RESULT_BADGES = {
+  answered:      { ar: 'رد',          en: 'Answered',       color: '#158A57' },
+  no_answer:     { ar: 'لم يرد',      en: 'No Answer',      color: '#C9860A' },
+  busy:          { ar: 'مشغول',       en: 'Busy',           color: '#D6403B' },
+  switched_off:  { ar: 'مغلق',        en: 'Switched Off',   color: '#6b7280' },
+  wrong_number:  { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#5A63C4' },
+  replied:       { ar: 'رد',          en: 'Replied',        color: '#158A57' },
+  seen:          { ar: 'شاف',         en: 'Seen',           color: '#2F6BD3' },
+  delivered:     { ar: 'وصلت',        en: 'Delivered',      color: '#C9860A' },
+  not_delivered: { ar: 'لم تصل',      en: 'Not Delivered',  color: '#D6403B' },
+  blocked:       { ar: 'محظور',       en: 'Blocked',        color: '#6b7280' },
+  opened:        { ar: 'فتح',         en: 'Opened',         color: '#2F6BD3' },
+  sent:          { ar: 'تم الإرسال',  en: 'Sent',           color: '#C9860A' },
+  bounced:       { ar: 'ارتد',        en: 'Bounced',        color: '#D6403B' },
+  attended:      { ar: 'حضر',         en: 'Attended',       color: '#158A57' },
+  visited:       { ar: 'زار',         en: 'Visited',        color: '#158A57' },
+  no_show:       { ar: 'لم يحضر',     en: 'No Show',        color: '#6b7280' },
+  cancelled:     { ar: 'ألغى',        en: 'Cancelled',      color: '#D6403B' },
+  rescheduled:   { ar: 'أُجّل',       en: 'Rescheduled',    color: '#C9860A' },
+  interested:    { ar: 'مهتم',        en: 'Interested',     color: '#158A57' },
+  not_interested:{ ar: 'غير مهتم',    en: 'Not Interested', color: '#D6403B' },
+  completed:     { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
+};
+
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [
