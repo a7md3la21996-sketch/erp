@@ -2017,8 +2017,8 @@ export default function ContactsPage() {
         </div>
         {(hasPermission(P.CONTACTS_EDIT) || hasPermission(P.CONTACTS_EDIT_OWN)) && (
           <button onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold cursor-pointer active:scale-95 transition-all shadow-sm">
-            <Plus size={16} /> {isRTL ? 'إضافة عميل' : 'Add Lead'}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold cursor-pointer active:scale-95 transition-all shadow-sm whitespace-nowrap shrink-0">
+            <Plus size={16} className="shrink-0" /> {isRTL ? 'إضافة عميل' : 'Add Lead'}
           </button>
         )}
       </div>
