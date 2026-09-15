@@ -581,11 +581,9 @@ export default function ContactsTable({
                   {(() => {
                     const ln = c._lastNote;
                     if (!ln) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                    const usedDesc = !(ln.notes && ln.notes.trim()); // _feedback fell back to description
-                    const raw = ln._feedback || ln.notes || ln.description || '';
-                    const hasBadge = ln.result && ACTIVITY_RESULT_BADGES[ln.result];
-                    // The composed `description` prefixes "<result label> — "; drop it.
-                    const note = (hasBadge && usedDesc) ? raw.replace(/^[^—]*—\s*/, '') : raw;
+                    // Description is now the PURE note (result is its own badge column);
+                    // show it as-is — no label-stripping (that mangled notes with " — ").
+                    const note = ln._feedback || ln.notes || ln.description || '';
                     return (
                     <div className="max-w-[180px]">
                       <p dir="rtl" style={{ unicodeBidi: 'isolate' }} className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={note}>{note || '—'}</p>

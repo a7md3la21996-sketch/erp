@@ -1070,14 +1070,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 // (or a bare label) — strip that so only the note is shown.
                 const b = item.result && ACTIVITY_RESULT_BADGES[item.result];
                 if (b) {
-                  let note = item.notes;
-                  if (!note && item.description) {
-                    const d = item.description;
-                    const sep = d.indexOf(' — ');
-                    if (sep >= 0) note = d.slice(sep + 3);
-                    else if (b.en && d.includes(b.en)) note = '';
-                    else note = d;
-                  }
+                  // description is the PURE note now (result shows as the badge) —
+                  // no label-splitting (that mangled notes containing " — ").
+                  const note = item.notes || item.description || '';
                   return (
                     <span className="inline-flex items-baseline gap-1.5 flex-wrap">
                       <ResultBadge result={item.result} isRTL={isRTL} />

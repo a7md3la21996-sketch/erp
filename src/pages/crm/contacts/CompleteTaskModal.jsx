@@ -148,17 +148,25 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
         </div>
 
         <div className="px-5 py-4">
-          {/* Activity Type */}
+          {/* Activity Type — locked when closing a specific scheduled activity
+              in place (its type is fixed; a switchable type would write a result
+              that doesn't match the stored row). */}
           <div className="mb-3">
             <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'نوع النشاط' : 'Activity Type'} <span className="text-red-500">*</span></label>
-            <div className="flex gap-1.5 flex-wrap">
-              {ACT_TYPES.map(t => (
-                <button key={t.key} onClick={() => { setActType(t.key); setActResult(''); }}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${actType === t.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-                  {isRTL ? t.ar : t.en}
-                </button>
-              ))}
-            </div>
+            {activity ? (
+              <span className="inline-block px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-brand-500 text-white">
+                {(() => { const t = ACT_TYPES.find(x => x.key === actType); return t ? (isRTL ? t.ar : t.en) : actType; })()}
+              </span>
+            ) : (
+              <div className="flex gap-1.5 flex-wrap">
+                {ACT_TYPES.map(t => (
+                  <button key={t.key} onClick={() => { setActType(t.key); setActResult(''); }}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${actType === t.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
+                    {isRTL ? t.ar : t.en}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Result */}
