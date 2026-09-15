@@ -31,6 +31,9 @@ AS $$
     AND (
       (notes IS NOT NULL AND notes <> '')
       OR (description IS NOT NULL AND description <> '')
+      -- Include result-only rows (e.g. a "No Answer" call with no note) so the
+      -- Result badge still shows after descriptions are backfilled to pure notes.
+      OR (result IS NOT NULL AND result <> '')
     )
   ORDER BY contact_id, created_at DESC;
 $$;
