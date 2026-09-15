@@ -18,6 +18,7 @@ import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { useToast } from '../contexts/ToastContext';
 import ActivityDrawer from './ActivityDrawer';
 import ContactSearch from './crm/opportunities/ContactSearch';
+import { ACTIVITY_RESULT_BADGES, ResultBadge } from './crm/contacts/constants';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -25,19 +26,6 @@ const ICONS = {
   RefreshCw, CheckSquare,
 };
 
-const RESULT_LABELS = {
-  answered:     { ar: 'رد',          en: 'Answered',       color: '#158A57' },
-  no_answer:    { ar: 'لم يرد',      en: 'No Answer',      color: '#C9860A' },
-  busy:         { ar: 'مشغول',       en: 'Busy',           color: '#D6403B' },
-  switched_off: { ar: 'مغلق',        en: 'Switched Off',   color: '#6b7280' },
-  wrong_number: { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#5A63C4' },
-  interested:   { ar: 'مهتم',        en: 'Interested',     color: '#158A57' },
-  not_interested:{ ar: 'غير مهتم',   en: 'Not Interested', color: '#D6403B' },
-  sent:         { ar: 'تم الإرسال',   en: 'Sent',           color: '#2F6BD3' },
-  completed:    { ar: 'مكتمل',       en: 'Completed',      color: '#158A57' },
-  cancelled:    { ar: 'ملغي',        en: 'Cancelled',      color: '#D6403B' },
-  rescheduled:  { ar: 'تم التأجيل',  en: 'Rescheduled',    color: '#C9860A' },
-};
 
 const DEPT_LABELS = {
   all:        { ar: 'الكل', en: 'All' },
@@ -157,7 +145,7 @@ export default function ActivitiesPage() {
     // which silently capped the dropdown — invisible entities on other pages
     // were unreachable). Free-form text matches via ilike across all pages.
     { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'text' },
-    { id: 'result', label: 'النتيجة', labelEn: 'Result', type: 'select', options: Object.entries(RESULT_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'result', label: 'النتيجة', labelEn: 'Result', type: 'select', options: Object.entries(ACTIVITY_RESULT_BADGES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
     ...auditFields,
@@ -405,7 +393,7 @@ export default function ActivitiesPage() {
               { header: isRTL ? 'النوع' : 'Type', key: r => isRTL ? ACTIVITY_TYPES[r.type]?.ar : ACTIVITY_TYPES[r.type]?.en },
               { header: isRTL ? 'الجهة' : 'Related To', key: 'entity_name' },
               { header: isRTL ? 'بواسطة' : 'By', key: r => isRTL ? (r.user_name_ar || r.user_name_en) : (r.user_name_en || r.user_name_ar) },
-              { header: isRTL ? 'النتيجة' : 'Result', key: r => r.result ? (isRTL ? RESULT_LABELS[r.result]?.ar : RESULT_LABELS[r.result]?.en) || r.result : '' },
+              { header: isRTL ? 'النتيجة' : 'Result', key: r => r.result ? (isRTL ? ACTIVITY_RESULT_BADGES[r.result]?.ar : ACTIVITY_RESULT_BADGES[r.result]?.en) || r.result : '' },
               { header: isRTL ? 'القسم' : 'Department', key: r => isRTL ? DEPT_LABELS[r.dept]?.ar : DEPT_LABELS[r.dept]?.en },
               { header: isRTL ? 'الملاحظات' : 'Notes', key: 'notes' },
               { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
@@ -615,11 +603,7 @@ export default function ActivitiesPage() {
                         {lang === 'ar' ? deptDef.ar : deptDef.en}
                       </Badge>
                     )}
-                    {act.result && RESULT_LABELS[act.result] && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: RESULT_LABELS[act.result].color + '18', color: RESULT_LABELS[act.result].color }}>
-                        {lang === 'ar' ? RESULT_LABELS[act.result].ar : RESULT_LABELS[act.result].en}
-                      </span>
-                    )}
+                    <ResultBadge result={act.result} isRTL={isRTL} />
                     {act._offline && (
                       <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#D6403B', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
                         <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
@@ -646,13 +630,14 @@ export default function ActivitiesPage() {
                       </span>
                     )}
                   </div>
-                  {/* Row 3: Notes */}
-                  {(act.notes || act.description) && (
-                    <div className="text-xs text-content-muted dark:text-content-muted-dark leading-relaxed line-clamp-2" dir={isRTL ? 'rtl' : 'ltr'}>
-                      {act.description && act.description !== act.notes && (
-                        <span className="font-semibold text-content dark:text-content-dark">{act.description} — </span>
+                  {/* Row 3: the pure note (result shows as its own badge above).
+                      dir=auto so Arabic/English each read + clip correctly. */}
+                  {(act.description || act.notes) && (
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark leading-relaxed line-clamp-2" dir="auto">
+                      {act.description || act.notes}
+                      {act.notes && act.description && act.notes !== act.description && (
+                        <span className="opacity-70"> · {act.notes}</span>
                       )}
-                      {act.notes}
                     </div>
                   )}
                 </div>
