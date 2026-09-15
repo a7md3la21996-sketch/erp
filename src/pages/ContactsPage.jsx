@@ -2041,14 +2041,6 @@ export default function ContactsPage() {
           { key: 'today',    label: isRTL ? 'النهاردة' : 'Today',   count: followupCounts.today,    color: '#C9860A' },
           { key: 'upcoming', label: isRTL ? 'قادمة' : 'Upcoming',   count: followupCounts.upcoming, color: '#2F6BD3' },
         ];
-        const statusChips = [
-          { label: isRTL ? 'الكل' : 'All', value: 'all', count: STATUS_DEFS.filter(s => s.value !== 'disqualified').reduce((acc, s) => acc + (stats[s.value] || 0), 0), color: '#2F6BD3' },
-          ...STATUS_DEFS.filter(s => s.value !== 'disqualified').map(s => ({ ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0 })),
-        ];
-        const categoryChips = [
-          { key: 'all', label: isRTL ? 'كل التصنيفات' : 'All', count: categoryCounts.total || 0, color: '#2F6BD3' },
-          ...leadCategoryDefs.map(c => ({ key: c.key, label: isRTL ? c.label_ar : c.label_en, count: categoryCounts[c.key] || 0, color: c.color })),
-        ];
         // Stage chips (lead lifecycle) — preview feature; no counts yet.
         const stageChips = [
           { key: 'all', label: isRTL ? 'كل المراحل' : 'All Stages', color: '#2F6BD3' },
@@ -2072,26 +2064,6 @@ export default function ContactsPage() {
                 );
               })}
             </div>
-            <Divider />
-            {/* Status (active pipeline) */}
-            {statusChips.map(s => {
-              const active = filterStatus === s.value;
-              return (
-                <button key={`st-${s.value}`} onClick={() => setFilterStatus(s.value)} className={chipCls(active)} style={chipStyle(active, s.color)}>
-                  {dot(s.color)} {s.label} <span className={countCls(active)}>{s.count}</span>
-                </button>
-              );
-            })}
-            <Divider />
-            {/* Category (lead origin) */}
-            {categoryChips.map(c => {
-              const active = categoryFilter === c.key;
-              return (
-                <button key={`cat-${c.key}`} onClick={() => { setCategoryFilter(c.key); setPage(1); }} className={chipCls(active)} style={chipStyle(active, c.color)}>
-                  {dot(c.color)} {c.label} <span className={countCls(active)}>{c.count}</span>
-                </button>
-              );
-            })}
             {STAGE_UI_ENABLED && (<>
             <Divider />
             {/* Stage (lead lifecycle) — preview feature (flag-gated, off in prod) */}
@@ -2142,8 +2114,32 @@ export default function ContactsPage() {
           const ddCls = 'px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
           const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
           const advCount = [filterType, filterActivity, filterTemp].filter(v => v !== 'all').length;
+          const curStatusDef = STATUS_DEFS.find(s => s.value === filterStatus && s.value !== 'disqualified');
+          const curCatDef = leadCategoryDefs.find(c => c.key === categoryFilter);
           return (
             <>
+              {/* Status — primary pipeline filter, always visible as a dropdown
+                  here with the filters (was a chip row before). Archive
+                  (disqualified) stays its own chip below. */}
+              <div className="relative inline-block">
+                <select value={filterStatus === 'disqualified' ? 'all' : filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }} className={ddCls}
+                  style={curStatusDef ? { borderColor: curStatusDef.color, color: curStatusDef.color } : undefined}>
+                  <option value="all">{isRTL ? 'كل الحالات' : 'All Statuses'}</option>
+                  {STATUS_DEFS.filter(s => s.value !== 'disqualified').map(s => (
+                    <option key={s.value} value={s.value}>{(isRTL ? s.label : s.labelEn)} ({stats[s.value] || 0})</option>
+                  ))}
+                </select>{chev}
+              </div>
+              {/* Category (lead origin) — always visible dropdown too. */}
+              <div className="relative inline-block">
+                <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }} className={ddCls}
+                  style={curCatDef ? { borderColor: curCatDef.color, color: curCatDef.color } : undefined}>
+                  <option value="all">{isRTL ? 'كل التصنيفات' : 'All Categories'} ({categoryCounts.total || 0})</option>
+                  {leadCategoryDefs.map(c => (
+                    <option key={c.key} value={c.key}>{(isRTL ? c.label_ar : c.label_en)} ({categoryCounts[c.key] || 0})</option>
+                  ))}
+                </select>{chev}
+              </div>
               {/* "Filters" toggle — reveals the advanced dropdowns (kept hidden
                   so they don't crowd the bar; active ones show as pills below). */}
               <button type="button" onClick={() => setShowAdvanced(v => !v)}
