@@ -2190,7 +2190,6 @@ export default function ContactsPage() {
                         const DS = (label, value, on, options, color) => <div>{lbl(label)}<div className="[&>div]:w-full"><SearchableSelect value={value} onChange={on} className={ddPanelTriggerCls} activeColor={color} options={options} /></div></div>;
                         const dcls = 'w-full px-2 py-1.5 rounded-lg text-[11px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none';
                         const DR = (field, label) => { const [a, b] = getD(field); return <div className="col-span-2">{lbl(label)}<div className="flex gap-1.5"><input type="date" value={a} onChange={e => setD(field, e.target.value, b)} className={dcls} /><input type="date" value={b} onChange={e => setD(field, a, e.target.value)} className={dcls} /></div></div>; };
-                        const sec = (t) => <div className="col-span-full text-[10px] font-bold uppercase tracking-wide text-brand-500 mb-1 mt-1.5 first:mt-0">{t}</div>;
                         return (
                           <>
                             <div className="flex items-center justify-between mb-3">
@@ -2199,27 +2198,20 @@ export default function ContactsPage() {
                                 className="text-[10px] text-red-500 bg-transparent border-none cursor-pointer hover:underline p-0 flex items-center gap-1"><RotateCcw size={10} /> {isRTL ? 'مسح الكل' : 'Clear all'}</button>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-2.5 gap-y-2">
-                              {sec(isRTL ? 'معلومات الليد' : 'Lead info')}
                               {DS(isRTL ? 'التصنيف' : 'Category', categoryFilter, (v) => { setCategoryFilter(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل التصنيفات' : 'All Categories' }, ...leadCategoryDefs.map(c => ({ value: c.key, label: isRTL ? c.label_ar : c.label_en }))], curCatDef?.color)}
                               {DS(isRTL ? 'النوع' : 'Type', filterType, (v) => { setFilterType(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' }, ...types.filter(k => TYPE[k]).map(k => ({ value: k, label: isRTL ? TYPE[k].label : TYPE[k].labelEn }))], TYPE[filterType]?.color)}
                               {SS('source', isRTL ? 'المصدر' : 'Source')}
                               {SS('prefix', isRTL ? 'اللقب' : 'Prefix')}
                               {SS('_country', isRTL ? 'الدولة' : 'Country')}
                               {DS(isRTL ? 'الحرارة' : 'Temperature', filterTemp, (v) => { setFilterTemp(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل الحرارة' : 'All Temp' }, ...Object.entries(TEMP).map(([k, v]) => ({ value: k, label: isRTL ? v.labelAr : v.label }))], filterTemp !== 'all' ? TEMP[filterTemp]?.color : undefined)}
-
-                              {sec(isRTL ? 'التعيين' : 'Assignment')}
                               {showAssignee && <div>{lbl(isRTL ? 'المسؤول' : 'Assignee')}<div className="[&>div]:w-full"><SearchableSelect value={showUnassigned ? '__unassigned' : (curAssignee || '')} onChange={(v) => { setShowUnassigned(v === '__unassigned'); setSmartFilters(prev => { const rest = prev.filter(f => f.field !== 'assigned_to_name'); return (v && v !== '__unassigned') ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest; }); setPage(1); }} className={ddPanelTriggerCls} activeColor={(curAssignee || showUnassigned) ? '#2F6BD3' : undefined} options={[{ value: '', label: isRTL ? 'كل الموظفين' : 'All Assignees' }, { value: '__unassigned', label: `${isRTL ? 'غير معيّن' : 'Unassigned'} (${stats.unassigned || 0})` }, ...assigneeNames.map(n => ({ value: n, label: n }))]} /></div></div>}
                               {SS('assigned_by_name', isRTL ? 'عيّنه' : 'Assigned by')}
                               {SS('created_by_name', isRTL ? 'أنشأه' : 'Created by')}
-
-                              {sec(isRTL ? 'النشاط والصفقة' : 'Activity & Deal')}
                               {STAGE_UI_ENABLED && DS(isRTL ? 'المرحلة' : 'Stage', filterStage, (v) => { setFilterStage(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل المراحل' : 'All Stages' }, ...CONTACT_STAGE_ORDER.map(k => ({ value: k, label: isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en }))], (filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? CONTACT_STAGE[filterStage].color : undefined)}
                               {DS(isRTL ? 'النشاط' : 'Activity', filterActivity, (v) => { setFilterActivity(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل النشاط' : 'All Activity' }, { value: 'active_3d', label: isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)` }, { value: 'moderate_7d', label: isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)` }, { value: 'stale', label: isRTL ? '■ مهمل' : '■ Stale' }, { value: 'never', label: isRTL ? '✕ لم يتم التواصل' : '✕ Never' }])}
                               {SS('_meeting', isRTL ? 'عليه اجتماع' : 'Has meeting')}
                               {SS('_deal_stage', isRTL ? 'مرحلة الصفقة' : 'Deal stage')}
                               {SS('_no_activity_by', isRTL ? 'بدون نشاط' : 'No activity by')}
-
-                              {sec(isRTL ? 'التواريخ' : 'Dates')}
                               {DR('created_at', isRTL ? 'تاريخ الإنشاء' : 'Created')}
                               {DR('assigned_at', isRTL ? 'تاريخ التوزيع' : 'Assigned')}
                               {DR('last_activity_at', isRTL ? 'آخر نشاط' : 'Last activity')}
