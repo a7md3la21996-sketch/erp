@@ -93,6 +93,7 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
           return (
             <button key={String(o.value)} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
               className={`w-full text-start px-3 py-1.5 text-xs cursor-pointer flex items-center gap-2 border-none bg-transparent ${active ? 'bg-brand-500/10 text-brand-500 font-semibold' : 'text-content dark:text-content-dark hover:bg-brand-500/[0.07]'}`}>
+              {o.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: o.color }} />}
               <span className="flex-1 truncate">{o.label}</span>
               {active && <Check size={13} className="shrink-0" />}
             </button>
@@ -107,6 +108,7 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
       <button ref={btnRef} type="button" disabled={disabled} onClick={toggle}
         className={`inline-flex items-center gap-1.5 cursor-pointer ${triggerCls}`}
         style={activeColor ? { borderColor: activeColor, color: activeColor } : undefined}>
+        {current?.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: current.color }} />}
         <span className="flex-1 min-w-0 truncate text-start">{current ? current.label : (placeholder || '')}</span>
         <ChevronDown size={12} className="shrink-0 opacity-60" />
       </button>

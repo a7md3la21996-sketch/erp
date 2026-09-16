@@ -278,12 +278,11 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
           </div>
         )}
         {/* Conversation outcome — appears after an engaged result (answered /
-            replied / attended …). One compact dropdown, grouped by direction
-            (🟢 progressing / 🟠 objection / 🔴 lost); the trigger takes the
-            selected group's colour. */}
+            replied / attended …). One compact dropdown; each option carries its
+            direction colour as a small dot, and the trigger takes the selected
+            group's colour. */}
         {outcomeRequired && (() => {
-          const emoji = { progressing: '🟢', objection: '🟠', lost: '🔴' };
-          const opts = CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([key, ar, en]) => ({ value: key, label: `${emoji[g.key]} ${isRTL ? ar : en}` })));
+          const opts = CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([key, ar, en]) => ({ value: key, label: isRTL ? ar : en, color: g.color })));
           const grp = CONVERSATION_OUTCOME_GROUPS.find(g => g.items.some(([k]) => k === actForm.outcome));
           return (
             <div className="mb-2.5">
