@@ -313,7 +313,7 @@ export default function ContactsTable({
               {hasCol('contact_status') && <th className={`${thCls} w-[130px] hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
               {hasCol('source') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'المصدر' : 'Source'}</th>}
               {hasCol('date') && <th className={`${thCls} w-[120px] hidden lg:table-cell`}>{isRTL ? 'التاريخ' : 'Date'}</th>}
-              {hasCol('result') && <th className={`${thCls} w-[130px] hidden lg:table-cell`}>{isRTL ? 'آخر تفاعل' : 'Last interaction'}</th>}
+              {hasCol('result') && <th className={`${thCls} w-[150px] hidden lg:table-cell`}>{isRTL ? 'آخر تفاعل' : 'Last interaction'}</th>}
               {hasCol('last_feedback') && <th className={`${thCls} w-[180px] hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
               {hasCol('next_action') && <th className={`${thCls} w-[150px] hidden md:table-cell`}>{isRTL ? 'الخطوة الجاية' : 'Next Action'}</th>}
               {hasCol('actions') && <th className={`${thCls} w-[110px] text-center`}>{t('common.actions')}</th>}
@@ -579,13 +579,17 @@ export default function ContactsTable({
                     const Icon = TYPE_ICON[ln.type];
                     const badge = ln.result && ACTIVITY_RESULT_BADGES[ln.result];
                     return (
-                      <span className="inline-flex items-center gap-1.5">
-                        {Icon && <Icon size={13} className="shrink-0 text-content-muted dark:text-content-muted-dark" />}
-                        {badge
-                          ? <ResultBadge result={ln.result} isRTL={isRTL} />
-                          : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
-                        <OutcomeBadge outcome={ln.outcome} isRTL={isRTL} />
-                      </span>
+                      // Stack the outcome UNDER the result so a narrow column can
+                      // hold both without spilling into the next column.
+                      <div className="flex flex-col items-start gap-1 min-w-0">
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          {Icon && <Icon size={13} className="shrink-0 text-content-muted dark:text-content-muted-dark" />}
+                          {badge
+                            ? <ResultBadge result={ln.result} isRTL={isRTL} />
+                            : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                        </span>
+                        <OutcomeBadge outcome={ln.outcome} isRTL={isRTL} className="max-w-full truncate" />
+                      </div>
                     );
                   })()}
                 </td>}
