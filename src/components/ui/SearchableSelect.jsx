@@ -56,11 +56,14 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
       if (btnRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
       setOpen(false);
     };
-    const onScroll = () => setOpen(false);
+    // Close when the PAGE/container scrolls (a fixed panel can't follow the
+    // trigger) — but NOT when scrolling inside the panel's own list.
+    const onScroll = (e) => { if (panelRef.current && panelRef.current.contains(e.target)) return; setOpen(false); };
+    const onResize = () => setOpen(false);
     document.addEventListener('mousedown', onDown);
     window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDown); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+    window.addEventListener('resize', onResize);
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDown); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onResize); };
   }, [open]);
 
   const triggerCls = className || 'px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
