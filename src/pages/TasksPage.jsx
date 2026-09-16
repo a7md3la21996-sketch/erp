@@ -18,6 +18,7 @@ import ContactSearch from './crm/opportunities/ContactSearch';
 import { createActivity } from '../services/contactsService';
 import { localDateStr } from '../utils/dateTime';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { logAction } from '../services/auditService';
@@ -1158,12 +1159,13 @@ export default function TasksPage() {
               );
             })}
             <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
-            <select value={agentFilter} onChange={e => { setAgentFilter(e.target.value); setPage(1); }}
-              className="px-3 py-1.5 rounded-full text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer"
-              style={agentFilter !== 'all' ? { borderColor: '#2F6BD3', color: '#2F6BD3', background: '#2F6BD315' } : {}}>
-              <option value="all">{lang==='ar'?'كل الموظفين':'All Agents'}</option>
-              {assignedToOptions.map(a => <option key={a.value} value={a.value}>{lang==='ar' ? a.label : a.labelEn}</option>)}
-            </select>
+            <SearchableSelect
+              value={agentFilter}
+              onChange={(v) => { setAgentFilter(v); setPage(1); }}
+              className="px-3 py-1.5 rounded-full text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+              activeColor={agentFilter !== 'all' ? '#2F6BD3' : undefined}
+              options={[{ value: 'all', label: lang === 'ar' ? 'كل الموظفين' : 'All Agents' }, ...assignedToOptions.map(a => ({ value: a.value, label: lang === 'ar' ? a.label : a.labelEn }))]}
+            />
           </div>
 
           {/* Filters */}

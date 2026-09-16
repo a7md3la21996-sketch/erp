@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, ModalFooter, Button, confirm } from '../ui';
+import SearchableSelect from '../ui/SearchableSelect';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, Calendar, X, Link2 } from 'lucide-react';
 import supabase from '../../lib/supabase';
 
@@ -510,18 +511,15 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
                       {lang === 'ar' ? 'كود البصمة:' : 'Fingerprint ID:'} {emp.employee_id} · {emp.department} · {emp.attendance.length} {lang === 'ar' ? 'يوم' : 'days'}
                     </p>
                   </div>
-                  <select
-                    value={manualMapping[idx] || ''}
-                    onChange={e => setManualMapping(prev => ({ ...prev, [idx]: e.target.value || null }))}
-                    className="w-48 px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-xs text-content dark:text-content-dark"
-                  >
-                    <option value="">{lang === 'ar' ? '— اختر الموظف —' : '— Select employee —'}</option>
-                    {availableEmployees.map(e => (
-                      <option key={e.id} value={e.id}>
-                        {(isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar} ({e.employee_number})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-48 [&>div]:w-full">
+                    <SearchableSelect
+                      value={manualMapping[idx] || ''}
+                      onChange={(v) => setManualMapping(prev => ({ ...prev, [idx]: v || null }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-xs text-content dark:text-content-dark"
+                      placeholder={lang === 'ar' ? '— اختر الموظف —' : '— Select employee —'}
+                      options={[{ value: '', label: lang === 'ar' ? '— اختر الموظف —' : '— Select employee —' }, ...availableEmployees.map(emp => ({ value: emp.id, label: `${(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar} (${emp.employee_number})` }))]}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

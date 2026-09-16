@@ -8,6 +8,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Eraser, Search, Users, AlertTriangle } from 'lucide-react';
 import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters, Input, confirm } from '../../components/ui';
 import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import supabase from '../../lib/supabase';
 
 // ── Status Badge ─────────────────────────────────────────────
@@ -94,18 +95,15 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
             <label className="block text-xs font-medium text-content-muted dark:text-content-muted-dark mb-1">
               {lang === 'ar' ? 'الموظف' : 'Employee'}
             </label>
-            <select
-              value={employeeId}
-              onChange={e => setEmployeeId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-            >
-              <option value="">{lang === 'ar' ? 'اختر موظف...' : 'Select employee...'}</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>
-                  {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar} — {emp.employee_number || emp.employee_id}
-                </option>
-              ))}
-            </select>
+            <div className="[&>div]:w-full">
+              <SearchableSelect
+                value={employeeId}
+                onChange={(v) => setEmployeeId(v)}
+                className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+                placeholder={lang === 'ar' ? 'اختر موظف...' : 'Select employee...'}
+                options={[{ value: '', label: lang === 'ar' ? 'اختر موظف...' : 'Select employee...' }, ...employees.map(emp => ({ value: emp.id, label: `${(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar} — ${emp.employee_number || emp.employee_id}` }))]}
+              />
+            </div>
           </div>
         )}
 

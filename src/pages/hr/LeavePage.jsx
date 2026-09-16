@@ -7,6 +7,7 @@ import { createApproval, getApprovals, approveRequest, rejectRequest, getApprova
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X, MessageSquare, User } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 /* ─── Inline ApprovalBadge Component ─── */
 function ApprovalBadge({ status, approverName, comments, lang }) {
@@ -365,11 +366,15 @@ export default function LeavePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الموظف' : 'Employee'}</label>
-                <select value={reqForm.employee_id} onChange={e => setReqForm(f => ({ ...f, employee_id: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-                  <option value="">{isRTL ? 'اختر الموظف...' : 'Select employee...'}</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{isRTL ? e.full_name_ar : (e.full_name_en || e.full_name_ar)}</option>)}
-                </select>
+                <div className="[&>div]:w-full">
+                  <SearchableSelect
+                    value={reqForm.employee_id}
+                    onChange={(v) => setReqForm(f => ({ ...f, employee_id: v }))}
+                    className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+                    placeholder={isRTL ? 'اختر الموظف...' : 'Select employee...'}
+                    options={[{ value: '', label: isRTL ? 'اختر الموظف...' : 'Select employee...' }, ...employees.map(emp => ({ value: emp.id, label: isRTL ? emp.full_name_ar : (emp.full_name_en || emp.full_name_ar) }))]}
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع الإجازة' : 'Leave Type'}</label>

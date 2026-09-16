@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, Plus, X, Filter, RotateCcw, Zap, Check, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import SearchableSelect from './SearchableSelect';
 
 /**
  * SmartFilter – Odoo/Notion-style dynamic filter bar
@@ -416,10 +417,21 @@ export default function SmartFilter({
                   <div className="flex-1 min-w-[100px]">
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القيمة' : 'Value'}</div>
                     {getFieldType(draft.field) === 'select' ? (
-                      <select value={draft.value} onChange={e => setDraft(d => ({ ...d, value: e.target.value }))} className={`${inputCls} w-full`}>
-                        <option value="">{isRTL ? 'اختر...' : 'Choose...'}</option>
-                        {getField(draft.field)?.options?.map(o => <option key={o.value} value={o.value}>{isRTL ? o.label : (o.labelEn || o.label)}</option>)}
-                      </select>
+                      (getField(draft.field)?.options?.length || 0) > 8 ? (
+                        <SearchableSelect
+                          value={draft.value}
+                          onChange={v => setDraft(d => ({ ...d, value: v }))}
+                          className={`${inputCls} w-full justify-between`}
+                          placeholder={isRTL ? 'اختر...' : 'Choose...'}
+                          options={[{ value: '', label: isRTL ? 'اختر...' : 'Choose...' },
+                            ...(getField(draft.field)?.options || []).map(o => ({ value: o.value, label: isRTL ? o.label : (o.labelEn || o.label) }))]}
+                        />
+                      ) : (
+                        <select value={draft.value} onChange={e => setDraft(d => ({ ...d, value: e.target.value }))} className={`${inputCls} w-full`}>
+                          <option value="">{isRTL ? 'اختر...' : 'Choose...'}</option>
+                          {getField(draft.field)?.options?.map(o => <option key={o.value} value={o.value}>{isRTL ? o.label : (o.labelEn || o.label)}</option>)}
+                        </select>
+                      )
                     ) : getFieldType(draft.field) === 'date' ? (
                       <input type="date" value={draft.value} onChange={e => setDraft(d => ({ ...d, value: e.target.value }))} className={`${inputCls} w-full`} />
                     ) : getFieldType(draft.field) === 'number' ? (

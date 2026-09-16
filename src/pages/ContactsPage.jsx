@@ -29,6 +29,7 @@ import { getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input, getSmartFilterChipLabel } from '../components/ui';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useContactsFilters } from '../hooks/useContactsFilters';
 import useCrmPermissions from '../hooks/useCrmPermissions';
@@ -2173,25 +2174,26 @@ export default function ContactsPage() {
                   ))}
                 </select>{chev}
               </div>
-              {/* Assignee (managers/admins) — most-used, kept inline. */}
+              {/* Assignee (managers/admins) — searchable (long list of names). */}
               {showAssignee && (
-                <div className="relative inline-block">
-                  <select value={showUnassigned ? '__unassigned' : curAssignee}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setShowUnassigned(v === '__unassigned');
-                      setSmartFilters(prev => {
-                        const rest = prev.filter(f => f.field !== 'assigned_to_name');
-                        return (v && v !== '__unassigned') ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest;
-                      });
-                      setPage(1);
-                    }}
-                    className={ddCls} style={(curAssignee || showUnassigned) ? { borderColor: '#2F6BD3', color: '#2F6BD3' } : undefined}>
-                    <option value="">{isRTL ? 'كل الموظفين' : 'All Assignees'}</option>
-                    <option value="__unassigned">{isRTL ? 'غير معيّن' : 'Unassigned'} ({stats.unassigned || 0})</option>
-                    {assigneeNames.map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>{chev}
-                </div>
+                <SearchableSelect
+                  value={showUnassigned ? '__unassigned' : (curAssignee || '')}
+                  onChange={(v) => {
+                    setShowUnassigned(v === '__unassigned');
+                    setSmartFilters(prev => {
+                      const rest = prev.filter(f => f.field !== 'assigned_to_name');
+                      return (v && v !== '__unassigned') ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest;
+                    });
+                    setPage(1);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  activeColor={(curAssignee || showUnassigned) ? '#2F6BD3' : undefined}
+                  options={[
+                    { value: '', label: isRTL ? 'كل الموظفين' : 'All Assignees' },
+                    { value: '__unassigned', label: `${isRTL ? 'غير معيّن' : 'Unassigned'} (${stats.unassigned || 0})` },
+                    ...assigneeNames.map(n => ({ value: n, label: n })),
+                  ]}
+                />
               )}
               {/* "Filters" — ONE popover holding the secondary filters (Stage /
                   Type / Activity / Temperature) so the bar stays uncluttered.

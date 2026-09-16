@@ -5,6 +5,7 @@ import supabase from '../../lib/supabase';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 // ExcelJS is loaded dynamically to reduce bundle size (~917KB)
 import { Button, FilterPill } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 // Normalize a name for fuzzy comparison: trim, collapse spaces, lowercase,
 // strip punctuation/diacritics. Used to match sheet names against real users.
@@ -1556,18 +1557,15 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                               </div>
                             )}
                           </div>
-                          <select
-                            value={agentOverrides[a.raw] || (a.status === 'exact' || a.status === 'normalized' ? a.matchedTo : '')}
-                            onChange={e => setAgentOverrides(prev => ({ ...prev, [a.raw]: e.target.value }))}
-                            style={{ padding: '4px 6px', borderRadius: 6, fontSize: 11, border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', minWidth: 150 }}
-                          >
-                            <option value="">{isRTL ? '— اتركه كما هو —' : '— leave as-is —'}</option>
-                            {knownUsers.map(u => (
-                              <option key={u.id} value={u.full_name_en || u.full_name_ar}>
-                                {u.full_name_en || u.full_name_ar}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="min-w-[150px] [&>div]:w-full">
+                            <SearchableSelect
+                              value={agentOverrides[a.raw] || (a.status === 'exact' || a.status === 'normalized' ? a.matchedTo : '')}
+                              onChange={(v) => setAgentOverrides(prev => ({ ...prev, [a.raw]: v }))}
+                              className="w-full px-1.5 py-1 rounded-md text-[11px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark"
+                              placeholder={isRTL ? '— اتركه كما هو —' : '— leave as-is —'}
+                              options={[{ value: '', label: isRTL ? '— اتركه كما هو —' : '— leave as-is —' }, ...knownUsers.map(u => ({ value: u.full_name_en || u.full_name_ar, label: u.full_name_en || u.full_name_ar }))]}
+                            />
+                          </div>
                         </div>
                       );
                     })}

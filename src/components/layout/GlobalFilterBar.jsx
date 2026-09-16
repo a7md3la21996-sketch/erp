@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
 import supabase from '../../lib/supabase';
+import SearchableSelect from '../ui/SearchableSelect';
 
 // Module-scope so its identity is STABLE across renders. Defining it inside the
 // component made it a new component type every render, so React unmounted and
@@ -142,28 +143,40 @@ export default function GlobalFilterBar() {
 
           {managers.length > 0 && (
             <Field label={isRTL ? 'المدير' : 'Manager'}>
-              <select value={managerId} onChange={e => { setManagerId(e.target.value); setTeamId('all'); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-                <option value="all">{isRTL ? 'كل المديرين' : 'All Managers'}</option>
-                {managers.map(m => <option key={m.id} value={m.id}>{isRTL ? (m.full_name_ar || m.full_name_en) : (m.full_name_en || m.full_name_ar)}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={managerId}
+                  onChange={(v) => { setManagerId(v); setTeamId('all'); setAgentName('all'); }}
+                  className={selectClass}
+                  options={[{ value: 'all', label: isRTL ? 'كل المديرين' : 'All Managers' }, ...managers.map(m => ({ value: m.id, label: isRTL ? (m.full_name_ar || m.full_name_en) : (m.full_name_en || m.full_name_ar) }))]}
+                />
+              </div>
             </Field>
           )}
 
           <Field label={isRTL ? 'الفريق' : 'Team'}>
-            <select value={teamId} onChange={e => { setTeamId(e.target.value); setAgentName('all'); }} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-              <option value="all">{isRTL ? 'كل الفرق' : 'All Teams'}</option>
-              {visibleTeams.map(t => <option key={t} value={t}>{isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t)}</option>)}
-            </select>
+            <div className="[&>div]:w-full">
+              <SearchableSelect
+                value={teamId}
+                onChange={(v) => { setTeamId(v); setAgentName('all'); }}
+                className={selectClass}
+                options={[{ value: 'all', label: isRTL ? 'كل الفرق' : 'All Teams' }, ...visibleTeams.map(t => ({ value: t, label: isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t) }))]}
+              />
+            </div>
           </Field>
 
           <Field label={isRTL ? 'الموظف' : 'Agent'}>
-            <select value={agentName} onChange={e => setAgentName(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-              <option value="all">{isRTL ? 'كل الموظفين' : 'All Agents'}</option>
-              {filteredAgents.map(a => {
-                const n = isRTL ? (a.full_name_ar || a.full_name_en) : (a.full_name_en || a.full_name_ar);
-                return <option key={a.id} value={n}>{n}</option>;
-              })}
-            </select>
+            <div className="[&>div]:w-full">
+              <SearchableSelect
+                value={agentName}
+                onChange={(v) => setAgentName(v)}
+                className={selectClass}
+                options={[{ value: 'all', label: isRTL ? 'كل الموظفين' : 'All Agents' }, ...filteredAgents.map(a => {
+                  const n = isRTL ? (a.full_name_ar || a.full_name_en) : (a.full_name_en || a.full_name_ar);
+                  return { value: n, label: n };
+                })]}
+              />
+            </div>
           </Field>
 
           <Field label={isRTL ? 'الفترة' : 'Period'}>

@@ -8,6 +8,7 @@ import {
   Activity, Calendar, User, BarChart3, Download, Clock,
 } from 'lucide-react';
 import { Button, Badge, Table, Th, Td, Tr, ExportButton, Pagination, KpiCard } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import { ACTION_TYPES } from '../../services/auditService';
 
 const ACTION_CONFIG = {
@@ -225,10 +226,12 @@ export default function AuditLogPage() {
       {activeTab === 'views' ? (<>
         {/* Views Filters */}
         <div className="flex gap-2 mb-4 flex-wrap items-center">
-          <select value={viewUser} onChange={e => { setViewUser(e.target.value); setViewsPage(1); }} className={selectCls}>
-            <option value="">{isRTL ? 'كل المستخدمين' : 'All Users'}</option>
-            {userOptions.map(u => <option key={u.value} value={u.value}>{isRTL ? u.label : u.labelEn}</option>)}
-          </select>
+          <SearchableSelect
+            value={viewUser}
+            onChange={(v) => { setViewUser(v); setViewsPage(1); }}
+            className={selectCls.replace(' appearance-none', '')}
+            options={[{ value: '', label: isRTL ? 'كل المستخدمين' : 'All Users' }, ...userOptions.map(u => ({ value: u.value, label: isRTL ? u.label : u.labelEn }))]}
+          />
           <select value={viewDateRange} onChange={e => { setViewDateRange(e.target.value); setViewsPage(1); }} className={selectCls}>
             <option value="all">{isRTL ? 'كل الأوقات' : 'All Time'}</option>
             <option value="today">{isRTL ? 'اليوم' : 'Today'}</option>
@@ -310,10 +313,12 @@ export default function AuditLogPage() {
         </select>
 
         {/* User filter */}
-        <select value={filterUser} onChange={e => { setFilterUser(e.target.value); setPage(1); }} className={selectCls}>
-          <option value="">{isRTL ? 'كل المستخدمين' : 'All Users'}</option>
-          {userOptions.map(u => <option key={u.value} value={u.value}>{isRTL ? u.label : u.labelEn}</option>)}
-        </select>
+        <SearchableSelect
+          value={filterUser}
+          onChange={(v) => { setFilterUser(v); setPage(1); }}
+          className={selectCls.replace(' appearance-none', '')}
+          options={[{ value: '', label: isRTL ? 'كل المستخدمين' : 'All Users' }, ...userOptions.map(u => ({ value: u.value, label: isRTL ? u.label : u.labelEn }))]}
+        />
 
         {/* Date range */}
         <select value={filterDateRange} onChange={e => { setFilterDateRange(e.target.value); setPage(1); }} className={selectCls}>

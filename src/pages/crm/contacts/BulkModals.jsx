@@ -10,6 +10,7 @@ import { getTemplates, renderBody } from '../../../services/smsTemplateService';
 import { reportError } from '../../../utils/errorReporter';
 import { getDeptStages } from './constants';
 import { Button, SelectedContactsList } from '../../../components/ui';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 
 // English status labels for timeline activity notes — mirrors the map the
 // drawer's handleStatusChange uses so DQ entries read like other transitions.
@@ -705,10 +706,15 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
         <div className="flex flex-col gap-3">
           <div>
             <label className={labelCls}>{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
-            <select value={bulkOppForm.assigned_to_name} onChange={e => setBulkOppForm(f => ({ ...f, assigned_to_name: e.target.value }))} className={fieldCls}>
-              <option value="">{isRTL ? '— اختر —' : '— Select —'}</option>
-              {agents.map(a => <option key={a.id || a.name} value={a.name}>{a.name}</option>)}
-            </select>
+            <div className="[&>div]:w-full">
+              <SearchableSelect
+                value={bulkOppForm.assigned_to_name}
+                onChange={(v) => setBulkOppForm(f => ({ ...f, assigned_to_name: v }))}
+                className={fieldCls}
+                placeholder={isRTL ? '— اختر —' : '— Select —'}
+                options={[{ value: '', label: isRTL ? '— اختر —' : '— Select —' }, ...agents.map(a => ({ value: a.name, label: a.name }))]}
+              />
+            </div>
           </div>
 
           <div className="flex gap-2.5">
@@ -732,10 +738,15 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
           {projectsList.length > 0 && (
             <div>
               <label className={labelCls}>{isRTL ? 'المشروع' : 'Project'}</label>
-              <select value={bulkOppForm.project_id} onChange={e => setBulkOppForm(f => ({ ...f, project_id: e.target.value }))} className={fieldCls}>
-                <option value="">{isRTL ? '— بدون مشروع —' : '— No Project —'}</option>
-                {projectsList.map(p => <option key={p.id} value={p.id}>{isRTL ? p.name_ar : p.name_en}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={bulkOppForm.project_id}
+                  onChange={(v) => setBulkOppForm(f => ({ ...f, project_id: v }))}
+                  className={fieldCls}
+                  placeholder={isRTL ? '— بدون مشروع —' : '— No Project —'}
+                  options={[{ value: '', label: isRTL ? '— بدون مشروع —' : '— No Project —' }, ...projectsList.map(p => ({ value: p.id, label: isRTL ? p.name_ar : p.name_en }))]}
+                />
+              </div>
             </div>
           )}
 
