@@ -30,6 +30,7 @@ import { applyRoleFilter } from '../utils/roleFilter';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input, getSmartFilterChipLabel } from '../components/ui';
 import SearchableSelect from '../components/ui/SearchableSelect';
+import { useClickOutside } from '../utils/hooks';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useContactsFilters } from '../hooks/useContactsFilters';
 import useCrmPermissions from '../hooks/useCrmPermissions';
@@ -75,6 +76,45 @@ function followupDayBounds() {
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   return { todayStart: todayStart.toISOString(), tomorrowStart: tomorrowStart.toISOString() };
+}
+
+// A compact date-range control: a dropdown button (shows the current range /
+// "Any time") that opens a small menu with From/To pickers + quick presets.
+// Replaces the two bare date inputs that used to sit in the filters grid.
+function DateRangeMenu({ label, value, onChange, isRTL }) {
+  const [open, setOpen] = useState(false);
+  const ref = useReactRef(null);
+  useClickOutside(ref, () => setOpen(false), open);
+  const [a, b] = Array.isArray(value) ? value : ['', ''];
+  const active = a || b;
+  const summary = active ? `${a || '…'} → ${b || '…'}` : (isRTL ? 'أي وقت' : 'Any time');
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const preset = (days) => { const to = new Date(); const from = new Date(); from.setDate(to.getDate() - days); onChange([fmt(from), fmt(to)]); };
+  const dcls = 'w-full px-2 py-1 rounded-lg text-[11px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none';
+  return (
+    <div className="relative" ref={ref}>
+      <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{label}</div>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className={`w-full inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border bg-surface-input dark:bg-surface-input-dark ${active ? 'border-brand-500 text-brand-500' : 'border-edge dark:border-edge-dark text-content dark:text-content-dark'}`}>
+        <span className="flex-1 min-w-0 truncate text-start">{summary}</span>
+        <ChevronDown size={12} className="shrink-0 opacity-60" />
+      </button>
+      {open && (
+        <div className="absolute z-[2000] mt-1 w-60 p-2 rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-[0_8px_30px_rgba(27,51,71,0.18)]">
+          <div className="flex gap-1.5 mb-2">
+            <div className="flex-1"><div className="text-[9px] text-content-muted dark:text-content-muted-dark mb-0.5">{isRTL ? 'من' : 'From'}</div><input type="date" value={a} onChange={e => onChange([e.target.value, b])} className={dcls} /></div>
+            <div className="flex-1"><div className="text-[9px] text-content-muted dark:text-content-muted-dark mb-0.5">{isRTL ? 'إلى' : 'To'}</div><input type="date" value={b} onChange={e => onChange([a, e.target.value])} className={dcls} /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {[[7, isRTL ? '٧ أيام' : '7d'], [30, isRTL ? '٣٠ يوم' : '30d'], [90, isRTL ? '٩٠ يوم' : '90d']].map(([d, l]) => (
+              <button key={d} type="button" onClick={() => preset(d)} className="px-2 py-1 rounded-md text-[10px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark hover:border-brand-500 cursor-pointer">{l}</button>
+            ))}
+            {active && <button type="button" onClick={() => onChange(['', ''])} className="ms-auto px-2 py-1 rounded-md text-[10px] text-red-500 hover:underline cursor-pointer bg-transparent border-none">{isRTL ? 'مسح' : 'Clear'}</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ContactsPage() {
@@ -2163,11 +2203,21 @@ export default function ContactsPage() {
           const agentF = smartFilters.find(f => f.field === 'assigned_to_name' && f.operator === 'is');
           const curAssignee = typeof agentF?.value === 'string' ? agentF.value : '';
           const showAssignee = profile?.role !== 'sales_agent';
+          // Compact inline trigger for the most-used filters, shown in the bar.
+          const barTriggerCls = 'max-w-[160px] px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
           return (
             <>
-              {/* "Filters" — ONE popover holding the secondary filters (Stage /
-                  Type / Activity / Temperature) so the bar stays uncluttered.
-                  Replaces the old scattered dropdowns + a separate toggle. */}
+              {/* Most-used filters — surfaced directly in the bar (Category /
+                  Type / Stage) so they're one click away without opening the
+                  "More filters" panel. Same shared state as the panel. */}
+              <SearchableSelect value={categoryFilter} onChange={(v) => { setCategoryFilter(v); setPage(1); }} className={barTriggerCls} activeColor={categoryFilter !== 'all' ? curCatDef?.color : undefined}
+                options={[{ value: 'all', label: isRTL ? 'كل التصنيفات' : 'All Categories' }, ...leadCategoryDefs.map(c => ({ value: c.key, label: isRTL ? c.label_ar : c.label_en }))]} />
+              <SearchableSelect value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} className={barTriggerCls} activeColor={filterType !== 'all' ? TYPE[filterType]?.color : undefined}
+                options={[{ value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' }, ...types.filter(k => TYPE[k]).map(k => ({ value: k, label: isRTL ? TYPE[k].label : TYPE[k].labelEn }))]} />
+              {STAGE_UI_ENABLED && <SearchableSelect value={filterStage} onChange={(v) => { setFilterStage(v); setPage(1); }} className={barTriggerCls} activeColor={(filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? CONTACT_STAGE[filterStage].color : undefined}
+                options={[{ value: 'all', label: isRTL ? 'كل المراحل' : 'All Stages' }, ...CONTACT_STAGE_ORDER.map(k => ({ value: k, label: isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en }))]} />}
+              {/* "More filters" — ONE panel holding the remaining filters so the
+                  bar stays uncluttered. */}
               <button type="button" onClick={() => setShowAdvanced(v => !v)}
                 className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
                 <SlidersHorizontal size={13} /> {isRTL ? 'المزيد من الفلاتر' : 'More filters'}
@@ -2188,8 +2238,6 @@ export default function ContactsPage() {
                         const fopts = (id) => [{ value: '', label: isRTL ? 'الكل' : 'All' }, ...((SMART_FIELDS.find(f => f.id === id)?.options) || []).map(o => ({ value: o.value, label: isRTL ? o.label : (o.labelEn || o.label) }))];
                         const SS = (field, label) => <div>{lbl(label)}<div className="[&>div]:w-full"><SearchableSelect value={getV(field)} onChange={(v) => setV(field, v)} className={ddPanelTriggerCls} options={fopts(field)} /></div></div>;
                         const DS = (label, value, on, options, color) => <div>{lbl(label)}<div className="[&>div]:w-full"><SearchableSelect value={value} onChange={on} className={ddPanelTriggerCls} activeColor={color} options={options} /></div></div>;
-                        const dcls = 'w-full px-2 py-1.5 rounded-lg text-[11px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none';
-                        const DR = (field, label) => { const [a, b] = getD(field); return <div className="col-span-2">{lbl(label)}<div className="flex gap-1.5"><input type="date" value={a} onChange={e => setD(field, e.target.value, b)} className={dcls} /><input type="date" value={b} onChange={e => setD(field, a, e.target.value)} className={dcls} /></div></div>; };
                         return (
                           <>
                             <div className="flex items-center justify-between mb-3">
@@ -2198,8 +2246,6 @@ export default function ContactsPage() {
                                 className="text-[10px] text-red-500 bg-transparent border-none cursor-pointer hover:underline p-0 flex items-center gap-1"><RotateCcw size={10} /> {isRTL ? 'مسح الكل' : 'Clear all'}</button>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-2.5 gap-y-2">
-                              {DS(isRTL ? 'التصنيف' : 'Category', categoryFilter, (v) => { setCategoryFilter(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل التصنيفات' : 'All Categories' }, ...leadCategoryDefs.map(c => ({ value: c.key, label: isRTL ? c.label_ar : c.label_en }))], curCatDef?.color)}
-                              {DS(isRTL ? 'النوع' : 'Type', filterType, (v) => { setFilterType(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' }, ...types.filter(k => TYPE[k]).map(k => ({ value: k, label: isRTL ? TYPE[k].label : TYPE[k].labelEn }))], TYPE[filterType]?.color)}
                               {SS('source', isRTL ? 'المصدر' : 'Source')}
                               {SS('prefix', isRTL ? 'اللقب' : 'Prefix')}
                               {SS('_country', isRTL ? 'الدولة' : 'Country')}
@@ -2207,14 +2253,13 @@ export default function ContactsPage() {
                               {showAssignee && <div>{lbl(isRTL ? 'المسؤول' : 'Assignee')}<div className="[&>div]:w-full"><SearchableSelect value={showUnassigned ? '__unassigned' : (curAssignee || '')} onChange={(v) => { setShowUnassigned(v === '__unassigned'); setSmartFilters(prev => { const rest = prev.filter(f => f.field !== 'assigned_to_name'); return (v && v !== '__unassigned') ? [...rest, { field: 'assigned_to_name', operator: 'is', value: v }] : rest; }); setPage(1); }} className={ddPanelTriggerCls} activeColor={(curAssignee || showUnassigned) ? '#2F6BD3' : undefined} options={[{ value: '', label: isRTL ? 'كل الموظفين' : 'All Assignees' }, { value: '__unassigned', label: `${isRTL ? 'غير معيّن' : 'Unassigned'} (${stats.unassigned || 0})` }, ...assigneeNames.map(n => ({ value: n, label: n }))]} /></div></div>}
                               {SS('assigned_by_name', isRTL ? 'عيّنه' : 'Assigned by')}
                               {SS('created_by_name', isRTL ? 'أنشأه' : 'Created by')}
-                              {STAGE_UI_ENABLED && DS(isRTL ? 'المرحلة' : 'Stage', filterStage, (v) => { setFilterStage(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل المراحل' : 'All Stages' }, ...CONTACT_STAGE_ORDER.map(k => ({ value: k, label: isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en }))], (filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? CONTACT_STAGE[filterStage].color : undefined)}
                               {DS(isRTL ? 'النشاط' : 'Activity', filterActivity, (v) => { setFilterActivity(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل النشاط' : 'All Activity' }, { value: 'active_3d', label: isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)` }, { value: 'moderate_7d', label: isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)` }, { value: 'stale', label: isRTL ? '■ مهمل' : '■ Stale' }, { value: 'never', label: isRTL ? '✕ لم يتم التواصل' : '✕ Never' }])}
                               {SS('_meeting', isRTL ? 'عليه اجتماع' : 'Has meeting')}
                               {SS('_deal_stage', isRTL ? 'مرحلة الصفقة' : 'Deal stage')}
                               {SS('_no_activity_by', isRTL ? 'بدون نشاط' : 'No activity by')}
-                              {DR('created_at', isRTL ? 'تاريخ الإنشاء' : 'Created')}
-                              {DR('assigned_at', isRTL ? 'تاريخ التوزيع' : 'Assigned')}
-                              {DR('last_activity_at', isRTL ? 'آخر نشاط' : 'Last activity')}
+                              <DateRangeMenu label={isRTL ? 'تاريخ الإنشاء' : 'Created'} value={getD('created_at')} onChange={(v) => setD('created_at', v[0], v[1])} isRTL={isRTL} />
+                              <DateRangeMenu label={isRTL ? 'تاريخ التوزيع' : 'Assigned'} value={getD('assigned_at')} onChange={(v) => setD('assigned_at', v[0], v[1])} isRTL={isRTL} />
+                              <DateRangeMenu label={isRTL ? 'آخر نشاط' : 'Last activity'} value={getD('last_activity_at')} onChange={(v) => setD('last_activity_at', v[0], v[1])} isRTL={isRTL} />
                             </div>
                           </>
                         );
