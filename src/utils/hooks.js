@@ -60,22 +60,24 @@ export function useFocusTrap(ref) {
     const previouslyFocused = document.activeElement;
     const focusableSelector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
     const getFocusable = () => Array.from(node.querySelectorAll(focusableSelector)).filter(el => !el.hasAttribute('aria-hidden') && el.offsetParent !== null);
-    // Move focus to first focusable element
+    // Move focus to first focusable element. preventScroll everywhere: a modal
+    // (or its trigger) can sit far down the document, so a default focus would
+    // scroll the page to that element — the "page jumps to the bottom" bug.
     const first = getFocusable()[0];
-    if (first) first.focus();
+    if (first) first.focus({ preventScroll: true });
     const handler = (e) => {
       if (e.key !== 'Tab') return;
       const focusables = getFocusable();
       if (focusables.length === 0) { e.preventDefault(); return; }
       const firstEl = focusables[0];
       const lastEl = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
-      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus({ preventScroll: true }); }
+      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus({ preventScroll: true }); }
     };
     node.addEventListener('keydown', handler);
     return () => {
       node.removeEventListener('keydown', handler);
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus({ preventScroll: true });
     };
   }, [ref]);
 }
