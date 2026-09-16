@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS, ROLE_NAV_GROUPS, MODULE_IDS, GLOBAL_IDS, findModuleId } from '../../config/navigation';
 import { P } from '../../config/roles';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle, Circle } from 'lucide-react';
+import { useShortcutsHelp } from './KeyboardShortcutsProvider';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle, Circle, Sun, Moon, Globe, LogOut, Keyboard, User, ChevronUp } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 import { getEmailStats } from '../../services/emailService';
@@ -13,11 +14,30 @@ import { getPendingCount as getApprovalPendingCount } from '../../services/appro
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const { i18n } = useTranslation();
-  const { hasPermission, profile } = useAuth();
+  const { hasPermission, profile, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { setShowHelp } = useShortcutsHelp();
   const [openMenus, setOpenMenus] = useState({});
-  const { theme } = useTheme();
+  const [profileMenu, setProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
+  const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+  const handleLangToggle = () => {
+    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(newLang).then(() => {
+      document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = newLang;
+    });
+  };
+  // Close the profile menu on outside click / route change.
+  useEffect(() => {
+    if (!profileMenu) return;
+    const h = (e) => { if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenu(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [profileMenu]);
+  useEffect(() => { setProfileMenu(false); }, [location.pathname]);
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
@@ -258,7 +278,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   key={fav.id}
                   to={fav.path}
                   onClick={handleNavClick}
-                  className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2 px-3 rounded-lg no-underline text-[12px] font-medium transition-colors ${isActive(fav.path) ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}
+                  className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2 px-3 rounded-lg no-underline text-[12px] font-medium transition-colors ${isActive(fav.path) ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-700 dark:text-gray-200'}`}
                 >
                   <Star size={14} className="shrink-0" style={{ color: '#C9860A' }} fill="#C9860A" />
                   <span className="flex-1 text-start truncate">{isRTL ? (fav.nameAr || fav.name) : fav.name}</span>
@@ -295,7 +315,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               <div key={item.id} className="mb-0.5">
                 {item.path && !hasChildren ? (
                   <div style={{ position: 'relative' }} className="group">
-                  <Link to={item.path} onClick={handleNavClick} title={!showLabels ? item.label[lang] : undefined} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}>
+                  <Link to={item.path} onClick={handleNavClick} title={!showLabels ? item.label[lang] : undefined} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-700 dark:text-gray-200'}`}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
@@ -319,7 +339,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   </Link>
                   </div>
                 ) : (
-                  <button onClick={(e) => handleParentClick(e, item)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'} text-start`}>
+                  <button onClick={(e) => handleParentClick(e, item)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-700 dark:text-gray-200'} text-start`}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
@@ -343,9 +363,11 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                           </div>
                         );
                       }
+                      const ChildIcon = child.icon;
                       return (
-                        <Link key={child.id} to={child.path} onClick={handleNavClick} className={`block py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50/25 dark:bg-brand-500/15' : 'font-normal text-gray-400 dark:text-gray-500 bg-transparent'}`}>
-                          {child.label[lang]}
+                        <Link key={child.id} to={child.path} onClick={handleNavClick} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-2.5 py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50/25 dark:bg-brand-500/15' : 'font-normal text-gray-600 dark:text-gray-300 bg-transparent hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+                          {ChildIcon && <ChildIcon size={16} className="shrink-0 opacity-80" />}
+                          <span className="flex-1 text-start truncate">{child.label[lang]}</span>
                         </Link>
                       );
                     })}
@@ -373,16 +395,25 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                       </span>
                     </div>
                     <div className="p-1.5">
-                      {visibleChildren.map(child => (
-                        <Link
-                          key={child.id}
-                          to={child.path}
-                          onClick={() => { setFlyoutMenu(null); handleNavClick(); }}
-                          className={`block py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' : 'font-normal text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 bg-transparent'}`}
-                        >
-                          {child.label[lang]}
-                        </Link>
-                      ))}
+                      {visibleChildren.map(child => {
+                        if (child.group) return (
+                          <div key={child.group.en} className="pt-2 pb-1 px-3 first:pt-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{child.group[lang]}</span>
+                          </div>
+                        );
+                        const ChildIcon = child.icon;
+                        return (
+                          <Link
+                            key={child.id}
+                            to={child.path}
+                            onClick={() => { setFlyoutMenu(null); handleNavClick(); }}
+                            className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-2.5 py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' : 'font-normal text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 bg-transparent'}`}
+                          >
+                            {ChildIcon && <ChildIcon size={16} className="shrink-0 opacity-80" />}
+                            <span className="flex-1 text-start truncate">{child.label[lang]}</span>
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -447,63 +478,75 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             )}
           </Link>
 
-          {/* Profile */}
-          <Link
-            to="/profile"
-            onClick={handleNavClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: collapsed ? '8px 0' : '8px 10px',
-              borderRadius: 10,
-              textDecoration: 'none',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              background: location.pathname === '/profile'
-                ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)')
-                : 'transparent',
-              transition: 'background 0.15s',
-            }}
-          >
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2B4C6F, #2F6BD3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 12,
-              fontWeight: 700,
-              color: '#fff',
-              flexShrink: 0,
-            }}>
-              {(profile?.full_name_en || profile?.full_name_ar || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-            </div>
-            {!collapsed && (
-              <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: isDark ? '#e2e8f0' : '#1e293b',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {isRTL ? (profile?.full_name_ar || profile?.full_name_en) : (profile?.full_name_en || profile?.full_name_ar)}
+          {/* Profile — opens a menu (profile / theme / language / shortcuts / logout).
+              These moved here from the header's top-right profile, which was removed. */}
+          <div ref={profileMenuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setProfileMenu(v => !v)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: collapsed ? '8px 0' : '8px 10px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                background: profileMenu ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)') : 'transparent',
+                transition: 'background 0.15s',
+              }}
+            >
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #2B4C6F, #2F6BD3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0,
+              }}>
+                {(profile?.full_name_en || profile?.full_name_ar || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+              {!collapsed && (
+                <div style={{ overflow: 'hidden', flex: 1, minWidth: 0, textAlign: 'start' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {isRTL ? (profile?.full_name_ar || profile?.full_name_en) : (profile?.full_name_en || profile?.full_name_ar)}
+                  </div>
+                  <div style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {profile?.email || (isRTL ? 'الحساب' : 'Account')}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: 11,
-                  color: isDark ? '#64748b' : '#94a3b8',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {isRTL ? 'الملف الشخصي' : 'View Profile'}
-                </div>
+              )}
+              {!collapsed && <ChevronUp size={15} className={`shrink-0 text-gray-400 transition-transform ${profileMenu ? '' : 'rotate-180'}`} />}
+            </button>
+
+            {profileMenu && (
+              <div
+                dir={isRTL ? 'rtl' : 'ltr'}
+                className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg dark:shadow-2xl py-1.5"
+                style={{ position: 'absolute', bottom: 'calc(100% + 6px)', insetInlineStart: 0, minWidth: 210, zIndex: 9999 }}
+              >
+                <button onClick={() => { setProfileMenu(false); handleNavClick(); navigate('/profile'); }} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-white/5 text-start">
+                  <User size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />{isRTL ? 'الملف الشخصي' : 'My Profile'}
+                </button>
+                <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
+                <button onClick={() => { toggleTheme(); setProfileMenu(false); }} className="w-full flex items-center gap-2.5 px-3.5 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-white/5 text-start">
+                  {isDark ? <Sun size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" /> : <Moon size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />}
+                  {isDark ? (isRTL ? 'الوضع الفاتح' : 'Light Mode') : (isRTL ? 'الوضع الداكن' : 'Dark Mode')}
+                </button>
+                <button onClick={() => { handleLangToggle(); setProfileMenu(false); }} className="w-full flex items-center gap-2.5 px-3.5 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-white/5 text-start">
+                  <Globe size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                  {i18n.language.startsWith('ar') ? 'English' : 'العربية'}
+                </button>
+                <button onClick={() => { setShowHelp(true); setProfileMenu(false); }} className="w-full flex items-center gap-2.5 px-3.5 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-white/5 text-start">
+                  <Keyboard size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                  {isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
+                </button>
+                <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
+                <button onClick={() => { setProfileMenu(false); logout(); }} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-[13px] text-start">
+                  <LogOut size={16} className="shrink-0" />{isRTL ? 'تسجيل الخروج' : 'Log Out'}
+                </button>
               </div>
             )}
-          </Link>
+          </div>
         </div>
       </aside>
     </>

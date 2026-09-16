@@ -337,47 +337,6 @@ export default function Header({ onMenuClick }) {
             )}
           </div>
         )}
-        <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark hidden sm:block" />
-        <div ref={ref} className="relative">
-          <button onClick={() => setOpenDropdown(openDropdown === 'profile' ? null : 'profile')} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
-              <User size={16} color="#fff" />
-            </div>
-            {/* Full name/role - hidden on small screens */}
-            <div className="text-start hidden sm:block">
-              <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
-              <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{roleLabel}</div>
-            </div>
-          </button>
-          {showProfile && (
-            <div dir={isRTL ? 'rtl' : 'ltr'} className={`fixed top-14 end-2 w-[240px] max-w-[calc(100vw-16px)] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
-              <div className="px-4 py-2.5 border-b border-edge dark:border-edge-dark/75">
-                <div className="text-sm font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
-                <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">{profile?.email}</div>
-              </div>
-              <button onClick={() => { setShowProfile(false); navigate('/profile'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
-                <User size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />{isRTL ? 'الملف الشخصي' : 'My Profile'}
-              </button>
-              <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
-              <button onClick={() => { toggleTheme(); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
-                {theme === 'dark' ? <Sun size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" /> : <Moon size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />}
-                {theme === 'dark' ? (isRTL ? 'الوضع الفاتح' : 'Light Mode') : (isRTL ? 'الوضع الداكن' : 'Dark Mode')}
-              </button>
-              <button onClick={() => { handleLangToggle(); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
-                <Globe size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
-                {i18n.language === 'ar' ? 'English' : 'العربية'}
-              </button>
-              <button onClick={() => { setShowHelp(true); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
-                <Keyboard size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
-                {isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
-              </button>
-              <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
-              <button onClick={logout} className="w-full flex items-center gap-2.5 px-4 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-[13px] text-start">
-                <LogOut size={16} className="shrink-0" />{t('auth.logout')}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     </header>
     {isImpersonating && (
