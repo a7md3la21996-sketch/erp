@@ -7,6 +7,7 @@ import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
+import { CONVERSATION_OUTCOME_GROUPS } from './constants';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
 // Assembles a single interaction payload and hands it to onLogInteraction,
@@ -40,8 +41,10 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
   const [actMode, setActMode] = useState('log');
 
   // Activity state
-  const [actForm, setActForm] = useState({ type: initialType || 'call', description: '', result: '', scheduled_date: '', meeting_subtype: '' });
-  const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '', meeting_subtype: '' } : {}) }));
+  const [actForm, setActForm] = useState({ type: initialType || 'call', description: '', result: '', outcome: '', scheduled_date: '', meeting_subtype: '' });
+  // Changing type OR result clears the conversation outcome (it's only relevant
+  // to the current engaged result).
+  const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '', outcome: '', meeting_subtype: '' } : {}), ...(k === 'result' ? { outcome: '' } : {}) }));
   const currentResults = ACTIVITY_RESULTS[actForm.type] || [];
   const resultRequired = actMode === 'log' && currentResults.length > 0;
 
@@ -129,10 +132,14 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
   // must carry a written outcome — same rule the DB RPC enforces.
   const noteRequired = actMode === 'log' && isNoteRequired(actForm.type, actForm.result);
   const descriptionMissing = noteRequired && !actForm.description.trim();
+  // After an engaged touch we also require the conversation outcome (what the
+  // talk led to) so the pipeline signal is captured, not just "answered".
+  const outcomeRequired = noteRequired;
+  const outcomeMissing = outcomeRequired && !actForm.outcome;
   const canSave = (actMode === 'schedule'
     ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)
     : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype))
-    && !taskDateRequired && !dqReasonRequired && !noteBodyMissing && !descriptionMissing;
+    && !taskDateRequired && !dqReasonRequired && !noteBodyMissing && !descriptionMissing && !outcomeMissing;
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -161,6 +168,7 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
     const payload = {
       type: actForm.type,
       result: actForm.result || null,
+      outcome: actForm.outcome || null,
       description,
       meetingSubtype: actForm.type === 'meeting' ? actForm.meeting_subtype : null,
       mode: actMode,
@@ -260,11 +268,37 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
             <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{RESULT_TITLES[actForm.type]} <span className="text-red-500">*</span></div>
             <div className="flex gap-1.5 flex-wrap">
               {currentResults.map(r => (
-                <button key={r.value} onClick={() => setActForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                <button key={r.value} onClick={() => setActForm(f => ({ ...f, result: f.result === r.value ? '' : r.value, outcome: '' }))}
                   className={`px-2.5 py-1 rounded-lg text-[11px] cursor-pointer border font-cairo ${actForm.result === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
                   style={actForm.result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
                   {r.label}
                 </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Conversation outcome — appears after an engaged result (answered /
+            replied / attended …). Grouped by direction, one required choice. */}
+        {outcomeRequired && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+              {isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span>
+            </div>
+            <div className={`flex flex-col gap-1.5 ${outcomeMissing ? 'ring-1 ring-red-500/60 rounded-lg p-1.5' : ''}`}>
+              {CONVERSATION_OUTCOME_GROUPS.map(g => (
+                <div key={g.key} className="flex gap-1.5 flex-wrap items-center">
+                  <span className="text-[9px] font-bold w-11 shrink-0" style={{ color: g.color }}>{isRTL ? g.ar : g.en}</span>
+                  {g.items.map(([key, ar, en]) => {
+                    const on = actForm.outcome === key;
+                    return (
+                      <button key={key} type="button" onClick={() => setActForm(f => ({ ...f, outcome: f.outcome === key ? '' : key }))}
+                        className={`px-2 py-1 rounded-lg text-[11px] cursor-pointer border font-cairo ${on ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                        style={on ? { background: g.color + '18', border: `1px solid ${g.color}`, color: g.color } : undefined}>
+                        {isRTL ? ar : en}
+                      </button>
+                    );
+                  })}
+                </div>
               ))}
             </div>
           </div>

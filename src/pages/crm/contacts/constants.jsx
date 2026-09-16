@@ -106,6 +106,53 @@ export function ResultBadge({ result, isRTL, className = '' }) {
   );
 }
 
+// ── Conversation outcomes (after an ENGAGED touch) ──────────────────────────
+// Once the contact actually engaged (call answered / whatsapp+email replied /
+// meeting attended / visit happened) the rep records WHAT the conversation led
+// to — a second, richer signal than the channel-level result. Grouped by
+// direction (progressing / objection / lost) with a shared colour per group.
+export const CONVERSATION_OUTCOME_GROUPS = [
+  { key: 'progressing', ar: 'بيتقدّم', en: 'Progressing', color: '#158A57', items: [
+    ['interested', 'مهتم', 'Interested'],
+    ['wants_meeting', 'عايز معاينة/اجتماع', 'Wants viewing/meeting'],
+    ['wants_info', 'طلب تفاصيل/بروشور', 'Requested info'],
+    ['callback_scheduled', 'حدّد ميعاد مكالمة', 'Callback scheduled'],
+    ['negotiating', 'بيتفاوض', 'Negotiating'],
+    ['ready_to_reserve', 'جاهز يحجز', 'Ready to reserve'],
+  ] },
+  { key: 'objection', ar: 'متردد/اعتراض', en: 'Objection', color: '#C9860A', items: [
+    ['price_high', 'السعر مرتفع', 'Price too high'],
+    ['payment_plan', 'نظام السداد', 'Payment plan'],
+    ['location', 'الموقع مش مناسب', 'Location'],
+    ['needs_time', 'محتاج وقت يفكر', 'Needs time'],
+    ['comparing', 'بيقارن عروض', 'Comparing offers'],
+  ] },
+  { key: 'lost', ar: 'مش مهتم', en: 'Not interested', color: '#D6403B', items: [
+    ['not_interested', 'غير مهتم', 'Not interested'],
+    ['no_budget', 'مفيش ميزانية', 'No budget'],
+    ['already_bought', 'اشترى بالفعل', 'Already bought'],
+    ['just_browsing', 'بيتفرج بس', 'Just browsing'],
+    ['do_not_contact', 'ممنوع التواصل', 'Do not contact'],
+    ['wrong_person', 'شخص خطأ', 'Wrong person'],
+  ] },
+];
+// Flat key → { ar, en, color, group } map for badges/labels anywhere.
+export const CONVERSATION_OUTCOMES = Object.fromEntries(
+  CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([k, ar, en]) => [k, { ar, en, color: g.color, group: g.key }]))
+);
+
+// Shared coloured outcome badge (mirrors ResultBadge). Null for unknown keys.
+export function OutcomeBadge({ outcome, isRTL, className = '' }) {
+  const o = outcome && CONVERSATION_OUTCOMES[outcome];
+  if (!o) return null;
+  return (
+    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap align-middle ${className}`}
+      style={{ background: o.color + '18', color: o.color }}>
+      {isRTL ? o.ar : o.en}
+    </span>
+  );
+}
+
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [

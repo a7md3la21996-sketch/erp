@@ -61,6 +61,7 @@ export async function logInteraction(contactId, payload = {}) {
   const {
     type,
     result = null,
+    outcome = null,
     description = '',
     notes = null,
     meetingSubtype = null,
@@ -105,6 +106,17 @@ export async function logInteraction(contactId, payload = {}) {
     if (/NOTE_REQUIRED/.test(error.message || '')) throw new Error('NOTE_REQUIRED');
     reportError('interactionsService', 'logInteraction', error);
     throw new Error(error.message || 'Failed to log interaction');
+  }
+  // Conversation outcome (interested / price_high / …) is stored on the created
+  // activity. Done as a light follow-up update (not through the RPC) so the
+  // central log_interaction contract stays untouched. Tolerant: if the column
+  // isn't there yet, or the id can't be resolved, logging still succeeds.
+  if (outcome) {
+    const activityId = data?.activity?.id || data?.activity_id || data?.activityId;
+    if (activityId) {
+      const { error: outErr } = await supabase.from('activities').update({ outcome }).eq('id', activityId);
+      if (outErr) reportError('interactionsService', 'logInteraction.outcome', outErr);
+    }
   }
   return data || {};
 }
