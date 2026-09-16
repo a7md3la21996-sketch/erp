@@ -111,36 +111,49 @@ export function ResultBadge({ result, isRTL, className = '' }) {
 // Once the contact actually engaged (call answered / whatsapp+email replied /
 // meeting attended / visit happened) the rep records WHAT the conversation led
 // to — a second, richer signal than the channel-level result. Grouped by
-// direction (progressing / objection / lost) with a shared colour per group.
+// direction (moving / objection / lost) with a shared colour per group.
+//
+// This taxonomy was EXTRACTED from what reps actually write on leads: a term
+// analysis of 7,444 answered-call notes (top phrases: "غير مهتم"/"صرف نظر",
+// "مهتم", "ابعتلي التفاصيل"/واتساب, "بعتله اوفر", "اكلمه الساعة", "استلام فوري",
+// "شاري اصلا", "بروكر/سمسار", "السعر غالي"). Not guessed.
 export const CONVERSATION_OUTCOME_GROUPS = [
-  { key: 'progressing', ar: 'بيتقدّم', en: 'Progressing', color: '#158A57', items: [
+  { key: 'moving', ar: 'مهتم/بيتحرك', en: 'Interested', color: '#158A57', items: [
     ['interested', 'مهتم', 'Interested'],
-    ['wants_meeting', 'عايز معاينة/اجتماع', 'Wants viewing/meeting'],
-    ['wants_info', 'طلب تفاصيل/بروشور', 'Requested info'],
-    ['callback_scheduled', 'حدّد ميعاد مكالمة', 'Callback scheduled'],
-    ['negotiating', 'بيتفاوض', 'Negotiating'],
-    ['ready_to_reserve', 'جاهز يحجز', 'Ready to reserve'],
+    ['wants_info', 'طلب تفاصيل (واتساب)', 'Requested info'],
+    ['offer_sent', 'بعتله عرض/أوفر', 'Offer sent'],
+    ['callback_scheduled', 'هيكلّمني/حدّد ميعاد', 'Callback scheduled'],
+    ['wants_meeting', 'عايز معاينة/زيارة', 'Wants a visit'],
   ] },
-  { key: 'objection', ar: 'متردد/اعتراض', en: 'Objection', color: '#C9860A', items: [
-    ['price_high', 'السعر مرتفع', 'Price too high'],
-    ['payment_plan', 'نظام السداد', 'Payment plan'],
-    ['location', 'الموقع مش مناسب', 'Location'],
+  { key: 'objection', ar: 'اعتراض/تردد', en: 'Objection', color: '#C9860A', items: [
+    ['price_high', 'السعر غالي/فوق ميزانيته', 'Price too high'],
+    ['wants_ready', 'عايز استلام فوري/قريب', 'Wants a ready unit'],
     ['needs_time', 'محتاج وقت يفكر', 'Needs time'],
     ['comparing', 'بيقارن عروض', 'Comparing offers'],
   ] },
-  { key: 'lost', ar: 'مش مهتم', en: 'Not interested', color: '#D6403B', items: [
-    ['not_interested', 'غير مهتم', 'Not interested'],
-    ['no_budget', 'مفيش ميزانية', 'No budget'],
+  { key: 'lost', ar: 'مقفول', en: 'Closed / lost', color: '#D6403B', items: [
+    ['not_interested', 'غير مهتم / صرف نظر', 'Not interested'],
     ['already_bought', 'اشترى بالفعل', 'Already bought'],
-    ['just_browsing', 'بيتفرج بس', 'Just browsing'],
+    ['broker', 'بروكر/سمسار (مش عميل)', 'Broker / not a buyer'],
+    ['no_budget', 'مش قادر مادياً', "Can't afford"],
+    ['wrong_person', 'رقم/شخص غلط', 'Wrong number / person'],
     ['do_not_contact', 'ممنوع التواصل', 'Do not contact'],
-    ['wrong_person', 'شخص خطأ', 'Wrong person'],
   ] },
 ];
+// Keys retired from the picker but kept so any already-stored value still
+// renders a badge (the taxonomy was refined after go-live from real usage).
+const LEGACY_OUTCOMES = {
+  negotiating:      { ar: 'بيتفاوض',        en: 'Negotiating',    color: '#C9860A', group: 'objection' },
+  ready_to_reserve: { ar: 'جاهز يحجز',      en: 'Ready to reserve', color: '#158A57', group: 'moving' },
+  payment_plan:     { ar: 'نظام السداد',    en: 'Payment plan',   color: '#C9860A', group: 'objection' },
+  location:         { ar: 'الموقع',         en: 'Location',       color: '#C9860A', group: 'objection' },
+  just_browsing:    { ar: 'بيتفرج بس',      en: 'Just browsing',  color: '#D6403B', group: 'lost' },
+};
 // Flat key → { ar, en, color, group } map for badges/labels anywhere.
-export const CONVERSATION_OUTCOMES = Object.fromEntries(
-  CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([k, ar, en]) => [k, { ar, en, color: g.color, group: g.key }]))
-);
+export const CONVERSATION_OUTCOMES = {
+  ...LEGACY_OUTCOMES,
+  ...Object.fromEntries(CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([k, ar, en]) => [k, { ar, en, color: g.color, group: g.key }]))),
+};
 
 // Shared coloured outcome badge (mirrors ResultBadge). Null for unknown keys.
 export function OutcomeBadge({ outcome, isRTL, className = '' }) {
