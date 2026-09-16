@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Phone, X, Send, MessageSquare } from 'lucide-react';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button } from '../../../components/ui/';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { logAction } from '../../../services/auditService';
 import { useFocusTrap } from '../../../utils/hooks';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -96,15 +97,14 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
           {/* Template select */}
           <div>
             <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القالب' : 'Template'}</div>
-            <select
-              value={selectedId}
-              onChange={e => setSelectedId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none font-cairo"
-            >
-              {(templates || []).map(t => (
-                <option key={t.id} value={t.id}>{isRTL ? (t.nameAr || t.name) : t.name}</option>
-              ))}
-            </select>
+            <div className="[&>div]:w-full">
+              <SearchableSelect
+                value={selectedId}
+                onChange={(v) => setSelectedId(v)}
+                className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none font-cairo"
+                options={(templates || []).map(t => ({ value: t.id, label: isRTL ? (t.nameAr || t.name) : t.name }))}
+              />
+            </div>
           </div>
 
           {/* Language toggle */}

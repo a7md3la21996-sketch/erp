@@ -12,6 +12,7 @@ import {
   getExportRestrictions, saveExportRestrictions,
 } from '../../services/securityService';
 import { ROLES, ROLE_LABELS } from '../../config/roles';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 export default function SecurityPage() {
   const { i18n } = useTranslation();
@@ -367,46 +368,49 @@ export default function SecurityPage() {
               <label style={{ fontSize: 13, fontWeight: 600, color: textPrimary, marginBottom: 4, display: 'block' }}>
                 {isRTL ? 'انتهاء صلاحية كلمة المرور' : 'Password Expiry'}
               </label>
-              <select
+              <div className="[&>div]:w-full"><SearchableSelect
                 value={policy.expiryDays || 0}
-                onChange={e => setPolicy({ ...policy, expiryDays: parseInt(e.target.value) })}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value={0}>{isRTL ? 'بدون انتهاء' : 'Never'}</option>
-                <option value={30}>{isRTL ? '30 يوم' : '30 days'}</option>
-                <option value={60}>{isRTL ? '60 يوم' : '60 days'}</option>
-                <option value={90}>{isRTL ? '90 يوم' : '90 days'}</option>
-              </select>
+                onChange={(v) => setPolicy({ ...policy, expiryDays: parseInt(v) })}
+                className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                options={[
+                  { value: 0, label: isRTL ? 'بدون انتهاء' : 'Never' },
+                  { value: 30, label: isRTL ? '30 يوم' : '30 days' },
+                  { value: 60, label: isRTL ? '60 يوم' : '60 days' },
+                  { value: 90, label: isRTL ? '90 يوم' : '90 days' },
+                ]}
+              /></div>
             </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: textPrimary, marginBottom: 4, display: 'block' }}>
                 {isRTL ? 'منع إعادة الاستخدام' : 'Prevent Reuse'}
               </label>
-              <select
+              <div className="[&>div]:w-full"><SearchableSelect
                 value={policy.preventReuse || 0}
-                onChange={e => setPolicy({ ...policy, preventReuse: parseInt(e.target.value) })}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value={0}>{isRTL ? 'بدون' : 'None'}</option>
-                <option value={3}>{isRTL ? 'آخر 3' : 'Last 3'}</option>
-                <option value={5}>{isRTL ? 'آخر 5' : 'Last 5'}</option>
-                <option value={10}>{isRTL ? 'آخر 10' : 'Last 10'}</option>
-              </select>
+                onChange={(v) => setPolicy({ ...policy, preventReuse: parseInt(v) })}
+                className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                options={[
+                  { value: 0, label: isRTL ? 'بدون' : 'None' },
+                  { value: 3, label: isRTL ? 'آخر 3' : 'Last 3' },
+                  { value: 5, label: isRTL ? 'آخر 5' : 'Last 5' },
+                  { value: 10, label: isRTL ? 'آخر 10' : 'Last 10' },
+                ]}
+              /></div>
             </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: textPrimary, marginBottom: 4, display: 'block' }}>
                 {isRTL ? 'أقصى محاولات فاشلة' : 'Max Failed Attempts'}
               </label>
-              <select
+              <div className="[&>div]:w-full"><SearchableSelect
                 value={policy.maxAttempts || 0}
-                onChange={e => setPolicy({ ...policy, maxAttempts: parseInt(e.target.value) })}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value={0}>{isRTL ? 'غير محدود' : 'Unlimited'}</option>
-                <option value={3}>3</option>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-              </select>
+                onChange={(v) => setPolicy({ ...policy, maxAttempts: parseInt(v) })}
+                className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                options={[
+                  { value: 0, label: isRTL ? 'غير محدود' : 'Unlimited' },
+                  { value: 3, label: '3' },
+                  { value: 5, label: '5' },
+                  { value: 10, label: '10' },
+                ]}
+              /></div>
             </div>
           </div>
         </div>

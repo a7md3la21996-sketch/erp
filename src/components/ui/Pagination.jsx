@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import SearchableSelect from './SearchableSelect';
 
 const SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -19,15 +20,12 @@ export default function Pagination({ page, totalPages, onPageChange, pageSize, o
         <span className="text-xs text-content-muted dark:text-content-muted-dark">
           {isRTL ? `${start}–${end} من ${totalItems}` : `${start}–${end} of ${totalItems}`}
         </span>
-        <select
+        <SearchableSelect
           value={pageSize}
-          onChange={e => onPageSizeChange(Number(e.target.value))}
-          className="text-[11px] px-1.5 py-0.5 rounded border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer outline-none"
-        >
-          {SIZE_OPTIONS.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+          onChange={(v) => onPageSizeChange(Number(v))}
+          className="text-[11px] justify-between px-1.5 py-0.5 rounded border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer outline-none"
+          options={SIZE_OPTIONS.map(s => ({ value: s, label: s }))}
+        />
       </div>
 
       {/* Prev / Next */}

@@ -13,6 +13,7 @@ import {
   UserCheck, Trash2, CheckSquare
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination , confirm } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 
 /* ─── Icon Button ─── */
@@ -667,10 +668,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'القسم' : 'Department'}</label>
-            <select value={form.department || form.department_id || ''} onChange={e => { set('department', e.target.value); set('department_id', e.target.value); }} className={inputCls}>
-              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
-              {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.department || form.department_id || ''} onChange={(v) => { set('department', v); set('department_id', v); }} className={`${inputCls} justify-between`} options={[{ value: '', label: lang === 'ar' ? 'اختر...' : 'Select...' }, ...(departments || []).map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))]} /></div>
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'المسمى الوظيفي' : 'Job Title'}</label>
@@ -678,9 +676,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'نوع التعاقد' : 'Employment Type'}</label>
-            <select value={form.employment_type || ''} onChange={e => set('employment_type', e.target.value)} className={inputCls}>
-              {WORK_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.employment_type || ''} onChange={(v) => set('employment_type', v)} className={`${inputCls} justify-between`} options={WORK_TYPES.map(t => ({ value: t.value, label: isRTL ? t.ar : t.en }))} /></div>
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'تاريخ الالتحاق' : 'Hire Date'}</label>
@@ -736,11 +732,11 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'فترة الدوام' : 'Shift'}</label>
-            <select
+            <div className="[&>div]:w-full"><SearchableSelect
               value={form.shift_id || ''}
-              onChange={e => {
-                const s = shifts.find(sh => sh.id === e.target.value);
-                set('shift_id', e.target.value);
+              onChange={(v) => {
+                const s = shifts.find(sh => sh.id === v);
+                set('shift_id', v);
                 if (s) {
                   set('shift_name', s.name);
                   set('work_start', s.official_start);
@@ -748,13 +744,9 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
                   set('late_threshold', s.late_threshold);
                 }
               }}
-              className={inputCls}
-            >
-              <option value="">{lang === 'ar' ? 'اختر فترة...' : 'Select shift...'}</option>
-              {shifts.map(s => (
-                <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>
-              ))}
-            </select>
+              className={`${inputCls} justify-between`}
+              options={[{ value: '', label: lang === 'ar' ? 'اختر فترة...' : 'Select shift...' }, ...shifts.map(s => ({ value: s.id, label: `${isRTL ? (s.name_ar || s.name) : s.name} (${s.official_start} - ${s.official_end})` }))]}
+            /></div>
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'ساعة البداية' : 'Work Start'}</label>
@@ -770,11 +762,11 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSa
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'مكان العمل' : 'Work Mode'}</label>
-            <select value={form.work_mode || 'office'} onChange={e => set('work_mode', e.target.value)} className={inputCls}>
-              <option value="office">{lang === 'ar' ? 'من الشركة' : 'Office'}</option>
-              <option value="remote">{lang === 'ar' ? 'من البيت' : 'Remote'}</option>
-              <option value="flexible">{lang === 'ar' ? 'مرن' : 'Flexible'}</option>
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.work_mode || 'office'} onChange={(v) => set('work_mode', v)} className={`${inputCls} justify-between`} options={[
+              { value: 'office', label: lang === 'ar' ? 'من الشركة' : 'Office' },
+              { value: 'remote', label: lang === 'ar' ? 'من البيت' : 'Remote' },
+              { value: 'flexible', label: lang === 'ar' ? 'مرن' : 'Flexible' },
+            ]} /></div>
           </div>
         </div>
 
@@ -958,28 +950,22 @@ function BulkEditModal({ open, selectedIds, departments, isRTL, lang, canViewSal
         <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {fieldRow('work_mode', lang === 'ar' ? 'مكان العمل' : 'Work Mode',
-            <select value={form.work_mode || 'office'} onChange={e => set('work_mode', e.target.value)} className={inputCls}>
-              <option value="office">{lang === 'ar' ? 'من الشركة' : 'Office'}</option>
-              <option value="remote">{lang === 'ar' ? 'من البيت' : 'Remote'}</option>
-              <option value="flexible">{lang === 'ar' ? 'مرن' : 'Flexible'}</option>
-              <option value="field">{lang === 'ar' ? 'ميداني' : 'Field'}</option>
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.work_mode || 'office'} onChange={(v) => set('work_mode', v)} className={`${inputCls} justify-between`} options={[
+              { value: 'office', label: lang === 'ar' ? 'من الشركة' : 'Office' },
+              { value: 'remote', label: lang === 'ar' ? 'من البيت' : 'Remote' },
+              { value: 'flexible', label: lang === 'ar' ? 'مرن' : 'Flexible' },
+              { value: 'field', label: lang === 'ar' ? 'ميداني' : 'Field' },
+            ]} /></div>
           )}
           {fieldRow('department', lang === 'ar' ? 'القسم' : 'Department',
-            <select value={form.department || ''} onChange={e => set('department', e.target.value)} className={inputCls}>
-              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
-              {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.department || ''} onChange={(v) => set('department', v)} className={`${inputCls} justify-between`} options={[{ value: '', label: lang === 'ar' ? 'اختر...' : 'Select...' }, ...(departments || []).map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))]} /></div>
           )}
           {fieldRow('shift_id', lang === 'ar' ? 'فترة الدوام' : 'Shift',
-            <select value={form.shift_id || ''} onChange={e => {
-              set('shift_id', e.target.value);
-              const s = shifts.find(sh => sh.id === e.target.value);
+            <div className="[&>div]:w-full"><SearchableSelect value={form.shift_id || ''} onChange={(v) => {
+              set('shift_id', v);
+              const s = shifts.find(sh => sh.id === v);
               if (s) { set('shift_name', s.name); set('work_start', s.official_start); set('work_end', s.official_end); set('late_threshold', s.late_threshold); }
-            }} className={inputCls}>
-              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
-              {shifts.map(s => <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>)}
-            </select>
+            }} className={`${inputCls} justify-between`} options={[{ value: '', label: lang === 'ar' ? 'اختر...' : 'Select...' }, ...shifts.map(s => ({ value: s.id, label: `${isRTL ? (s.name_ar || s.name) : s.name} (${s.official_start} - ${s.official_end})` }))]} /></div>
           )}
         </div>
 
@@ -1131,10 +1117,9 @@ function TerminationModal({ emp, onClose, onConfirm, lang, isRTL }) {
           </div>
           <div>
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'السبب' : 'Reason'}</label>
-            <select value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-              {REASONS.map(r => <option key={r.value} value={r.value}>{lang === 'ar' ? r.ar : r.en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.reason} onChange={(v) => setForm(f => ({ ...f, reason: v }))}
+              className="w-full justify-between px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              options={REASONS.map(r => ({ value: r.value, label: lang === 'ar' ? r.ar : r.en }))} /></div>
           </div>
           <div>
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'ملاحظات' : 'Notes'}</label>
@@ -1201,12 +1186,7 @@ function BulkShiftModal({ open, selectedIds, lang, isRTL, onClose, onDone }) {
       <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-3">
         <div>
           <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'فترة الدوام' : 'Shift'}</label>
-          <select value={shiftId} onChange={e => setShiftId(e.target.value)} className={inputCls}>
-            <option value="">{lang === 'ar' ? 'اختر فترة...' : 'Select shift...'}</option>
-            {shifts.map(s => (
-              <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>
-            ))}
-          </select>
+          <div className="[&>div]:w-full"><SearchableSelect value={shiftId} onChange={(v) => setShiftId(v)} className={`${inputCls} justify-between`} options={[{ value: '', label: lang === 'ar' ? 'اختر فترة...' : 'Select shift...' }, ...shifts.map(s => ({ value: s.id, label: `${isRTL ? (s.name_ar || s.name) : s.name} (${s.official_start} - ${s.official_end})` }))]} /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

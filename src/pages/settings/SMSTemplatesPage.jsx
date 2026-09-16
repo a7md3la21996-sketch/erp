@@ -16,6 +16,7 @@ import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import SmartFilter, { applySmartFilters } from '../../components/ui/SmartFilter';
 import Pagination from '../../components/ui/Pagination';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 // ── Category badge color map ──────────────────────────────────────────
 const CAT_COLORS = {
@@ -176,9 +177,7 @@ function TemplateModal({ template, onClose, onSave, isRTL, isDark }) {
           {/* Category */}
           <div>
             <label style={labelStyle}>{isRTL ? 'التصنيف' : 'Category'}</label>
-            <select style={inputStyle} value={form.category} onChange={e => set('category', e.target.value)}>
-              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{isRTL ? c.ar : c.en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.category} onChange={(v) => set('category', v)} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={CATEGORIES.map(c => ({ value: c.id, label: isRTL ? c.ar : c.en }))} /></div>
           </div>
 
           {/* Variable insertion buttons */}

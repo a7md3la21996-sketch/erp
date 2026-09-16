@@ -1382,23 +1382,12 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {validationRules.autoFillSource && (
-                        <select
+                        <SearchableSelect
                           value={validationRules.defaultSource}
-                          onChange={(e) => setValidationRules(p => ({ ...p, defaultSource: e.target.value }))}
-                          style={{
-                            fontSize: 11,
-                            padding: '4px 8px',
-                            borderRadius: 6,
-                            border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`,
-                            background: isDark ? '#1a2332' : '#fff',
-                            color: isDark ? '#e2e8f0' : '#1e293b',
-                            outline: 'none',
-                          }}
-                        >
-                          {SOURCE_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>
-                          ))}
-                        </select>
+                          onChange={(v) => setValidationRules(p => ({ ...p, defaultSource: v }))}
+                          className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                          options={SOURCE_OPTIONS.map(o => ({ value: o.value, label: isRTL ? o.ar : o.en }))}
+                        />
                       )}
                       <div
                         onClick={() => setValidationRules(p => ({ ...p, autoFillSource: !p.autoFillSource }))}
@@ -1436,23 +1425,12 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {validationRules.autoFillContactType && (
-                        <select
+                        <SearchableSelect
                           value={validationRules.defaultContactType}
-                          onChange={(e) => setValidationRules(p => ({ ...p, defaultContactType: e.target.value }))}
-                          style={{
-                            fontSize: 11,
-                            padding: '4px 8px',
-                            borderRadius: 6,
-                            border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`,
-                            background: isDark ? '#1a2332' : '#fff',
-                            color: isDark ? '#e2e8f0' : '#1e293b',
-                            outline: 'none',
-                          }}
-                        >
-                          {CONTACT_TYPE_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>
-                          ))}
-                        </select>
+                          onChange={(v) => setValidationRules(p => ({ ...p, defaultContactType: v }))}
+                          className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                          options={CONTACT_TYPE_OPTIONS.map(o => ({ value: o.value, label: isRTL ? o.ar : o.en }))}
+                        />
                       )}
                       <div
                         onClick={() => setValidationRules(p => ({ ...p, autoFillContactType: !p.autoFillContactType }))}

@@ -328,28 +328,47 @@ function ObjectiveModal({ isOpen, onClose, onSave, editObj, isDark, isRTL, lang 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>{isRTL ? 'الربع' : 'Quarter'}</label>
-              <select value={form.quarter} onChange={e => setForm(p => ({ ...p, quarter: e.target.value }))} style={inputStyle}>
-                {QUARTERS.map(q => <option key={q} value={q}>{q}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.quarter}
+                  onChange={(v) => setForm(p => ({ ...p, quarter: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={QUARTERS.map(q => ({ value: q, label: q }))}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'السنة' : 'Year'}</label>
-              <select value={form.year} onChange={e => setForm(p => ({ ...p, year: Number(e.target.value) }))} style={inputStyle}>
-                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.year}
+                  onChange={(v) => setForm(p => ({ ...p, year: Number(v) }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={YEARS.map(y => ({ value: y, label: y }))}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'القسم' : 'Department'}</label>
-              <select value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} style={inputStyle}>
-                <option value="">{isRTL ? 'اختر' : 'Select'}</option>
-                {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.department}
+                  onChange={(v) => setForm(p => ({ ...p, department: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[{ value: '', label: isRTL ? 'اختر' : 'Select' }, ...DEPARTMENTS.map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))]}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'الحالة' : 'Status'}</label>
-              <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
-                {OBJ_STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{isRTL ? s.label_ar : s.label_en}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.status}
+                  onChange={(v) => setForm(p => ({ ...p, status: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={OBJ_STATUS_OPTIONS.map(s => ({ value: s.value, label: isRTL ? s.label_ar : s.label_en }))}
+                />
+              </div>
             </div>
           </div>
 
@@ -415,15 +434,25 @@ function ObjectiveModal({ isOpen, onClose, onSave, editObj, isDark, isRTL, lang 
                 </div>
                 <div>
                   <label style={{ ...labelStyle, fontSize: 10 }}>{isRTL ? 'الوحدة' : 'Unit'}</label>
-                  <select value={kr.unit} onChange={e => updateKRField(idx, 'unit', e.target.value)} style={{ ...inputStyle, fontSize: 12, padding: '6px 10px' }}>
-                    {KR_UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{isRTL ? u.label_ar : u.label_en}</option>)}
-                  </select>
+                  <div className="[&>div]:w-full">
+                    <SearchableSelect
+                      value={kr.unit}
+                      onChange={(v) => updateKRField(idx, 'unit', v)}
+                      className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                      options={KR_UNIT_OPTIONS.map(u => ({ value: u.value, label: isRTL ? u.label_ar : u.label_en }))}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label style={{ ...labelStyle, fontSize: 10 }}>{isRTL ? 'الحالة' : 'Status'}</label>
-                  <select value={kr.status} onChange={e => updateKRField(idx, 'status', e.target.value)} style={{ ...inputStyle, fontSize: 12, padding: '6px 10px' }}>
-                    {KR_STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{isRTL ? s.label_ar : s.label_en}</option>)}
-                  </select>
+                  <div className="[&>div]:w-full">
+                    <SearchableSelect
+                      value={kr.status}
+                      onChange={(v) => updateKRField(idx, 'status', v)}
+                      className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                      options={KR_STATUS_OPTIONS.map(s => ({ value: s.value, label: isRTL ? s.label_ar : s.label_en }))}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label style={{ ...labelStyle, fontSize: 10 }}>{isRTL ? 'الموعد' : 'Due Date'}</label>

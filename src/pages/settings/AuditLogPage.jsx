@@ -185,6 +185,7 @@ export default function AuditLogPage() {
   };
 
   const selectCls = "px-2.5 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none";
+  const selectCls2 = "px-2.5 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer justify-between";
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
@@ -229,15 +230,20 @@ export default function AuditLogPage() {
           <SearchableSelect
             value={viewUser}
             onChange={(v) => { setViewUser(v); setViewsPage(1); }}
-            className={selectCls.replace(' appearance-none', '')}
+            className={selectCls2}
             options={[{ value: '', label: isRTL ? 'كل المستخدمين' : 'All Users' }, ...userOptions.map(u => ({ value: u.value, label: isRTL ? u.label : u.labelEn }))]}
           />
-          <select value={viewDateRange} onChange={e => { setViewDateRange(e.target.value); setViewsPage(1); }} className={selectCls}>
-            <option value="all">{isRTL ? 'كل الأوقات' : 'All Time'}</option>
-            <option value="today">{isRTL ? 'اليوم' : 'Today'}</option>
-            <option value="week">{isRTL ? 'آخر أسبوع' : 'Last Week'}</option>
-            <option value="month">{isRTL ? 'آخر شهر' : 'Last Month'}</option>
-          </select>
+          <SearchableSelect
+            value={viewDateRange}
+            onChange={(v) => { setViewDateRange(v); setViewsPage(1); }}
+            className={selectCls2}
+            options={[
+              { value: 'all', label: isRTL ? 'كل الأوقات' : 'All Time' },
+              { value: 'today', label: isRTL ? 'اليوم' : 'Today' },
+              { value: 'week', label: isRTL ? 'آخر أسبوع' : 'Last Week' },
+              { value: 'month', label: isRTL ? 'آخر شهر' : 'Last Month' },
+            ]}
+          />
           <input type="text" value={viewSearch} onChange={e => setViewSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && fetchViews()}
             placeholder={isRTL ? 'بحث بالاسم...' : 'Search by name...'} className={`${selectCls} flex-1 min-w-[150px]`} dir="auto" />
@@ -301,33 +307,42 @@ export default function AuditLogPage() {
       {/* Filters */}
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         {/* Action filter */}
-        <select value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(1); }} className={selectCls}>
-          <option value="">{isRTL ? 'كل الإجراءات' : 'All Actions'}</option>
-          {Object.entries(ACTION_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </select>
+        <SearchableSelect
+          value={filterAction}
+          onChange={(v) => { setFilterAction(v); setPage(1); }}
+          className={selectCls2}
+          options={[{ value: '', label: isRTL ? 'كل الإجراءات' : 'All Actions' }, ...Object.entries(ACTION_CONFIG).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en }))]}
+        />
 
         {/* Entity filter */}
-        <select value={filterEntity} onChange={e => { setFilterEntity(e.target.value); setPage(1); }} className={selectCls}>
-          <option value="">{isRTL ? 'كل الكيانات' : 'All Entities'}</option>
-          {Object.entries(ENTITY_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </select>
+        <SearchableSelect
+          value={filterEntity}
+          onChange={(v) => { setFilterEntity(v); setPage(1); }}
+          className={selectCls2}
+          options={[{ value: '', label: isRTL ? 'كل الكيانات' : 'All Entities' }, ...Object.entries(ENTITY_LABELS).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en }))]}
+        />
 
         {/* User filter */}
         <SearchableSelect
           value={filterUser}
           onChange={(v) => { setFilterUser(v); setPage(1); }}
-          className={selectCls.replace(' appearance-none', '')}
+          className={selectCls2}
           options={[{ value: '', label: isRTL ? 'كل المستخدمين' : 'All Users' }, ...userOptions.map(u => ({ value: u.value, label: isRTL ? u.label : u.labelEn }))]}
         />
 
         {/* Date range */}
-        <select value={filterDateRange} onChange={e => { setFilterDateRange(e.target.value); setPage(1); }} className={selectCls}>
-          <option value="all">{isRTL ? 'كل الأوقات' : 'All Time'}</option>
-          <option value="today">{isRTL ? 'اليوم' : 'Today'}</option>
-          <option value="week">{isRTL ? 'آخر أسبوع' : 'Last Week'}</option>
-          <option value="month">{isRTL ? 'آخر شهر' : 'Last Month'}</option>
-          <option value="custom">{isRTL ? 'تاريخ محدد' : 'Custom'}</option>
-        </select>
+        <SearchableSelect
+          value={filterDateRange}
+          onChange={(v) => { setFilterDateRange(v); setPage(1); }}
+          className={selectCls2}
+          options={[
+            { value: 'all', label: isRTL ? 'كل الأوقات' : 'All Time' },
+            { value: 'today', label: isRTL ? 'اليوم' : 'Today' },
+            { value: 'week', label: isRTL ? 'آخر أسبوع' : 'Last Week' },
+            { value: 'month', label: isRTL ? 'آخر شهر' : 'Last Month' },
+            { value: 'custom', label: isRTL ? 'تاريخ محدد' : 'Custom' },
+          ]}
+        />
 
         {filterDateRange === 'custom' && (
           <>

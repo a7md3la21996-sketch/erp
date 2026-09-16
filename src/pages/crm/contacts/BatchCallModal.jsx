@@ -11,6 +11,7 @@ import {
 } from './constants';
 import { reportError } from '../../../utils/errorReporter';
 import { Button } from '../../../components/ui';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { useToast } from '../../../contexts/ToastContext';
 
 const STATUS_DEFS = {
@@ -286,11 +287,11 @@ export default function BatchCallModal({
           {isDisqualifying && (
             <div className="mb-3">
               <div className="text-xs font-semibold text-red-500 mb-1.5">{isRTL ? 'سبب الاستبعاد (مطلوب)' : 'Disqualify reason (required)'}</div>
-              <select value={batchDqReason} onChange={e => setBatchDqReason(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs box-border font-inherit ${dqReasonMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} style={{ outline: 'none' }}>
-                <option value="">{isRTL ? 'اختر السبب...' : 'Select reason...'}</option>
-                {DQ_REASONS.map(r => <option key={r.value} value={r.value}>{isRTL ? r.ar : r.en}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect value={batchDqReason} onChange={(v) => setBatchDqReason(v)}
+                  className={`w-full justify-between px-3 py-2 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs box-border font-inherit outline-none ${dqReasonMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`}
+                  options={[{ value: '', label: isRTL ? 'اختر السبب...' : 'Select reason...' }, ...DQ_REASONS.map(r => ({ value: r.value, label: isRTL ? r.ar : r.en }))]} />
+              </div>
             </div>
           )}
 
@@ -329,13 +330,11 @@ export default function BatchCallModal({
                   </div>
                   <div className="flex-1">
                     <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'الأولوية' : 'Priority'}</label>
-                    <select value={batchTaskForm.priority} onChange={e => setBatchTaskForm(f => ({ ...f, priority: e.target.value }))}
-                      className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit" style={{ outline: 'none' }}>
-                      <option value="low">{isRTL ? 'منخفضة' : 'Low'}</option>
-                      <option value="medium">{isRTL ? 'متوسطة' : 'Medium'}</option>
-                      <option value="high">{isRTL ? 'عالية' : 'High'}</option>
-                      <option value="urgent">{isRTL ? 'عاجلة' : 'Urgent'}</option>
-                    </select>
+                    <div className="[&>div]:w-full">
+                      <SearchableSelect value={batchTaskForm.priority} onChange={(v) => setBatchTaskForm(f => ({ ...f, priority: v }))}
+                        className="w-full justify-between px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit outline-none"
+                        options={[{ value: 'low', label: isRTL ? 'منخفضة' : 'Low' }, { value: 'medium', label: isRTL ? 'متوسطة' : 'Medium' }, { value: 'high', label: isRTL ? 'عالية' : 'High' }, { value: 'urgent', label: isRTL ? 'عاجلة' : 'Urgent' }]} />
+                    </div>
                   </div>
                 </div>
               </div>

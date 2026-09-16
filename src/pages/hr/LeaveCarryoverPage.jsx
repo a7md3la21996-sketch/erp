@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { Calendar, RefreshCw } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import supabase from '../../lib/supabase';
 
 const currentYear = new Date().getFullYear();
@@ -202,15 +203,12 @@ export default function LeaveCarryoverPage() {
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
               {lang === 'ar' ? 'من سنة' : 'From Year'}
             </label>
-            <select
+            <SearchableSelect
               value={fromYear}
-              onChange={e => setFromYear(Number(e.target.value))}
-              className="px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-            >
-              {yearOptions.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+              onChange={(v) => setFromYear(Number(v))}
+              className="justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+              options={yearOptions.map(y => ({ value: y, label: String(y) }))}
+            />
           </div>
           <div className="text-content-muted dark:text-content-muted-dark text-lg font-bold mt-4">
             &rarr;

@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, Search, Filter, RefreshCw,
 } from 'lucide-react';
 import { getHistory, getStats, clearHistory } from '../../services/exportImportHistoryService';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 const ENTITY_LABELS = {
   contacts:       { ar: 'جهات الاتصال',  en: 'Contacts' },
@@ -182,31 +183,25 @@ export default function ExportImportHistoryPage() {
             }}
           />
         </div>
-        <select
+        <SearchableSelect
           value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-          style={{
-            padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`,
-            background: inputBg, color: textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none',
-          }}
-        >
-          <option value="all">{isRTL ? 'الكل' : 'All Types'}</option>
-          <option value="export">{isRTL ? 'تصدير' : 'Export'}</option>
-          <option value="import">{isRTL ? 'استيراد' : 'Import'}</option>
-        </select>
-        <select
+          onChange={(v) => setTypeFilter(v)}
+          className="px-3 py-2 text-[13px] rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer"
+          options={[
+            { value: 'all', label: isRTL ? 'الكل' : 'All Types' },
+            { value: 'export', label: isRTL ? 'تصدير' : 'Export' },
+            { value: 'import', label: isRTL ? 'استيراد' : 'Import' },
+          ]}
+        />
+        <SearchableSelect
           value={entityFilter}
-          onChange={e => setEntityFilter(e.target.value)}
-          style={{
-            padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`,
-            background: inputBg, color: textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none',
-          }}
-        >
-          <option value="all">{isRTL ? 'كل الكيانات' : 'All Entities'}</option>
-          {Object.entries(ENTITY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
-          ))}
-        </select>
+          onChange={(v) => setEntityFilter(v)}
+          className="px-3 py-2 text-[13px] rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer"
+          options={[
+            { value: 'all', label: isRTL ? 'كل الكيانات' : 'All Entities' },
+            ...Object.entries(ENTITY_LABELS).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en })),
+          ]}
+        />
       </div>
 
       {/* ── Table ──────────────────────────────────────────────── */}

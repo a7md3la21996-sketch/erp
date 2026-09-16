@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { Target, Zap, Check, Calendar } from 'lucide-react';
 import { Button, Select, Textarea } from '../../../components/ui/';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
@@ -345,11 +346,11 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
           {newStatus === 'disqualified' && newStatus !== currentStatus && (
             <div className="mt-2">
               <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'السبب (إجباري)' : 'Reason (required)'} <span className="text-red-500">*</span></div>
-              <select value={dqReason} onChange={e => setDqReason(e.target.value)}
-                className={`w-full px-2 py-1.5 rounded-lg text-xs outline-none bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark ${!dqReason ? 'border-2 border-red-500' : 'border border-edge dark:border-edge-dark'}`}>
-                <option value="">{isRTL ? 'اختر السبب...' : 'Select reason...'}</option>
-                {DQ_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect value={dqReason} onChange={(v) => setDqReason(v)}
+                  className={`w-full justify-between px-2 py-1.5 rounded-lg text-xs outline-none bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark ${!dqReason ? 'border-2 border-red-500' : 'border border-edge dark:border-edge-dark'}`}
+                  options={[{ value: '', label: isRTL ? 'اختر السبب...' : 'Select reason...' }, ...DQ_REASONS.map(r => ({ value: r.value, label: r.label }))]} />
+              </div>
             </div>
           )}
         </div>

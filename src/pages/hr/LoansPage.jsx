@@ -5,6 +5,7 @@ import { fetchEmployees } from '../../services/employeesService';
 import { useToast } from '../../contexts/ToastContext';
 import { DollarSign, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton , confirm } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 const LOAN_TYPES = [
   { value: 'loan', ar: 'قرض', en: 'Loan' },
@@ -249,18 +250,12 @@ export default function LoansPage() {
               <label className="block text-sm font-semibold text-content dark:text-content-dark mb-1">
                 {lang === 'ar' ? 'الموظف' : 'Employee'} *
               </label>
-              <select
+              <div className="[&>div]:w-full"><SearchableSelect
                 value={form.employee_id}
-                onChange={e => setForm(prev => ({ ...prev, employee_id: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-              >
-                <option value="">{lang === 'ar' ? 'اختر موظف' : 'Select employee'}</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setForm(prev => ({ ...prev, employee_id: v }))}
+                className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+                options={[{ value: '', label: lang === 'ar' ? 'اختر موظف' : 'Select employee' }, ...employees.map(emp => ({ value: emp.id, label: (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar }))]}
+              /></div>
             </div>
 
             {/* Type */}
@@ -268,15 +263,12 @@ export default function LoansPage() {
               <label className="block text-sm font-semibold text-content dark:text-content-dark mb-1">
                 {lang === 'ar' ? 'النوع' : 'Type'}
               </label>
-              <select
+              <div className="[&>div]:w-full"><SearchableSelect
                 value={form.type}
-                onChange={e => setForm(prev => ({ ...prev, type: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-              >
-                {LOAN_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{lang === 'ar' ? t.ar : t.en}</option>
-                ))}
-              </select>
+                onChange={(v) => setForm(prev => ({ ...prev, type: v }))}
+                className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+                options={LOAN_TYPES.map(t => ({ value: t.value, label: lang === 'ar' ? t.ar : t.en }))}
+              /></div>
             </div>
 
             {/* Amount & Monthly Deduction */}
@@ -326,15 +318,12 @@ export default function LoansPage() {
                 <label className="block text-sm font-semibold text-content dark:text-content-dark mb-1">
                   {lang === 'ar' ? 'الحالة' : 'Status'}
                 </label>
-                <select
+                <div className="[&>div]:w-full"><SearchableSelect
                   value={form.status || 'active'}
-                  onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-                >
-                  {STATUS_OPTIONS.map(s => (
-                    <option key={s.value} value={s.value}>{lang === 'ar' ? s.ar : s.en}</option>
-                  ))}
-                </select>
+                  onChange={(v) => setForm(prev => ({ ...prev, status: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+                  options={STATUS_OPTIONS.map(s => ({ value: s.value, label: lang === 'ar' ? s.ar : s.en }))}
+                /></div>
               </div>
             )}
 

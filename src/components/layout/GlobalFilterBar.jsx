@@ -180,8 +180,12 @@ export default function GlobalFilterBar() {
           </Field>
 
           <Field label={isRTL ? 'الفترة' : 'Period'}>
-            <select value={period} onChange={e => setPeriod(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
-              {[
+            <div className="[&>div]:w-full">
+            <SearchableSelect
+              value={period}
+              onChange={(v) => setPeriod(v)}
+              className={`${selectClass} justify-between`}
+              options={[
                 { value: 'all', ar: 'كل الأوقات', en: 'All Time' },
                 { value: 'today', ar: 'اليوم', en: 'Today' },
                 { value: 'yesterday', ar: 'أمس', en: 'Yesterday' },
@@ -190,8 +194,9 @@ export default function GlobalFilterBar() {
                 { value: 'last_7', ar: 'آخر 7 أيام', en: 'Last 7 Days' },
                 { value: 'last_30', ar: 'آخر 30 يوم', en: 'Last 30 Days' },
                 { value: 'custom', ar: 'فترة مخصصة', en: 'Custom Range' },
-              ].map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
-            </select>
+              ].map(p => ({ value: p.value, label: isRTL ? p.ar : p.en }))}
+            />
+            </div>
           </Field>
 
           {period === 'custom' && (

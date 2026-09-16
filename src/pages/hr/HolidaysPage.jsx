@@ -4,6 +4,7 @@ import { fetchHolidays, createHoliday, createHolidaysBulk, deleteHoliday } from 
 import { useToast } from '../../contexts/ToastContext';
 import { Calendar, Plus, Trash2, Copy } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, Select, PageSkeleton , confirm } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const DAY_NAMES_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -223,10 +224,9 @@ export default function HolidaysPage() {
           </div>
           <div className="col-span-full">
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'النوع' : 'Type'}</label>
-            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-              {TYPES.map(t => <option key={t.value} value={t.value}>{lang === 'ar' ? t.ar : t.en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.type} onChange={(v) => setForm(f => ({ ...f, type: v }))}
+              className="w-full justify-between px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              options={TYPES.map(t => ({ value: t.value, label: lang === 'ar' ? t.ar : t.en }))} /></div>
           </div>
         </div>
         <ModalFooter>

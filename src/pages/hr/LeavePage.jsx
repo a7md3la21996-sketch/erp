@@ -378,13 +378,14 @@ export default function LeavePage() {
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع الإجازة' : 'Leave Type'}</label>
-                <select value={reqForm.type} onChange={e => setReqForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-                  <option value="annual">{isRTL ? 'سنوية' : 'Annual'}</option>
-                  <option value="sick">{isRTL ? 'مرضية' : 'Sick'}</option>
-                  <option value="casual">{isRTL ? 'عارضة' : 'Casual'}</option>
-                  <option value="unpaid">{isRTL ? 'بدون راتب' : 'Unpaid'}</option>
-                </select>
+                <div className="[&>div]:w-full"><SearchableSelect value={reqForm.type} onChange={(v) => setReqForm(f => ({ ...f, type: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+                  options={[
+                    { value: 'annual', label: isRTL ? 'سنوية' : 'Annual' },
+                    { value: 'sick', label: isRTL ? 'مرضية' : 'Sick' },
+                    { value: 'casual', label: isRTL ? 'عارضة' : 'Casual' },
+                    { value: 'unpaid', label: isRTL ? 'بدون راتب' : 'Unpaid' },
+                  ]} /></div>
               </div>
               <div />
               <div>

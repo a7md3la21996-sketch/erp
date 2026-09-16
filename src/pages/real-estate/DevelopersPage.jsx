@@ -5,6 +5,7 @@ import { Button, Modal, ModalFooter, Input, Textarea, ListSkeleton, EmptyState ,
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchDevelopers, createDeveloper, updateDeveloper, deleteDeveloper, canManageDevelopers } from '../../services/developersService';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 const LOGO_TINTS = [
   'text-brand-600 bg-brand-500/10', 'text-emerald-600 bg-emerald-500/10',
@@ -195,11 +196,12 @@ export default function DevelopersPage() {
               <div className="space-y-2">
                 {form.groups.map((g, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <select value={g.type} onChange={e => setGroup(i, 'type', e.target.value)}
-                      className="h-9 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark px-2 shrink-0">
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="telegram">Telegram</option>
-                    </select>
+                    <SearchableSelect
+                      value={g.type}
+                      onChange={(v) => setGroup(i, 'type', v)}
+                      className="h-9 justify-between rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark px-2 shrink-0"
+                      options={[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'telegram', label: 'Telegram' }]}
+                    />
                     <input value={g.url} onChange={e => setGroup(i, 'url', e.target.value)} placeholder={isRTL ? 'لينك الجروب' : 'Group link (URL)'} dir="ltr"
                       className="flex-1 min-w-0 h-9 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark px-2.5 outline-none" />
                     <input value={g.label} onChange={e => setGroup(i, 'label', e.target.value)} placeholder={isRTL ? 'وصف' : 'Label'}

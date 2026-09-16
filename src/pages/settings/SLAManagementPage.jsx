@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { KpiCard, Pagination } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import {
   Shield, Timer, Clock, AlertTriangle, CheckCircle2, Plus, Edit2, Trash2,
   Search, X, ChevronDown, BarChart3, ListChecks, Play, Check, XCircle,
@@ -307,20 +308,13 @@ function DashboardTab({
           { key: 'priority', options: PRIORITIES, label: isRTL ? 'الأولوية' : 'Priority' },
           { key: 'entity', options: ENTITIES, label: isRTL ? 'النوع' : 'Entity' },
         ].map(f => (
-          <select
+          <SearchableSelect
             key={f.key}
             value={filters[f.key]}
-            onChange={e => { setFilters(prev => ({ ...prev, [f.key]: e.target.value })); setPage(1); }}
-            style={{
-              padding: '8px 12px', borderRadius: 8, border: `1px solid ${borderColor}`,
-              background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', cursor: 'pointer',
-            }}
-          >
-            <option value="">{f.label}</option>
-            {f.options.map(o => (
-              <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>
-            ))}
-          </select>
+            onChange={(v) => { setFilters(prev => ({ ...prev, [f.key]: v })); setPage(1); }}
+            className="justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+            options={[{ value: '', label: f.label }, ...f.options.map(o => ({ value: o.value, label: isRTL ? o.ar : o.en }))]}
+          />
         ))}
         {(filters.status || filters.priority || filters.entity || filters.search) && (
           <button
@@ -766,15 +760,11 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>{isRTL ? 'نوع الكيان' : 'Entity Type'}</label>
-              <select value={form.entity} onChange={e => setForm(f => ({ ...f, entity: e.target.value }))} style={inputStyle}>
-                {ENTITIES.map(e => <option key={e.value} value={e.value}>{isRTL ? e.ar : e.en}</option>)}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.entity} onChange={(v) => setForm(f => ({ ...f, entity: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={ENTITIES.map(e => ({ value: e.value, label: isRTL ? e.ar : e.en }))} /></div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'الأولوية' : 'Priority'}</label>
-              <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} style={inputStyle}>
-                {PRIORITIES.map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.priority} onChange={(v) => setForm(f => ({ ...f, priority: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={PRIORITIES.map(p => ({ value: p.value, label: isRTL ? p.ar : p.en }))} /></div>
             </div>
           </div>
 
@@ -788,14 +778,12 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
                   onChange={e => setForm(f => ({ ...f, firstResponseValue: Number(e.target.value) }))}
                   style={{ ...inputStyle, flex: 1 }}
                 />
-                <select
+                <SearchableSelect
                   value={form.firstResponseUnit}
-                  onChange={e => setForm(f => ({ ...f, firstResponseUnit: e.target.value }))}
-                  style={{ ...inputStyle, width: 'auto', minWidth: 90 }}
-                >
-                  <option value="minutes">{isRTL ? 'دقائق' : 'Minutes'}</option>
-                  <option value="hours">{isRTL ? 'ساعات' : 'Hours'}</option>
-                </select>
+                  onChange={(v) => setForm(f => ({ ...f, firstResponseUnit: v }))}
+                  className="justify-between min-w-[90px] px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[{ value: 'minutes', label: isRTL ? 'دقائق' : 'Minutes' }, { value: 'hours', label: isRTL ? 'ساعات' : 'Hours' }]}
+                />
               </div>
             </div>
             <div>
@@ -806,14 +794,12 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
                   onChange={e => setForm(f => ({ ...f, resolutionValue: Number(e.target.value) }))}
                   style={{ ...inputStyle, flex: 1 }}
                 />
-                <select
+                <SearchableSelect
                   value={form.resolutionUnit}
-                  onChange={e => setForm(f => ({ ...f, resolutionUnit: e.target.value }))}
-                  style={{ ...inputStyle, width: 'auto', minWidth: 90 }}
-                >
-                  <option value="minutes">{isRTL ? 'دقائق' : 'Minutes'}</option>
-                  <option value="hours">{isRTL ? 'ساعات' : 'Hours'}</option>
-                </select>
+                  onChange={(v) => setForm(f => ({ ...f, resolutionUnit: v }))}
+                  className="justify-between min-w-[90px] px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[{ value: 'minutes', label: isRTL ? 'دقائق' : 'Minutes' }, { value: 'hours', label: isRTL ? 'ساعات' : 'Hours' }]}
+                />
               </div>
             </div>
           </div>
@@ -844,13 +830,12 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
                   style={{ ...inputStyle, width: 70, padding: '4px 8px' }}
                 />
                 <span style={{ fontSize: 11, color: textSecondary }}>{isRTL ? 'دقيقة' : 'min'}</span>
-                <select
+                <div className="flex-1 [&>div]:w-full"><SearchableSelect
                   value={esc.notifyRole}
-                  onChange={e => updateEscalation(idx, 'notifyRole', e.target.value)}
-                  style={{ ...inputStyle, width: 'auto', padding: '4px 8px', flex: 1 }}
-                >
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+                  onChange={(v) => updateEscalation(idx, 'notifyRole', v)}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={ROLES.map(r => ({ value: r, label: r }))}
+                /></div>
                 <button onClick={() => removeEscalation(idx)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#D6403B', padding: 2 }}>
                   <X size={14} />
                 </button>
@@ -966,11 +951,7 @@ function CreateTicketModal({ onClose, onCreated, isDark, isRTL, cardBg, borderCo
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <label style={labelStyle}>{isRTL ? 'السياسة' : 'Policy'}</label>
-            <select value={form.policyId} onChange={e => setForm(f => ({ ...f, policyId: e.target.value }))} style={inputStyle}>
-              {policies.map(p => (
-                <option key={p.id} value={p.id}>{isRTL ? p.name : (p.nameEn || p.name)}</option>
-              ))}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.policyId} onChange={(v) => setForm(f => ({ ...f, policyId: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={policies.map(p => ({ value: p.id, label: isRTL ? p.name : (p.nameEn || p.name) }))} /></div>
           </div>
 
           <div>
@@ -981,9 +962,7 @@ function CreateTicketModal({ onClose, onCreated, isDark, isRTL, cardBg, borderCo
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>{isRTL ? 'نوع الكيان' : 'Entity Type'}</label>
-              <select value={form.entityType} onChange={e => setForm(f => ({ ...f, entityType: e.target.value }))} style={inputStyle}>
-                {ENTITIES.map(e => <option key={e.value} value={e.value}>{isRTL ? e.ar : e.en}</option>)}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.entityType} onChange={(v) => setForm(f => ({ ...f, entityType: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={ENTITIES.map(e => ({ value: e.value, label: isRTL ? e.ar : e.en }))} /></div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'المسؤول' : 'Assigned To'}</label>
@@ -993,10 +972,7 @@ function CreateTicketModal({ onClose, onCreated, isDark, isRTL, cardBg, borderCo
 
           <div>
             <label style={labelStyle}>{isRTL ? 'الأولوية (اختياري - تؤخذ من السياسة)' : 'Priority (optional - defaults to policy)'}</label>
-            <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} style={inputStyle}>
-              <option value="">{isRTL ? 'من السياسة' : 'From policy'}</option>
-              {PRIORITIES.map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.priority} onChange={(v) => setForm(f => ({ ...f, priority: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={[{ value: '', label: isRTL ? 'من السياسة' : 'From policy' }, ...PRIORITIES.map(p => ({ value: p.value, label: isRTL ? p.ar : p.en }))]} /></div>
           </div>
         </div>
 

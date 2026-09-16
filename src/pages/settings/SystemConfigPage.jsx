@@ -8,6 +8,7 @@ import { ROLES, ROLE_LABELS, ROLE_PERMISSIONS, P, LOCKED_PERMISSIONS, LOCKED_ROL
 import { reloadPermissionOverrides } from '../../contexts/AuthContext';
 import { hexToRgbaBg } from '../../utils/configHelpers';
 import { Card, Button, Input, Select, FilterPill, confirm } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
@@ -1438,10 +1439,7 @@ function GeneralSettingsTab({ config, updateSection, isRTL, toast }) {
               <Input type="number" value={settings[f.key]} onChange={e => setSettings(p => ({ ...p, [f.key]: Number(e.target.value) || 0 }))} placeholder={f.placeholder} className="max-w-[300px]" />
             )}
             {f.type === 'select' && (
-              <select value={settings[f.key]} onChange={e => setSettings(p => ({ ...p, [f.key]: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm max-w-[300px] w-full">
-                {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <div className="max-w-[300px] [&>div]:w-full"><SearchableSelect value={settings[f.key]} onChange={(v) => setSettings(p => ({ ...p, [f.key]: v }))} className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" options={f.options.map(o => ({ value: o.value, label: o.label }))} /></div>
             )}
             {f.type === 'toggle' && (
               <button onClick={() => setSettings(p => ({ ...p, [f.key]: !p[f.key] }))}
@@ -1601,10 +1599,7 @@ function UserManagementTab({ isRTL, toast }) {
               </div>
               <div>
                 <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الدور' : 'Role'}</label>
-                <select value={editUser.role} onChange={e => setEditUser(p => ({ ...p, role: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
+                <div className="[&>div]:w-full"><SearchableSelect value={editUser.role} onChange={(v) => setEditUser(p => ({ ...p, role: v }))} className="w-full justify-between px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" options={ROLES.map(r => ({ value: r.value, label: r.label }))} /></div>
               </div>
             </div>
             <div className="flex gap-2 mt-4 justify-end">

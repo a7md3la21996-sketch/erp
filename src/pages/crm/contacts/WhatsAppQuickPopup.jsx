@@ -5,6 +5,7 @@ import {
   generateWhatsAppLink, fillTemplate, getMessagesByContact,
 } from '../../../services/whatsappService';
 import { normalizePhone } from './constants';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 
 // Quick WhatsApp composer shown inline under the drawer action bar.
 // Extracted from ContactDrawer so its templates + recent-messages fetches
@@ -59,31 +60,30 @@ export default function WhatsAppQuickPopup({ contact, isRTL, onClose, onLogInter
           <X size={13} />
         </button>
       </div>
-      <select
-        value={waSelectedTpl}
-        onChange={e => {
-          setWaSelectedTpl(e.target.value);
-          if (e.target.value) {
-            const tpl = waTemplates.find(t => t.id === e.target.value);
-            if (tpl) {
-              const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
-              const filled = fillTemplate(body, {
-                name: contact.full_name || '',
-                company: contact.company || '',
-                amount: '',
-                date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
-              });
-              setWaMessage(filled);
+      <div className="[&>div]:w-full mb-2">
+        <SearchableSelect
+          value={waSelectedTpl}
+          onChange={(v) => {
+            setWaSelectedTpl(v);
+            if (v) {
+              const tpl = waTemplates.find(t => t.id === v);
+              if (tpl) {
+                const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
+                const filled = fillTemplate(body, {
+                  name: contact.full_name || '',
+                  company: contact.company || '',
+                  amount: '',
+                  date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
+                });
+                setWaMessage(filled);
+              }
             }
-          }
-        }}
-        className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none mb-2 font-cairo"
-      >
-        <option value="">{isRTL ? 'اختر قالب...' : 'Pick a template...'}</option>
-        {waTemplates.map(t => (
-          <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
-        ))}
-      </select>
+          }}
+          placeholder={isRTL ? 'اختر قالب...' : 'Pick a template...'}
+          className="w-full justify-between px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none font-cairo"
+          options={[{ value: '', label: isRTL ? 'اختر قالب...' : 'Pick a template...' }, ...waTemplates.map(t => ({ value: t.id, label: isRTL ? (t.name_ar || t.name) : t.name }))]}
+        />
+      </div>
       <textarea
         value={waMessage}
         onChange={e => setWaMessage(e.target.value)}

@@ -9,6 +9,7 @@ import {
   getRoles, getRole, createRole, updateRole, deleteRole,
   getModules, getActions, getActionLabels, getUserRole, setUserRole,
 } from '../../services/rbacService';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 /* ─── Mock Users for Assignment (DEV only) ─── */
 const MOCK_USERS = import.meta.env.DEV ? [
@@ -286,15 +287,14 @@ function RoleModal({ role, onSave, onClose, isDark, isRTL, lang }) {
           {!role && (
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>{lang === 'ar' ? 'نسخ الصلاحيات من دور موجود' : 'Copy permissions from existing role'}</label>
-              <select
-                value={copyFrom} onChange={e => handleCopyFrom(e.target.value)}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                <option value="">{lang === 'ar' ? '— اختر دور —' : '— Select role —'}</option>
-                {existingRoles.map(r => (
-                  <option key={r.id} value={r.id}>{lang === 'ar' ? r.name : r.nameEn}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect
+                value={copyFrom} onChange={(v) => handleCopyFrom(v)}
+                className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                options={[
+                  { value: '', label: lang === 'ar' ? '— اختر دور —' : '— Select role —' },
+                  ...existingRoles.map(r => ({ value: r.id, label: lang === 'ar' ? r.name : r.nameEn })),
+                ]}
+              /></div>
             </div>
           )}
 
@@ -567,21 +567,12 @@ export default function RolesPage() {
                       {user.email}
                     </span>
                   </div>
-                  <select
+                  <SearchableSelect
                     value={currentRole}
-                    onChange={e => handleAssignRole(user.id, e.target.value)}
-                    style={{
-                      padding: '6px 10px', borderRadius: 6, fontSize: 12,
-                      border: `1px solid ${isDark ? '#374151' : '#d1d5db'}`,
-                      background: isDark ? '#111827' : '#fff',
-                      color: isDark ? '#e2e8f0' : '#1f2937',
-                      cursor: 'pointer', minWidth: 130,
-                    }}
-                  >
-                    {roles.map(r => (
-                      <option key={r.id} value={r.id}>{lang === 'ar' ? r.name : r.nameEn}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => handleAssignRole(user.id, v)}
+                    className="px-2.5 py-1.5 text-[12px] rounded-md border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[130px]"
+                    options={roles.map(r => ({ value: r.id, label: lang === 'ar' ? r.name : r.nameEn }))}
+                  />
                 </div>
               );
             })}

@@ -4,8 +4,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
   BookOpen, Search, Plus, Pin, Eye, Tag, Edit2, Trash2,
-  X, ChevronDown, Check, PinOff,
+  X, Check, PinOff,
 } from 'lucide-react';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import {
   getAll, create, update, remove, searchArticles, getByCategory,
   incrementViews, togglePin, CATEGORIES,
@@ -727,25 +728,13 @@ export default function KnowledgeBasePage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 6 }}>
                     {isRTL ? 'التصنيف' : 'Category'}
                   </label>
-                  <div style={{ position: 'relative' }}>
-                    <select
+                  <div className="[&>div]:w-full">
+                    <SearchableSelect
                       value={formData.category}
-                      onChange={e => setFormData(f => ({ ...f, category: e.target.value }))}
-                      style={{
-                        width: '100%', padding: '10px 14px', background: c.inputBg,
-                        border: `1px solid ${c.border}`, borderRadius: 8, color: c.text,
-                        fontSize: 14, outline: 'none', appearance: 'none',
-                        cursor: 'pointer', boxSizing: 'border-box',
-                      }}
-                    >
-                      {Object.entries(CATEGORIES).map(([id, cat]) => (
-                        <option key={id} value={id}>{cat[lang]}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} style={{
-                      position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                      ...(isRTL ? { left: 12 } : { right: 12 }), pointerEvents: 'none', color: c.textMuted,
-                    }} />
+                      onChange={(v) => setFormData(f => ({ ...f, category: v }))}
+                      className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                      options={Object.entries(CATEGORIES).map(([id, cat]) => ({ value: id, label: cat[lang] }))}
+                    />
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { getFieldsByEntity, getFieldValues, setFieldValues } from '../../services/customFieldsService';
+import SearchableSelect from './SearchableSelect';
 
 /**
  * CustomFieldsRenderer – Reusable component to render custom fields for an entity.
@@ -122,12 +123,14 @@ export default function CustomFieldsRenderer({ entity, entityId, mode = 'view', 
           <input type="url" value={val} onChange={e => handleChange(field.id, e.target.value)} style={inputStyle} dir="ltr" placeholder="https://" />
         )}
         {field.field_type === 'select' && (
-          <select value={val} onChange={e => handleChange(field.id, e.target.value)} style={inputStyle}>
-            <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-            {(field.options || []).map(o => (
-              <option key={o.value} value={o.value}>{isRTL ? (o.label_ar || o.label) : o.label}</option>
-            ))}
-          </select>
+          <div className="[&>div]:w-full">
+            <SearchableSelect
+              value={val}
+              onChange={(v) => handleChange(field.id, v)}
+              className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+              options={[{ value: '', label: isRTL ? 'اختر...' : 'Select...' }, ...(field.options || []).map(o => ({ value: o.value, label: isRTL ? (o.label_ar || o.label) : o.label }))]}
+            />
+          </div>
         )}
         {field.field_type === 'checkbox' && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: textPrimary }}>

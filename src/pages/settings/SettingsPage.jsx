@@ -11,6 +11,7 @@ import {
   Eye, Printer } from 'lucide-react';
 import { Button, Card, Input } from '../../components/ui';
 import { PageSkeleton } from '../../components/ui/PageSkeletons';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 // Lazy load sub-pages
 const SystemConfigPage = lazyRetry(() => import('./SystemConfigPage'));
@@ -126,8 +127,8 @@ function GeneralTab({ isRTL, isDark, toggleTheme, lang, handleLangToggle, profil
           <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'العنوان (إنجليزي)' : 'Address (English)'}</label><Input value={form.address_en} onChange={e => handleChange('address_en', e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><DollarSign size={11} />{isRTL ? 'العملة' : 'Currency'}</label><select value={form.currency} onChange={e => handleChange('currency', e.target.value)} className={selectStyle}>{CURRENCIES.map(c => <option key={c.value} value={c.value}>{isRTL ? c.label_ar : c.label_en}</option>)}</select></div>
-          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><Clock size={11} />{isRTL ? 'المنطقة الزمنية' : 'Timezone'}</label><select value={form.timezone} onChange={e => handleChange('timezone', e.target.value)} className={selectStyle}>{TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}</select></div>
+          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><DollarSign size={11} />{isRTL ? 'العملة' : 'Currency'}</label><div className="[&>div]:w-full"><SearchableSelect value={form.currency} onChange={(v) => handleChange('currency', v)} className={`${selectStyle} justify-between`} options={CURRENCIES.map(c => ({ value: c.value, label: isRTL ? c.label_ar : c.label_en }))} /></div></div>
+          <div><label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block flex items-center gap-1"><Clock size={11} />{isRTL ? 'المنطقة الزمنية' : 'Timezone'}</label><div className="[&>div]:w-full"><SearchableSelect value={form.timezone} onChange={(v) => handleChange('timezone', v)} className={`${selectStyle} justify-between`} options={TIMEZONES.map(tz => ({ value: tz.value, label: tz.label }))} /></div></div>
         </div>
       </Card>
 

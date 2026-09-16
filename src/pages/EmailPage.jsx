@@ -6,6 +6,7 @@ import {
   Paperclip, Link, Plus, X, MailOpen,
   CornerUpLeft,
 } from 'lucide-react';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import {
   sendEmail, getEmails, markAsRead, starEmail, moveToTrash,
   saveDraft, getEmailStats, getTemplates, toggleReadStatus,
@@ -722,44 +723,29 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
                 <FileText size={11} style={{ verticalAlign: 'middle', marginInlineEnd: 4 }} />
                 {isRTL ? 'قالب' : 'Template'}
               </label>
-              <select
-                onChange={e => handleTemplateSelect(e.target.value)}
-                defaultValue=""
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: 8,
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                  background: isDark ? '#1e293b' : '#fff',
-                  fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">{isRTL ? 'اختر قالب...' : 'Select template...'}</option>
-                {templates.map(t => (
-                  <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value=""
+                  onChange={(v) => handleTemplateSelect(v)}
+                  placeholder={isRTL ? 'اختر قالب...' : 'Select template...'}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[{ value: '', label: isRTL ? 'اختر قالب...' : 'Select template...' }, ...templates.map(t => ({ value: t.id, label: isRTL ? (t.name_ar || t.name) : t.name }))]}
+                />
+              </div>
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 }}>
                 <Link size={11} style={{ verticalAlign: 'middle', marginInlineEnd: 4 }} />
                 {isRTL ? 'ربط بفرصة' : 'Link to Opportunity'}
               </label>
-              <select
-                value={oppId}
-                onChange={e => setOppId(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: 8,
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                  background: isDark ? '#1e293b' : '#fff',
-                  fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">{isRTL ? 'بدون ربط' : 'None'}</option>
-                {opportunities.map(o => (
-                  <option key={o.id} value={o.id}>{o.contact_name || o.id}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={oppId}
+                  onChange={(v) => setOppId(v)}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[{ value: '', label: isRTL ? 'بدون ربط' : 'None' }, ...opportunities.map(o => ({ value: o.id, label: o.contact_name || o.id }))]}
+                />
+              </div>
             </div>
           </div>
 

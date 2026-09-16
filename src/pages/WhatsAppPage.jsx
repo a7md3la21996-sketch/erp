@@ -7,6 +7,7 @@ import {
   Clock, CheckCheck, Check, AlertCircle, Download,
   Users, Pencil,
 } from 'lucide-react';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import {
   logMessage, getMessages, getConversation, getRecentConversations,
   getTemplates, saveTemplate, deleteTemplate, toggleTemplate,
@@ -1063,15 +1064,14 @@ function TemplateForm({ isDark, isRTL, template, onSave, onCancel }) {
 
       <div style={{ marginBottom: 12 }}>
         <label style={labelStyle}>{isRTL ? 'التصنيف' : 'Category'}</label>
-        <select
-          value={form.category}
-          onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-          style={{ ...inputStyle, background: isDark ? '#1e293b' : '#fff' }}
-        >
-          {TEMPLATE_CATEGORIES.map(c => (
-            <option key={c.id} value={c.id}>{isRTL ? c.label_ar : c.label}</option>
-          ))}
-        </select>
+        <div className="[&>div]:w-full">
+          <SearchableSelect
+            value={form.category}
+            onChange={(v) => setForm(f => ({ ...f, category: v }))}
+            className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+            options={TEMPLATE_CATEGORIES.map(c => ({ value: c.id, label: isRTL ? c.label_ar : c.label }))}
+          />
+        </div>
       </div>
 
       {/* Variable insertion buttons */}

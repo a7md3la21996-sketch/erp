@@ -225,15 +225,12 @@ function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete, onQui
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_in || '—'}</Td>
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_out || '—'}</Td>
       <Td>
-        <select
+        <SearchableSelect
           value={rec.status}
-          onChange={e => onQuickStatus(rec, e.target.value)}
-          className="text-xs px-1.5 py-0.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-content dark:text-content-dark cursor-pointer"
-        >
-          {Object.entries(STATUS_MAP).map(([key, val]) => (
-            <option key={key} value={key}>{lang === 'ar' ? val.ar : val.en}</option>
-          ))}
-        </select>
+          onChange={(v) => onQuickStatus(rec, v)}
+          className="justify-between text-xs px-1.5 py-0.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-content dark:text-content-dark cursor-pointer"
+          options={Object.entries(STATUS_MAP).map(([key, val]) => ({ value: key, label: lang === 'ar' ? val.ar : val.en }))}
+        />
       </Td>
       <Td>
         <div className="flex items-center gap-1">

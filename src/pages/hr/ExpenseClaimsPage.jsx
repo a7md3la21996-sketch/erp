@@ -12,6 +12,7 @@ import { KpiCard } from '../../components/ui';
 import Pagination from '../../components/ui/Pagination';
 import SmartFilter, { applySmartFilters } from '../../components/ui/SmartFilter';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import {
   Receipt, Plus, X, Trash2, Edit3, CheckCircle2, XCircle, Clock,
   DollarSign, ChevronDown, ChevronUp, CreditCard, AlertCircle,
@@ -460,11 +461,7 @@ export default function ExpenseClaimsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: textPrimary, marginBottom: 4 }}>{isRTL ? 'الفئة' : 'Category'}</label>
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}>
-                    {Object.entries(EXPENSE_CATEGORIES).map(([k, v]) => (
-                      <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
-                    ))}
-                  </select>
+                  <div className="[&>div]:w-full"><SearchableSelect value={form.category} onChange={(v) => setForm(f => ({ ...f, category: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={Object.entries(EXPENSE_CATEGORIES).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en }))} /></div>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: textPrimary, marginBottom: 4 }}>{isRTL ? 'التاريخ' : 'Date'}</label>

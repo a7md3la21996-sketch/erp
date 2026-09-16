@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Layers, Plus, Pencil, Trash2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { logAction } from '../../services/auditService';
 import {
@@ -335,17 +336,13 @@ export default function CustomFieldsPage() {
                 {/* Entity */}
                 <div>
                   <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'الكيان' : 'Entity'} <span style={{ color: '#D6403B' }}>*</span></label>
-                  <select value={form.entity} onChange={e => setForm(f => ({ ...f, entity: e.target.value }))} style={inputStyle}>
-                    {ENTITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>)}
-                  </select>
+                  <div className="[&>div]:w-full"><SearchableSelect value={form.entity} onChange={(v) => setForm(f => ({ ...f, entity: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={ENTITY_OPTIONS.map(o => ({ value: o.value, label: isRTL ? o.ar : o.en }))} /></div>
                 </div>
 
                 {/* Type */}
                 <div>
                   <label style={{ display: 'block', fontSize: 11, color: textMuted, marginBottom: 4 }}>{isRTL ? 'نوع الحقل' : 'Field Type'} <span style={{ color: '#D6403B' }}>*</span></label>
-                  <select value={form.field_type} onChange={e => setForm(f => ({ ...f, field_type: e.target.value }))} style={inputStyle}>
-                    {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{isRTL ? o.ar : o.en}</option>)}
-                  </select>
+                  <div className="[&>div]:w-full"><SearchableSelect value={form.field_type} onChange={(v) => setForm(f => ({ ...f, field_type: v }))} className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark" options={TYPE_OPTIONS.map(o => ({ value: o.value, label: isRTL ? o.ar : o.en }))} /></div>
                 </div>
 
                 {/* Field Name EN */}

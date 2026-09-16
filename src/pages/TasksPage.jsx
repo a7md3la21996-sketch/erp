@@ -188,11 +188,14 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
           <div style={gridStyle}>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'التكرار' : 'Frequency'}</label>
-              <select style={selectStyle} value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-                {Object.entries(FREQUENCIES).map(([k, v]) => (
-                  <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.frequency}
+                  onChange={(v) => setForm(f => ({ ...f, frequency: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={Object.entries(FREQUENCIES).map(([k, v]) => ({ value: k, label: lang === 'ar' ? v.ar : v.en }))}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'كل (فاصل)' : 'Interval'}</label>
@@ -239,11 +242,14 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
             </div>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'الأولوية' : 'Priority'}</label>
-              <select style={selectStyle} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                {Object.entries(PRIORITY_OPTIONS).map(([k, v]) => (
-                  <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.priority}
+                  onChange={(v) => setForm(f => ({ ...f, priority: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={Object.entries(PRIORITY_OPTIONS).map(([k, v]) => ({ value: k, label: lang === 'ar' ? v.ar : v.en }))}
+                />
+              </div>
             </div>
           </div>
           {/* Assignee + Reminder */}
@@ -264,12 +270,19 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
           <div style={gridStyle}>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'نوع الكيان (اختياري)' : 'Entity Type (optional)'}</label>
-              <select style={selectStyle} value={form.entity || ''} onChange={e => setForm(f => ({ ...f, entity: e.target.value }))}>
-                <option value="">{lang === 'ar' ? '-- بدون --' : '-- None --'}</option>
-                <option value="contact">{lang === 'ar' ? 'جهة اتصال' : 'Contact'}</option>
-                <option value="opportunity">{lang === 'ar' ? 'فرصة' : 'Opportunity'}</option>
-                <option value="deal">{lang === 'ar' ? 'صفقة' : 'Deal'}</option>
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.entity || ''}
+                  onChange={(v) => setForm(f => ({ ...f, entity: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={[
+                    { value: '', label: lang === 'ar' ? '-- بدون --' : '-- None --' },
+                    { value: 'contact', label: lang === 'ar' ? 'جهة اتصال' : 'Contact' },
+                    { value: 'opportunity', label: lang === 'ar' ? 'فرصة' : 'Opportunity' },
+                    { value: 'deal', label: lang === 'ar' ? 'صفقة' : 'Deal' },
+                  ]}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'اسم الكيان' : 'Entity Name'}</label>

@@ -536,25 +536,31 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
                     options weren't valid statuses and failed the DB check
                     constraint on every row. 'disqualified' is intentionally
                     omitted — it requires a reason, handled by DisqualifyModal. */}
-                <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark">
-                  <option value="">{isRTL ? 'بدون تغيير' : 'No change'}</option>
-                  <option value="new">{isRTL ? 'جديد' : 'New'}</option>
-                  <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
-                  <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
-                  <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opp'}</option>
-                </select>
+                <div className="[&>div]:w-full">
+                  <SearchableSelect value={bulkStatus} onChange={(v) => setBulkStatus(v)}
+                    className="w-full justify-between px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark"
+                    options={[
+                      { value: '', label: isRTL ? 'بدون تغيير' : 'No change' },
+                      { value: 'new', label: isRTL ? 'جديد' : 'New' },
+                      { value: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted' },
+                      { value: 'following', label: isRTL ? 'متابعة' : 'Following' },
+                      { value: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opp' },
+                    ]} />
+                </div>
               </div>
               <div className="flex-1">
                 <label className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحرارة' : 'Temperature'}</label>
-                <select value={bulkTemp} onChange={e => setBulkTemp(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark">
-                  <option value="">{isRTL ? 'بدون تغيير' : 'No change'}</option>
-                  <option value="hot">🔥 {isRTL ? 'حار' : 'Hot'}</option>
-                  <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
-                  <option value="cool">{isRTL ? 'فاتر' : 'Cool'}</option>
-                  <option value="cold">{isRTL ? 'بارد' : 'Cold'}</option>
-                </select>
+                <div className="[&>div]:w-full">
+                  <SearchableSelect value={bulkTemp} onChange={(v) => setBulkTemp(v)}
+                    className="w-full justify-between px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark"
+                    options={[
+                      { value: '', label: isRTL ? 'بدون تغيير' : 'No change' },
+                      { value: 'hot', label: `🔥 ${isRTL ? 'حار' : 'Hot'}` },
+                      { value: 'warm', label: isRTL ? 'دافئ' : 'Warm' },
+                      { value: 'cool', label: isRTL ? 'فاتر' : 'Cool' },
+                      { value: 'cold', label: isRTL ? 'بارد' : 'Cold' },
+                    ]} />
+                </div>
               </div>
             </div>
           </div>
@@ -720,18 +726,22 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
           <div className="flex gap-2.5">
             <div className="flex-1">
               <label className={labelCls}>{isRTL ? 'المرحلة' : 'Stage'}</label>
-              <select value={bulkOppForm.stage} onChange={e => setBulkOppForm(f => ({ ...f, stage: e.target.value }))} className={fieldCls}>
-                {stages.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect value={bulkOppForm.stage} onChange={(v) => setBulkOppForm(f => ({ ...f, stage: v }))} className={`${fieldCls} justify-between`}
+                  options={stages.map(s => ({ value: s.id, label: isRTL ? s.label_ar : s.label_en }))} />
+              </div>
             </div>
             <div className="flex-1">
               <label className={labelCls}>{isRTL ? 'الأولوية' : 'Priority'}</label>
-              <select value={bulkOppForm.priority} onChange={e => setBulkOppForm(f => ({ ...f, priority: e.target.value }))} className={fieldCls}>
-                <option value="low">{isRTL ? 'منخفضة' : 'Low'}</option>
-                <option value="medium">{isRTL ? 'متوسطة' : 'Medium'}</option>
-                <option value="high">{isRTL ? 'عالية' : 'High'}</option>
-                <option value="urgent">{isRTL ? 'عاجلة' : 'Urgent'}</option>
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect value={bulkOppForm.priority} onChange={(v) => setBulkOppForm(f => ({ ...f, priority: v }))} className={`${fieldCls} justify-between`}
+                  options={[
+                    { value: 'low', label: isRTL ? 'منخفضة' : 'Low' },
+                    { value: 'medium', label: isRTL ? 'متوسطة' : 'Medium' },
+                    { value: 'high', label: isRTL ? 'عالية' : 'High' },
+                    { value: 'urgent', label: isRTL ? 'عاجلة' : 'Urgent' },
+                  ]} />
+              </div>
             </div>
           </div>
 
@@ -833,13 +843,12 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
               {/* Template selector */}
               <div className="mb-4">
                 <label className="block text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اختر قالب الرسالة' : 'Select Template'}</label>
-                <select value={bulkSMSState.templateId} onChange={e => setBulkSMSState(s => ({ ...s, templateId: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none focus:border-brand-500">
-                  <option value="">{isRTL ? '— اختر قالب —' : '-- Select Template --'}</option>
-                  {(templates || []).map(t => (
-                    <option key={t.id} value={t.id}>{lang === 'ar' ? (t.nameAr || t.name) : t.name}</option>
-                  ))}
-                </select>
+                <div className="[&>div]:w-full">
+                  <SearchableSelect value={bulkSMSState.templateId} onChange={(v) => setBulkSMSState(s => ({ ...s, templateId: v }))}
+                    placeholder={isRTL ? '— اختر قالب —' : '-- Select Template --'}
+                    className="w-full justify-between px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none focus:border-brand-500"
+                    options={[{ value: '', label: isRTL ? '— اختر قالب —' : '-- Select Template --' }, ...(templates || []).map(t => ({ value: t.id, label: lang === 'ar' ? (t.nameAr || t.name) : t.name }))]} />
+                </div>
               </div>
 
               {/* Language toggle */}

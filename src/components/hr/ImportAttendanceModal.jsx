@@ -430,13 +430,12 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
               <label className="text-sm font-medium text-content dark:text-content-dark">
                 {lang === 'ar' ? 'الشهر:' : 'Month:'}
               </label>
-              <select
+              <SearchableSelect
                 value={month}
-                onChange={e => setMonth(+e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
-              >
-                {MONTHS_AR.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-              </select>
+                onChange={(v) => setMonth(+v)}
+                className="justify-between px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark"
+                options={MONTHS_AR.map((m, i) => ({ value: i + 1, label: m }))}
+              />
               <input
                 type="number"
                 value={year}

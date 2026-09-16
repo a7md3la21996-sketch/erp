@@ -7,6 +7,7 @@ import {
   AlertTriangle, ChevronDown, Bold, List, Megaphone, Check,
 } from 'lucide-react';
 import Pagination from '../components/ui/Pagination';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import SmartFilter, { applySmartFilters } from '../components/ui/SmartFilter';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import {
@@ -742,27 +743,25 @@ function AnnForm({ existing, onClose, onSave, isDark, isRTL, lang }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'التصنيف' : 'Category'}</label>
-              <select
-                value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                style={inputStyle}
-              >
-                {Object.entries(CATEGORIES).map(([k, v]) => (
-                  <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.category}
+                  onChange={(v) => setForm(f => ({ ...f, category: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={Object.entries(CATEGORIES).map(([k, v]) => ({ value: k, label: lang === 'ar' ? v.ar : v.en }))}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{lang === 'ar' ? 'الأولوية' : 'Priority'}</label>
-              <select
-                value={form.priority}
-                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                style={inputStyle}
-              >
-                {Object.entries(PRIORITIES).map(([k, v]) => (
-                  <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full">
+                <SearchableSelect
+                  value={form.priority}
+                  onChange={(v) => setForm(f => ({ ...f, priority: v }))}
+                  className="w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                  options={Object.entries(PRIORITIES).map(([k, v]) => ({ value: k, label: lang === 'ar' ? v.ar : v.en }))}
+                />
+              </div>
             </div>
           </div>
 

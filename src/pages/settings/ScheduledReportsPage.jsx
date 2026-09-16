@@ -17,6 +17,10 @@ import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import SmartFilter, { applySmartFilters } from '../../components/ui/SmartFilter';
 import Pagination from '../../components/ui/Pagination';
+import SearchableSelect from '../../components/ui/SearchableSelect';
+
+// Full-width field trigger class shared by the modal's SearchableSelect dropdowns
+const ssFieldCls = 'w-full justify-between px-3 py-2 rounded-lg text-[13px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
 
 // ── Format helpers ───────────────────────────────────────────────────
 function fmtDate(iso, isRTL) {
@@ -104,7 +108,6 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
     color: isDark ? '#e2e8f0' : '#1e293b',
     outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   };
-  const selectStyle = { ...inputStyle, cursor: 'pointer', appearance: 'auto' };
   const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4 };
 
   return (
@@ -154,18 +157,14 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={labelStyle}>{isRTL ? 'نوع التقرير' : 'Report Type'}</label>
-              <select value={form.reportType} onChange={e => setForm(f => ({ ...f, reportType: e.target.value }))} style={selectStyle}>
-                {Object.entries(REPORT_TYPES).map(([k, v]) => (
-                  <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.reportType} onChange={(val) => setForm(f => ({ ...f, reportType: val }))} className={ssFieldCls} options={Object.entries(REPORT_TYPES).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en }))} /></div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'صيغة الملف' : 'Format'}</label>
-              <select value={form.format} onChange={e => setForm(f => ({ ...f, format: e.target.value }))} style={selectStyle}>
-                <option value="excel">{isRTL ? 'إكسل (.xlsx)' : 'Excel (.xlsx)'}</option>
-                <option value="csv">{isRTL ? 'CSV' : 'CSV'}</option>
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.format} onChange={(val) => setForm(f => ({ ...f, format: val }))} className={ssFieldCls} options={[
+                { value: 'excel', label: isRTL ? 'إكسل (.xlsx)' : 'Excel (.xlsx)' },
+                { value: 'csv', label: isRTL ? 'CSV' : 'CSV' },
+              ]} /></div>
             </div>
           </div>
 
@@ -173,11 +172,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={labelStyle}>{isRTL ? 'التكرار' : 'Frequency'}</label>
-              <select value={form.frequency} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))} style={selectStyle}>
-                {Object.entries(FREQUENCY_OPTIONS).map(([k, v]) => (
-                  <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.frequency} onChange={(val) => setForm(f => ({ ...f, frequency: val }))} className={ssFieldCls} options={Object.entries(FREQUENCY_OPTIONS).map(([k, v]) => ({ value: k, label: isRTL ? v.ar : v.en }))} /></div>
             </div>
             <div>
               <label style={labelStyle}>{isRTL ? 'الوقت' : 'Time'}</label>
@@ -189,11 +184,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           {form.frequency === 'weekly' && (
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>{isRTL ? 'يوم الأسبوع' : 'Day of Week'}</label>
-              <select value={form.dayOfWeek} onChange={e => setForm(f => ({ ...f, dayOfWeek: Number(e.target.value) }))} style={selectStyle}>
-                {DAY_OF_WEEK.map(d => (
-                  <option key={d.value} value={d.value}>{isRTL ? d.ar : d.en}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.dayOfWeek} onChange={(val) => setForm(f => ({ ...f, dayOfWeek: Number(val) }))} className={ssFieldCls} options={DAY_OF_WEEK.map(d => ({ value: d.value, label: isRTL ? d.ar : d.en }))} /></div>
             </div>
           )}
 
@@ -201,11 +192,7 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           {form.frequency === 'monthly' && (
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>{isRTL ? 'يوم الشهر' : 'Day of Month'}</label>
-              <select value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: Number(e.target.value) }))} style={selectStyle}>
-                {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+              <div className="[&>div]:w-full"><SearchableSelect value={form.dayOfMonth} onChange={(val) => setForm(f => ({ ...f, dayOfMonth: Number(val) }))} className={ssFieldCls} options={Array.from({ length: 28 }, (_, i) => i + 1).map(d => ({ value: d, label: String(d) }))} /></div>
             </div>
           )}
 
@@ -228,13 +215,13 @@ function ScheduleModal({ schedule, onClose, onSave, isRTL, isDark }) {
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>{isRTL ? 'نطاق التاريخ' : 'Date Range'}</label>
-            <select value={form.filters.dateRange || 'all'} onChange={e => setForm(f => ({ ...f, filters: { ...f.filters, dateRange: e.target.value } }))} style={selectStyle}>
-              <option value="all">{isRTL ? 'الكل' : 'All Time'}</option>
-              <option value="this_month">{isRTL ? 'هذا الشهر' : 'This Month'}</option>
-              <option value="last_3_months">{isRTL ? 'آخر 3 أشهر' : 'Last 3 Months'}</option>
-              <option value="last_6_months">{isRTL ? 'آخر 6 أشهر' : 'Last 6 Months'}</option>
-              <option value="this_year">{isRTL ? 'هذه السنة' : 'This Year'}</option>
-            </select>
+            <div className="[&>div]:w-full"><SearchableSelect value={form.filters.dateRange || 'all'} onChange={(val) => setForm(f => ({ ...f, filters: { ...f.filters, dateRange: val } }))} className={ssFieldCls} options={[
+              { value: 'all', label: isRTL ? 'الكل' : 'All Time' },
+              { value: 'this_month', label: isRTL ? 'هذا الشهر' : 'This Month' },
+              { value: 'last_3_months', label: isRTL ? 'آخر 3 أشهر' : 'Last 3 Months' },
+              { value: 'last_6_months', label: isRTL ? 'آخر 6 أشهر' : 'Last 6 Months' },
+              { value: 'this_year', label: isRTL ? 'هذه السنة' : 'This Year' },
+            ]} /></div>
           </div>
 
           {/* Recipients */}
