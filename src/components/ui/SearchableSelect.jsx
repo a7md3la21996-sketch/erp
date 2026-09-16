@@ -51,7 +51,10 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
   // close on scroll/resize (a fixed panel can't follow the trigger).
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 30);
+    // preventScroll: the search input lives in a portal at the END of <body>,
+    // so a default focus would scroll the document down to that DOM position
+    // (i.e. jump the page to the bottom). preventScroll keeps the page put.
+    const t = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 30);
     const onDown = (e) => {
       if (btnRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
       setOpen(false);
