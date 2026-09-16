@@ -823,26 +823,47 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const HIDDEN_TIMELINE_ACTIVITY_TYPES = new Set(['status_change', 'temperature_change', 'reassignment']);
   const timeline = useMemo(() => {
     const acts = (activities || []).filter(a => !HIDDEN_TIMELINE_ACTIVITY_TYPES.has(a.type));
-    // A follow-up task created in the SAME log_interaction transaction as its
-    // activity shares its created_at to the millisecond (verified on live data:
-    // it's either an exact match or weeks apart — never a fuzzy few-seconds gap).
-    // Pair them so ONE action renders as ONE card: the follow-up shows as a
-    // compact "next step" line on the activity instead of a second full row that
-    // repeats the same actor + time.
-    const actByTs = new Map();
-    acts.forEach(a => {
-      const ts = a.created_at ? new Date(a.created_at).getTime() : null;
-      if (ts != null && !actByTs.has(ts)) actByTs.set(ts, a);
-    });
-    const nextStepByActId = new Map();
+    // Pair a follow-up task with the activity it was created ALONGSIDE, so one
+    // action renders as ONE card (the follow-up becomes a compact "next step"
+    // line, not a second row repeating the same actor + time). New rows (atomic
+    // log_interaction) share created_at to the ms; OLD rows were the activity
+    // then the task inserted seconds apart (verified: ~90% within 10s, no exact
+    // matches) — so match the CLOSEST parent activity within a short window, not
+    // just an exact timestamp.
+    const PAIR_TYPES = new Set(['call', 'whatsapp', 'email', 'meeting']);
+    const PAIR_WINDOW_MS = 90 * 1000;
+    const candidates = acts
+      .filter(a => PAIR_TYPES.has(a.type) && a.created_at)
+      .map(a => ({ a, ts: new Date(a.created_at).getTime() }));
+    const mergedByActId = new Map();
     const items = [];
     (tasks || []).forEach(t => {
+      const isFollowup = t.type === 'followup' || t.type === 'meeting';
       const ts = t.created_at ? new Date(t.created_at).getTime() : null;
-      const parent = ts != null ? actByTs.get(ts) : null;
-      if (parent) { nextStepByActId.set(parent.id, t); return; } // merged into its activity's card
+      if (isFollowup && ts != null) {
+        let best = null, bestGap = Infinity;
+        for (const c of candidates) {
+          const gap = Math.abs(c.ts - ts);
+          if (gap > PAIR_WINDOW_MS) continue;
+          // On a near-tie, prefer the activity logged by the same person.
+          const sameActor = t.assigned_to && c.a.user_id && t.assigned_to === c.a.user_id;
+          const score = gap - (sameActor ? 1 : 0);
+          if (score < bestGap) { bestGap = score; best = c.a; }
+        }
+        if (best) {
+          // Merge into the activity card (drop the duplicate row). Prefer a PENDING
+          // task for the card's next-step slot; otherwise keep whichever matched —
+          // its note can be the ONLY record of what happened (old calls stored the
+          // note on the task, leaving the activity blank), so the card must be able
+          // to pull it up rather than hide it.
+          const cur = mergedByActId.get(best.id);
+          if (!cur || (cur.status !== 'pending' && t.status === 'pending')) mergedByActId.set(best.id, t);
+          return;
+        }
+      }
       items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date });
     });
-    acts.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at, _nextStep: nextStepByActId.get(a.id) || null }));
+    acts.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at, _nextStep: mergedByActId.get(a.id) || null }));
     return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activities, tasks]);
@@ -1064,6 +1085,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         const actStatus = item.status || 'completed';
         const STATUS_COLORS = { scheduled: '#2F6BD3', completed: '#158A57', cancelled: '#D6403B' };
         const STATUS_LABELS = { scheduled: { ar: 'مجدول', en: 'Scheduled' }, completed: { ar: 'مكتمل', en: 'Completed' }, cancelled: { ar: 'ملغي', en: 'Cancelled' } };
+        // If the activity itself has no note, fall back to the merged follow-up's
+        // note — for old calls the note lived on the task, not the activity, so
+        // this keeps it visible instead of letting the merge hide it.
+        const mergedNote = item._nextStep && (item._nextStep.notes || item._nextStep.description) || '';
         return (
           <>
             <div className="flex items-center gap-2">
@@ -1087,7 +1112,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 if (b) {
                   // description is the PURE note now (result shows as the badge) —
                   // no label-splitting (that mangled notes containing " — ").
-                  const note = item.notes || item.description || '';
+                  const note = item.notes || item.description || mergedNote || '';
                   return (
                     <span className="inline-flex items-baseline gap-1.5 flex-wrap">
                       <ResultBadge result={item.result} isRTL={isRTL} />
@@ -1095,7 +1120,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     </span>
                   );
                 }
-                return item.notes || item.description || (isRTL ? 'نشاط' : 'Activity');
+                return item.notes || item.description || mergedNote || (isRTL ? 'نشاط' : 'Activity');
               })()}</div>
               {actStatus !== 'completed' && (
                 <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold shrink-0" style={{ background: STATUS_COLORS[actStatus] + '22', color: STATUS_COLORS[actStatus] }}>
@@ -1104,6 +1129,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               )}
             </div>
             {metaLine}
+            {/* The merged follow-up can carry its OWN note (older data stored the
+                note on the task). Show it too when it differs from the activity's
+                note — so both notes are visible and neither is hidden. */}
+            {(() => {
+              const tn = item._nextStep && (item._nextStep.notes || item._nextStep.description) || '';
+              const shown = item.notes || item.description || mergedNote || '';
+              const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+              if (!tn || norm(tn) === norm(shown)) return null;
+              return <div className="mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark leading-relaxed" dir="auto">{tn}</div>;
+            })()}
             {item.scheduled_date && (
               <div className="mt-1 text-[11px] flex items-center gap-1 text-blue-500">
                 <Calendar size={10} />
