@@ -2168,17 +2168,14 @@ export default function ContactsPage() {
               {/* "Filters" — ONE popover holding the secondary filters (Stage /
                   Type / Activity / Temperature) so the bar stays uncluttered.
                   Replaces the old scattered dropdowns + a separate toggle. */}
-              <div className="relative inline-block">
-                <button type="button" onClick={() => setShowAdvanced(v => !v)}
-                  className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
-                  <SlidersHorizontal size={13} /> {isRTL ? 'المزيد من الفلاتر' : 'More filters'}
-                  {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
-                </button>
-                {showAdvanced && (
-                  <>
-                    <div className="fixed inset-0 z-[199]" onClick={() => setShowAdvanced(false)} />
-                    <div dir={isRTL ? 'rtl' : 'ltr'}
-                      className="absolute top-full mt-1.5 end-0 z-[200] w-[min(760px,calc(100vw-2rem))] max-h-[75vh] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4">
+              <button type="button" onClick={() => setShowAdvanced(v => !v)}
+                className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
+                <SlidersHorizontal size={13} /> {isRTL ? 'المزيد من الفلاتر' : 'More filters'}
+                {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
+              </button>
+              {showAdvanced && (
+                <div dir={isRTL ? 'rtl' : 'ltr'}
+                  className="basis-full w-full order-last mt-2.5 pt-3 border-t border-edge dark:border-edge-dark">
                       {(() => {
                         // Every advanced field surfaced here as a normal control
                         // (dropdowns / date ranges), grouped in sections. The
@@ -2230,10 +2227,8 @@ export default function ContactsPage() {
                           </>
                         );
                       })()}
-                    </div>
-                  </>
-                )}
-              </div>
+                </div>
+              )}
               {/* Saved filters — tucked into a bookmark dropdown (was a permanent
                   row above the table). Shows when there's something to save or
                   saved filters exist. */}
