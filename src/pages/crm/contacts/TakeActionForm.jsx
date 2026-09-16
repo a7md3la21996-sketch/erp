@@ -278,31 +278,26 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
           </div>
         )}
         {/* Conversation outcome — appears after an engaged result (answered /
-            replied / attended …). Grouped by direction, one required choice. */}
-        {outcomeRequired && (
-          <div className="mb-2.5">
-            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
-              {isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span>
+            replied / attended …). One compact dropdown, grouped by direction
+            (🟢 progressing / 🟠 objection / 🔴 lost); the trigger takes the
+            selected group's colour. */}
+        {outcomeRequired && (() => {
+          const emoji = { progressing: '🟢', objection: '🟠', lost: '🔴' };
+          const opts = CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([key, ar, en]) => ({ value: key, label: `${emoji[g.key]} ${isRTL ? ar : en}` })));
+          const grp = CONVERSATION_OUTCOME_GROUPS.find(g => g.items.some(([k]) => k === actForm.outcome));
+          return (
+            <div className="mb-2.5">
+              <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+                {isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span>
+              </div>
+              <div className="[&>div]:w-full">
+                <SearchableSelect value={actForm.outcome} onChange={(v) => setActForm(f => ({ ...f, outcome: v }))}
+                  className={`w-full justify-between px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border ${outcomeMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'} text-content dark:text-content-dark`}
+                  activeColor={grp?.color} placeholder={isRTL ? 'اختر النتيجة...' : 'Select outcome...'} options={opts} />
+              </div>
             </div>
-            <div className={`flex flex-col gap-1.5 ${outcomeMissing ? 'ring-1 ring-red-500/60 rounded-lg p-1.5' : ''}`}>
-              {CONVERSATION_OUTCOME_GROUPS.map(g => (
-                <div key={g.key} className="flex gap-1.5 flex-wrap items-center">
-                  <span className="text-[9px] font-bold w-11 shrink-0" style={{ color: g.color }}>{isRTL ? g.ar : g.en}</span>
-                  {g.items.map(([key, ar, en]) => {
-                    const on = actForm.outcome === key;
-                    return (
-                      <button key={key} type="button" onClick={() => setActForm(f => ({ ...f, outcome: f.outcome === key ? '' : key }))}
-                        className={`px-2 py-1 rounded-lg text-[11px] cursor-pointer border font-cairo ${on ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                        style={on ? { background: g.color + '18', border: `1px solid ${g.color}`, color: g.color } : undefined}>
-                        {isRTL ? ar : en}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
         {/* Text box — always for a note (it IS the note's content), and forced
             visible + required after an engaged result so the outcome is captured. */}
         {(showAdv || actForm.type === 'note' || noteRequired) && (
