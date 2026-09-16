@@ -119,11 +119,12 @@ export function ResultBadge({ result, isRTL, className = '' }) {
 // "شاري اصلا", "بروكر/سمسار", "السعر غالي"). Not guessed.
 export const CONVERSATION_OUTCOME_GROUPS = [
   { key: 'moving', ar: 'مهتم/بيتحرك', en: 'Interested', color: '#158A57', items: [
-    ['interested', 'مهتم', 'Interested'],
-    ['wants_info', 'طلب تفاصيل (واتساب)', 'Requested info'],
+    ['meeting_scheduled', 'اتحجزت معاينة/اجتماع', 'Visit booked'],
     ['offer_sent', 'بعتله عرض/أوفر', 'Offer sent'],
     ['callback_scheduled', 'هيكلّمني/حدّد ميعاد', 'Callback scheduled'],
-    ['wants_meeting', 'عايز معاينة/زيارة', 'Wants a visit'],
+    ['wants_meeting', 'عايز معاينة (مبدئياً)', 'Wants a visit'],
+    ['interested', 'مهتم', 'Interested'],
+    ['wants_info', 'طلب تفاصيل (واتساب)', 'Requested info'],
   ] },
   { key: 'objection', ar: 'اعتراض/تردد', en: 'Objection', color: '#C9860A', items: [
     ['price_high', 'السعر غالي/فوق ميزانيته', 'Price too high'],
