@@ -193,7 +193,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     // server page and desync the list from the total count. Includes the
     // column-backed smart filters newly moved to the server applier.
     const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by', '_meeting', '_deal_stage',
-      'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'assigned_at', 'last_activity_at', '_country'];
+      'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'created_at', 'assigned_at', 'last_activity_at', '_country'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
     list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
