@@ -50,10 +50,13 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
       {open && (
         <>
           <div className="fixed inset-0 z-[3000]" onClick={() => setOpen(false)} />
+          {/* Mobile: dock as a bottom sheet so it can never overflow off-screen
+              regardless of where the trigger sits. Desktop (sm+): a normal
+              popover anchored to the trigger. */}
           <div dir={isRTL ? 'rtl' : 'ltr'}
-            className="absolute top-full mt-1 end-0 z-[3001] w-[230px] max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
+            className="fixed sm:absolute inset-x-2 sm:inset-auto bottom-2 sm:bottom-auto top-auto sm:top-full sm:mt-1 sm:end-0 z-[3001] w-auto sm:w-[230px] sm:max-w-[calc(100vw-1rem)] max-h-[70vh] sm:max-h-none flex flex-col bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
             {showSearch && (
-              <div className="p-1.5 border-b border-edge/60 dark:border-edge-dark/60">
+              <div className="p-1.5 border-b border-edge/60 dark:border-edge-dark/60 shrink-0">
                 <div className="relative">
                   <Search size={13} className="absolute end-2 top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark pointer-events-none" />
                   <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} dir="auto"
@@ -62,7 +65,7 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
                 </div>
               </div>
             )}
-            <div className="max-h-[240px] overflow-y-auto py-1">
+            <div className="flex-1 overflow-y-auto py-1 sm:max-h-[240px]">
               {filtered.length === 0 && <div className="px-3 py-2 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا نتائج' : 'No matches'}</div>}
               {filtered.map(o => {
                 const active = o.value === value;
