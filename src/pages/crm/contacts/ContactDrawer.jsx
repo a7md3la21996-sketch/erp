@@ -18,7 +18,7 @@ import {
 } from '../../../services/contactsService';
 import { updateOpportunity } from '../../../services/opportunitiesService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
-import { fetchTasks, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
+import { fetchTasks, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../../../services/tasksService';
 import { logInteraction } from '../../../services/interactionsService';
 import { useFocusTrap, useClickOutside } from '../../../utils/hooks';
 import EditContactModal from './EditContactModal';
@@ -1142,9 +1142,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               return (
                 <div className="mt-1.5 flex items-center gap-2 flex-wrap px-2.5 py-1 rounded-md bg-brand-500/[0.06]">
                   <span className="text-[10px] font-bold text-brand-500">{isRTL ? 'الخطوة الجاية' : 'Next step'}</span>
+                  {TASK_TYPES[ns.type] && (
+                    <span className="text-[10px] text-content dark:text-content-dark">{isRTL ? TASK_TYPES[ns.type].ar : TASK_TYPES[ns.type].en}</span>
+                  )}
                   {due && (
                     <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
-                      <Clock size={9} /> {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}{overdue && (isRTL ? ' (متأخر)' : ' (Overdue)')}
+                      <Clock size={9} /> {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                      {' · '}{due.toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {overdue && (isRTL ? ' (متأخر)' : ' (Overdue)')}
                     </span>
                   )}
                   {canEditContact && (
