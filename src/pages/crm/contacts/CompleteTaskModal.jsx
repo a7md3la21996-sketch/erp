@@ -7,7 +7,7 @@ import { logInteraction, isNoteRequired } from '../../../services/interactionsSe
 import { updateTask, createTask } from '../../../services/tasksService';
 import { updateActivity } from '../../../services/activitiesService';
 import { updateContact } from '../../../services/contactsService';
-import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE } from './constants';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect } from './constants';
 
 // ── Shared "close a next-step" modal ────────────────────────────────────────
 // The ONE way to close any task / meeting / next-step across the app: record
@@ -47,6 +47,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
     : (ACT_TYPES.some(t => t.key === task?.type) ? task.type : 'call');
   const [actType, setActType] = useState(seedType);
   const [actResult, setActResult] = useState('');
+  const [outcome, setOutcome] = useState('');
   const [actNotes, setActNotes] = useState('');
   const [followUpDate, setFollowUpDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); return toLocalInput(d); });
   const [followUpNotes, setFollowUpNotes] = useState('');
@@ -71,8 +72,10 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
   // FOLLOWUP_REQUIRED) — unless the rep explicitly closes with no next step
   // (deal done / dead). A pure note never requires one.
   const followUpRequired = actType !== 'note' && !noNextStep;
+  const outcomeRequired = noteRequired; // engaged → conversation outcome too
   const canSave = (!resultRequired || actResult)
     && (!noteRequired || actNotes.trim())
+    && (!outcomeRequired || outcome)
     && (!followUpRequired || followUpDate)
     && (!changeStatus || newStatus);
 
@@ -85,7 +88,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
         // + outcome), then open the next step. Creating the next follow-up
         // task fires supersede_prior_followups, which cancels the paired
         // scheduled task — so no dangling open loop remains.
-        await updateActivity(activity.id, { status: 'completed', result: actResult || null, description: actNotes || null });
+        await updateActivity(activity.id, { status: 'completed', result: actResult || null, outcome: outcomeRequired ? (outcome || null) : null, description: actNotes || null });
         if (followUpRequired && followUpDate && task.contact_id) {
           await createTask({
             type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`,
@@ -107,6 +110,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
           await logInteraction(task.contact_id, {
             type: actType,
             result: actResult || null,
+            outcome: outcomeRequired ? (outcome || null) : null,
             description: actNotes || null,       // PURE note — no label jamming
             followUp: (followUpRequired && followUpDate)
               ? { type: 'followup', title: `${isRTL ? 'متابعة' : 'Follow-up'} - ${task.contact_name || ''}`, dueAt: followUpDate, notes: followUpNotes || '', contactName: task.contact_name || '' }
@@ -174,13 +178,21 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
               <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'النتيجة' : 'Result'} <span className="text-red-500">*</span></label>
               <div className="flex gap-1.5 flex-wrap">
                 {currentResults.map(r => (
-                  <button key={r.value} onClick={() => setActResult(actResult === r.value ? '' : r.value)}
+                  <button key={r.value} onClick={() => { setActResult(actResult === r.value ? '' : r.value); setOutcome(''); }}
                     className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${actResult === r.value ? 'font-bold text-white border-transparent' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
                     style={actResult === r.value ? { background: r.color } : {}}>
                     {isRTL ? r.ar : r.en}
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Conversation outcome — required after an engaged result */}
+          {outcomeRequired && (
+            <div className="mb-3">
+              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span></label>
+              <OutcomeSelect value={outcome} onChange={setOutcome} isRTL={isRTL} invalid={!outcome} />
             </div>
           )}
 

@@ -6,7 +6,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input, Select, Textarea } from '../../../components/ui/';
 import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
-import { contactPropType } from './constants';
+import { contactPropType, OutcomeSelect } from './constants';
 
 const CALL_RESULTS = [
   { key: 'answered', ar: 'رد', en: 'Answered', color: '#158A57' },
@@ -42,6 +42,7 @@ export default function LogCallModal({ contact, onClose }) {
   const { profile } = useAuth();
 
   const [callResult, setCallResult] = useState('');
+  const [outcome, setOutcome] = useState('');
   const [callNotes, setCallNotes] = useState('');
   const [saving, setSaving] = useState(false);
   // Follow-up is now MANDATORY for a logged call (unified enforcement) — always
@@ -88,6 +89,7 @@ export default function LogCallModal({ contact, onClose }) {
   const handleSave = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
     if (isNoteRequired('call', callResult) && !callNotes.trim()) { toast.warning(isRTL ? 'اكتب اللي اتقال في المكالمة' : 'Write what was said on the call'); return; }
+    if (isNoteRequired('call', callResult) && !outcome) { toast.warning(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
     if (!followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
     setSaving(true);
 
@@ -98,6 +100,7 @@ export default function LogCallModal({ contact, onClose }) {
       await logInteraction(contact.id, {
         type: 'call',
         result: callResult,
+        outcome: isNoteRequired('call', callResult) ? (outcome || null) : null,
         // Store the pure note — type ('call') + result are structured columns.
         description: callNotes || null,
         followUp: {
@@ -146,7 +149,7 @@ export default function LogCallModal({ contact, onClose }) {
       <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-2">{isRTL ? 'نتيجة المكالمة' : 'Call Result'} <span className="text-red-500">*</span></div>
       <div className="flex gap-1.5 flex-wrap mb-3.5">
         {CALL_RESULTS.map(r => (
-          <button key={r.key} onClick={() => setCallResult(r.key)} className="px-3 py-[5px] rounded-full text-xs cursor-pointer font-inherit transition-colors" style={{
+          <button key={r.key} onClick={() => { setCallResult(r.key); setOutcome(''); }} className="px-3 py-[5px] rounded-full text-xs cursor-pointer font-inherit transition-colors" style={{
             border: `1.5px solid ${callResult === r.key ? r.color : 'var(--border-edge, #E2E8F0)'}`,
             background: callResult === r.key ? r.color + '18' : 'none',
             color: callResult === r.key ? r.color : undefined,
@@ -154,6 +157,13 @@ export default function LogCallModal({ contact, onClose }) {
           }}>{isRTL ? r.ar : r.en}</button>
         ))}
       </div>
+      {/* Conversation outcome — required after an engaged (answered) call */}
+      {isNoteRequired('call', callResult) && (
+        <div className="mb-3.5">
+          <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span></div>
+          <OutcomeSelect value={outcome} onChange={setOutcome} isRTL={isRTL} invalid={!outcome} />
+        </div>
+      )}
       {/* Notes — mandatory when the call was answered (engaged result) */}
       <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}{isNoteRequired('call', callResult) && <span className="text-red-500"> *</span>}</div>
       <Textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} className={`!resize-none mb-4 ${isNoteRequired('call', callResult) && !callNotes.trim() ? 'border-red-500' : ''}`} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />

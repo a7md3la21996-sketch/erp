@@ -6,6 +6,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { Flame, Wind, Snowflake, Thermometer } from 'lucide-react';
 import { hexToRgbaBg } from '../../../utils/configHelpers';
+import SearchableSelect from '../../../components/ui/SearchableSelect';
 
 // ── Shared PropTypes ─────────────────────────────────────────────────────
 export const contactPropType = PropTypes.shape({
@@ -150,6 +151,22 @@ export function OutcomeBadge({ outcome, isRTL, className = '' }) {
       style={{ background: o.color + '18', color: o.color }}>
       {isRTL ? o.ar : o.en}
     </span>
+  );
+}
+
+// Shared conversation-outcome dropdown — the ONE way every engaged entry point
+// (drawer take-action, log-call, meeting, complete-task) captures the outcome,
+// so the control looks and behaves identically everywhere. Each option carries
+// its direction colour as a dot; the trigger takes the selected group's colour.
+export function OutcomeSelect({ value, onChange, isRTL, invalid }) {
+  const opts = CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([key, ar, en]) => ({ value: key, label: isRTL ? ar : en, color: g.color })));
+  const grp = CONVERSATION_OUTCOME_GROUPS.find(g => g.items.some(([k]) => k === value));
+  return (
+    <div className="[&>div]:w-full">
+      <SearchableSelect value={value} onChange={onChange}
+        className={`w-full justify-between px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border ${invalid ? 'border-red-500' : 'border-edge dark:border-edge-dark'} text-content dark:text-content-dark`}
+        activeColor={grp?.color} placeholder={isRTL ? 'اختر النتيجة...' : 'Select outcome...'} options={opts} />
+    </div>
   );
 }
 

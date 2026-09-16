@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button, Input, Textarea } from '../../../components/ui';
-import { logInteraction } from '../../../services/interactionsService';
-import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE } from './constants';
+import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect } from './constants';
 
 // Meeting result is a fixed enum (same as every other activity) — NOT free text.
 const MEETING_RESULTS = ACTIVITY_RESULTS_BY_TYPE.meeting;
@@ -24,7 +24,8 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
   const [subtype, setSubtype] = useState('site_visit');
   const [location, setLocation] = useState('');
   const [when, setWhen] = useState('');
-  const [result, setResult] = useState('');   // enum outcome (attended/no_show/…)
+  const [result, setResult] = useState('');   // enum result (attended/no_show/…)
+  const [outcome, setOutcome] = useState(''); // conversation outcome (engaged only)
   const [note, setNote] = useState('');       // free-text feedback (what happened)
   const [followupAt, setFollowupAt] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,6 +52,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     // actually attended — a written feedback note (same engaged rule as calls).
     if (!scheduled && !result) { setError(isRTL ? 'اختر نتيجة الاجتماع' : 'Pick the meeting result'); return; }
     if (!scheduled && result === 'attended' && !note.trim()) { setError(isRTL ? 'اكتب اللي حصل في الاجتماع' : 'Write what happened'); return; }
+    if (!scheduled && isNoteRequired('meeting', result) && !outcome) { setError(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
     setSaving(true); setError('');
     const typeLabel = (TYPES.find(t => t.key === subtype) || {})[isRTL ? 'ar' : 'en'];
     // Feedback note → description (pure). result is the structured enum.
@@ -66,6 +68,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
         scheduledDate: scheduled ? new Date(when).toISOString() : null,
         occurredAt: (!scheduled && when) ? new Date(when).toISOString() : null,
         result: scheduled ? null : (result || null),
+        outcome: (!scheduled && isNoteRequired('meeting', result)) ? (outcome || null) : null,
         notes: location || null,
         description: desc,
         followUp,
@@ -137,7 +140,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
                   const b = ACTIVITY_RESULT_BADGES[k];
                   const active = result === k;
                   return (
-                    <button key={k} type="button" onClick={() => setResult(active ? '' : k)}
+                    <button key={k} type="button" onClick={() => { setResult(active ? '' : k); setOutcome(''); }}
                       className="px-3 py-1.5 rounded-full text-xs cursor-pointer border transition-colors"
                       style={{
                         borderColor: active ? b.color : 'var(--border-edge, #E2E8F0)',
@@ -150,6 +153,13 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {!scheduled && isNoteRequired('meeting', result) && (
+            <div>
+              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span></label>
+              <div className="mt-1"><OutcomeSelect value={outcome} onChange={setOutcome} isRTL={isRTL} invalid={!outcome} /></div>
             </div>
           )}
 

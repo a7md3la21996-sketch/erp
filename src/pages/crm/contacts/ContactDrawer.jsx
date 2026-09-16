@@ -51,7 +51,7 @@ import {
   Chip, getDeptStages, deptStageLabel,
   agentInitials, normalizePhone,
   CONTACT_STAGE, CONTACT_STAGE_ORDER, STAGE_UI_ENABLED,
-  ACTIVITY_RESULT_BADGES, ResultBadge,
+  ACTIVITY_RESULT_BADGES, ResultBadge, OutcomeBadge,
 } from './constants';
 import { generateWhatsAppLink } from '../../../services/whatsappService';
 
@@ -1116,6 +1116,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   return (
                     <span className="inline-flex items-baseline gap-1.5 flex-wrap">
                       <ResultBadge result={item.result} isRTL={isRTL} />
+                      <OutcomeBadge outcome={item.outcome} isRTL={isRTL} />
                       {note && <span dir="auto">{note}</span>}
                     </span>
                   );

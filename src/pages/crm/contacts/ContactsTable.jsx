@@ -11,7 +11,7 @@ import {
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, getDeptStages, deptStageLabel,
   agentInitials, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED,
-  ACTIVITY_RESULT_BADGES, ResultBadge,
+  ACTIVITY_RESULT_BADGES, ResultBadge, OutcomeBadge,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -584,6 +584,7 @@ export default function ContactsTable({
                         {badge
                           ? <ResultBadge result={ln.result} isRTL={isRTL} />
                           : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                        <OutcomeBadge outcome={ln.outcome} isRTL={isRTL} />
                       </span>
                     );
                   })()}

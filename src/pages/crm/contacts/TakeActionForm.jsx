@@ -7,7 +7,7 @@ import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
-import { CONVERSATION_OUTCOME_GROUPS } from './constants';
+import { OutcomeSelect } from './constants';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
 // Assembles a single interaction payload and hands it to onLogInteraction,
@@ -281,22 +281,14 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
             replied / attended …). One compact dropdown; each option carries its
             direction colour as a small dot, and the trigger takes the selected
             group's colour. */}
-        {outcomeRequired && (() => {
-          const opts = CONVERSATION_OUTCOME_GROUPS.flatMap(g => g.items.map(([key, ar, en]) => ({ value: key, label: isRTL ? ar : en, color: g.color })));
-          const grp = CONVERSATION_OUTCOME_GROUPS.find(g => g.items.some(([k]) => k === actForm.outcome));
-          return (
-            <div className="mb-2.5">
-              <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
-                {isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span>
-              </div>
-              <div className="[&>div]:w-full">
-                <SearchableSelect value={actForm.outcome} onChange={(v) => setActForm(f => ({ ...f, outcome: v }))}
-                  className={`w-full justify-between px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border ${outcomeMissing ? 'border-red-500' : 'border-edge dark:border-edge-dark'} text-content dark:text-content-dark`}
-                  activeColor={grp?.color} placeholder={isRTL ? 'اختر النتيجة...' : 'Select outcome...'} options={opts} />
-              </div>
+        {outcomeRequired && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+              {isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span>
             </div>
-          );
-        })()}
+            <OutcomeSelect value={actForm.outcome} onChange={(v) => setActForm(f => ({ ...f, outcome: v }))} isRTL={isRTL} invalid={outcomeMissing} />
+          </div>
+        )}
         {/* Text box — always for a note (it IS the note's content), and forced
             visible + required after an engaged result so the outcome is captured. */}
         {(showAdv || actForm.type === 'note' || noteRequired) && (
