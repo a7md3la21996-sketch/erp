@@ -54,6 +54,9 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
     { key: 'note',       ar: 'ملاحظة',           en: 'Note' },
   ];
   const [taskForm, setTaskForm] = useState({ type: 'followup', notes: '', priority: 'medium', due_date: '' });
+  // Which quick-preset is currently applied (for the active highlight). Cleared
+  // when the rep edits the datetime by hand.
+  const [followupPreset, setFollowupPreset] = useState(null);
 
   // Contact status state (optional section)
   const CONTACT_STATUSES = [
@@ -103,11 +106,13 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
     const p = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   };
-  const setPresetDate = (add) => {
+  const setPresetDate = (p) => {
+    const add = p.add;
     const d = new Date();
     if (add.hours) d.setHours(d.getHours() + add.hours);
     if (add.days) { d.setDate(d.getDate() + add.days); if (add.at != null) d.setHours(add.at, 0, 0, 0); }
     setTaskForm(f => ({ ...f, due_date: toLocalInput(d) }));
+    setFollowupPreset(p.key);
   };
 
   const meetingSubRequired = actForm.type === 'meeting';
@@ -307,12 +312,15 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
             {isRTL ? 'موعد المتابعة' : 'Follow-up date'}{followUpRequired && <span className="text-red-500"> *</span>}
           </div>
           <div className="flex gap-1.5 flex-wrap mb-2">
-            {FOLLOWUP_PRESETS.map(p => (
-              <button key={p.key} type="button" onClick={() => setPresetDate(p.add)}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40 hover:text-brand-500 transition-colors font-cairo">
-                {isRTL ? p.ar : p.en}
-              </button>
-            ))}
+            {FOLLOWUP_PRESETS.map(p => {
+              const on = followupPreset === p.key;
+              return (
+                <button key={p.key} type="button" onClick={() => setPresetDate(p)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${on ? 'border-brand-500 bg-brand-500/10 text-brand-500' : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40 hover:text-brand-500'}`}>
+                  {isRTL ? p.ar : p.en}
+                </button>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             {showAdv && (
@@ -320,7 +328,7 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
                 {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
               </Select>
             )}
-            <input type="datetime-local" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))} required
+            <input type="datetime-local" value={taskForm.due_date} onChange={e => { setTaskForm(f => ({ ...f, due_date: e.target.value })); setFollowupPreset(null); }} required
               className={`flex-1 px-2 py-1.5 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none ${taskDateRequired ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} />
           </div>
         </div>
