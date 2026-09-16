@@ -141,10 +141,18 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     // fk_act_contact), so the embed MUST name the FK or PostgREST 500s with
     // PGRST201 (ambiguous relationship). Filters below still address it as
     // `activities`.
-    const meetingSelect = filters.meetingBucket ? '*, activities!activities_contact_id_fkey!inner(id)' : '*';
+    // Server-side inner-join embeds — each filters the list to contacts that
+    // have a matching related row (no id list, no cap). `!inner` keeps each
+    // contact once. Deal-stage uses the deals.contact_id relationship (addressed
+    // as `deals` in the filters below); meeting names its FK (activities has two
+    // FKs to contacts, so it must be disambiguated).
+    const embeds = [];
+    if (filters.meetingBucket) embeds.push('activities!activities_contact_id_fkey!inner(id)');
+    if (filters.dealStage) embeds.push('deals!contact_id!inner(id,status)');
+    const selectStr = embeds.length ? `*, ${embeds.join(', ')}` : '*';
     let query = supabase
       .from('contacts')
-      .select(meetingSelect, isServerPaginated ? { count: 'exact' } : {})
+      .select(selectStr, isServerPaginated ? { count: 'exact' } : {})
       .or('is_deleted.is.null,is_deleted.eq.false')
       // nullsLast keeps NULL rows at the bottom regardless of sort direction
       // — without it, server pagination flips NULLs between pages and rows
@@ -271,6 +279,12 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       } else if (filters.meetingBucket === 'happened') {
         query = query.eq('activities.status', 'completed');
       }
+    }
+    // Deal-stage bucket — filter the embedded deals to the wanted stage. Pairs
+    // with the `deals!inner(id,status)` embed added to the select above. 'any'
+    // means "has any deal at all" (no status constraint).
+    if (filters.dealStage && filters.dealStage !== 'any') {
+      query = query.eq('deals.status', filters.dealStage);
     }
     // Active-pipeline default (Phase 0): hide disqualified (dead) leads from the
     // main list. Keep leads whose status is unset — they're not disqualified.

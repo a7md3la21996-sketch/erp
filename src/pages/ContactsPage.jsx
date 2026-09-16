@@ -1433,6 +1433,9 @@ export default function ContactsPage() {
           followupBounds: (isOverdueTasks || isTodayFollowup || isUpcomingFollowup) ? followupDayBounds() : undefined,
           // Has-a-meeting filter (server-side inner-join embed on activities).
           meetingBucket: smartFilters.find(f => f.field === '_meeting')?.value || undefined,
+          // Deal-stage filter (server-side inner-join embed on deals) — find
+          // leads that bought (won), are at reservation, etc.
+          dealStage: smartFilters.find(f => f.field === '_deal_stage')?.value || undefined,
           // Admin opp-stage filter — server-side inner-join (no 300-id cap).
           // Union every active exclude source instead of falling through with
           // `||` — the old chain silently dropped every list past the first

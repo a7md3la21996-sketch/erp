@@ -131,6 +131,18 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
         { value: 'upcoming', label: 'اجتماع قادم', labelEn: 'Upcoming' },
         { value: 'happened', label: 'اجتماع حصل',  labelEn: 'Happened' },
       ]},
+    // Deal-stage filter — server-side via a deals inner-join embed
+    // (contactsService fetchContacts / filters.dealStage). Finds contacts that
+    // have a deal at the chosen stage: bought (won), still at reservation, etc.
+    { id: '_deal_stage', label: 'مرحلة الصفقة', labelEn: 'Deal stage', type: 'select',
+      options: [
+        { value: 'any',        label: 'أي صفقة',        labelEn: 'Any deal' },
+        { value: 'won',        label: 'اشترى (تم البيع)', labelEn: 'Bought (Won)' },
+        { value: 'reserved',   label: 'حجز',            labelEn: 'Reserved' },
+        { value: 'contracted', label: 'تعاقد',          labelEn: 'Contracted' },
+        { value: 'new_deal',   label: 'صفقة جديدة',      labelEn: 'New deal' },
+        { value: 'lost',       label: 'خسارة',          labelEn: 'Lost' },
+      ]},
     ...auditFields,
   ], [contacts, auditFields, deptView]);
 
@@ -180,7 +192,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     // client-side, or the client would strip rows from the (already-correct)
     // server page and desync the list from the total count. Includes the
     // column-backed smart filters newly moved to the server applier.
-    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by', '_meeting',
+    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by', '_meeting', '_deal_stage',
       'prefix', 'contact_type', 'assigned_by_name', 'created_by_name', 'assigned_at', 'last_activity_at', '_country'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
     list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
