@@ -2148,9 +2148,11 @@ export default function ContactsPage() {
           const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
           const cfgTypeKeys = (configContactTypes || []).map(t => t.key);
           const types = deptView.contactTypes || (cfgTypeKeys.length ? cfgTypeKeys : LEAD_TYPES);
-          const ddCls = 'px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
+          const ddCls = 'px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
+          // Full-width select used inside the "Filters" popover.
+          const ddPanelCls = 'w-full px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
           const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
-          const advCount = [filterType, filterActivity, filterTemp].filter(v => v !== 'all').length;
+          const advCount = [filterType, filterActivity, filterTemp, STAGE_UI_ENABLED ? filterStage : 'all'].filter(v => v !== 'all').length;
           const curCatDef = leadCategoryDefs.find(c => c.key === categoryFilter);
           // Assignee filter — only for viewers who see more than their own leads.
           // Names come from the RLS-scoped userMap; filters via the same
@@ -2161,20 +2163,7 @@ export default function ContactsPage() {
           const showAssignee = profile?.role !== 'sales_agent';
           return (
             <>
-              {/* Stage (lead lifecycle) — moved DOWN from the prominent chip row
-                  into a compact dropdown here (preview feature, flag-gated). */}
-              {STAGE_UI_ENABLED && (
-                <div className="relative inline-block">
-                  <select value={filterStage} onChange={e => { setFilterStage(e.target.value); setPage(1); }} className={ddCls}
-                    style={(filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? { borderColor: CONTACT_STAGE[filterStage].color, color: CONTACT_STAGE[filterStage].color } : undefined}>
-                    <option value="all">{isRTL ? 'كل المراحل' : 'All Stages'}</option>
-                    {CONTACT_STAGE_ORDER.map(k => (
-                      <option key={k} value={k}>{isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en}</option>
-                    ))}
-                  </select>{chev}
-                </div>
-              )}
-              {/* Category (lead origin) — always visible dropdown too. */}
+              {/* Category (lead origin) — most-used, kept inline. */}
               <div className="relative inline-block">
                 <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }} className={ddCls}
                   style={curCatDef ? { borderColor: curCatDef.color, color: curCatDef.color } : undefined}>
@@ -2184,8 +2173,7 @@ export default function ContactsPage() {
                   ))}
                 </select>{chev}
               </div>
-              {/* Assignee (managers/admins) — filter by the agent a lead is on.
-                  Includes an "Unassigned" option (leads with no owner). */}
+              {/* Assignee (managers/admins) — most-used, kept inline. */}
               {showAssignee && (
                 <div className="relative inline-block">
                   <select value={showUnassigned ? '__unassigned' : curAssignee}
@@ -2205,46 +2193,78 @@ export default function ContactsPage() {
                   </select>{chev}
                 </div>
               )}
-              {/* "Filters" toggle — reveals the advanced dropdowns (kept hidden
-                  so they don't crowd the bar; active ones show as pills below). */}
-              <button type="button" onClick={() => setShowAdvanced(v => !v)}
-                className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
-                <SlidersHorizontal size={13} /> {isRTL ? 'فلتر' : 'Filter'}
-                {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
-              </button>
-              {showAdvanced && (<>
-              {/* Type */}
+              {/* "Filters" — ONE popover holding the secondary filters (Stage /
+                  Type / Activity / Temperature) so the bar stays uncluttered.
+                  Replaces the old scattered dropdowns + a separate toggle. */}
               <div className="relative inline-block">
-                <select value={filterType} onChange={e => setFilterType(e.target.value)} className={ddCls}
-                  style={TYPE[filterType] ? { borderColor: TYPE[filterType]?.color, color: TYPE[filterType]?.color } : undefined}>
-                  <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-                  {types.filter(k => TYPE[k]).map(k => (
-                    <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>
-                  ))}
-                </select>{chev}
+                <button type="button" onClick={() => setShowAdvanced(v => !v)}
+                  className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border ${(showAdvanced || advCount) ? 'border-brand-500 text-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark'}`}>
+                  <SlidersHorizontal size={13} /> {isRTL ? 'فلاتر' : 'Filters'}
+                  {advCount > 0 && <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">{advCount}</span>}
+                </button>
+                {showAdvanced && (
+                  <>
+                    <div className="fixed inset-0 z-[199]" onClick={() => setShowAdvanced(false)} />
+                    <div dir={isRTL ? 'rtl' : 'ltr'}
+                      className="absolute top-full mt-1.5 end-0 z-[200] w-[230px] max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{isRTL ? 'فلاتر إضافية' : 'More filters'}</span>
+                        {advCount > 0 && (
+                          <button onClick={() => { setFilterType('all'); setFilterActivity('all'); setFilterTemp('all'); setFilterStage('all'); setPage(1); }}
+                            className="text-[10px] text-red-500 bg-transparent border-none cursor-pointer hover:underline p-0 flex items-center gap-1">
+                            <RotateCcw size={10} /> {isRTL ? 'مسح' : 'Clear'}
+                          </button>
+                        )}
+                      </div>
+                      {STAGE_UI_ENABLED && (
+                        <div>
+                          <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المرحلة' : 'Stage'}</div>
+                          <div className="relative">
+                            <select value={filterStage} onChange={e => { setFilterStage(e.target.value); setPage(1); }} className={ddPanelCls}
+                              style={(filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? { borderColor: CONTACT_STAGE[filterStage].color, color: CONTACT_STAGE[filterStage].color } : undefined}>
+                              <option value="all">{isRTL ? 'كل المراحل' : 'All Stages'}</option>
+                              {CONTACT_STAGE_ORDER.map(k => <option key={k} value={k}>{isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en}</option>)}
+                            </select>{chev}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</div>
+                        <div className="relative">
+                          <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={ddPanelCls}
+                            style={TYPE[filterType] ? { borderColor: TYPE[filterType]?.color, color: TYPE[filterType]?.color } : undefined}>
+                            <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
+                            {types.filter(k => TYPE[k]).map(k => <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>)}
+                          </select>{chev}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النشاط' : 'Activity'}</div>
+                        <div className="relative">
+                          <select value={filterActivity} onChange={e => { setFilterActivity(e.target.value); setPage(1); }} className={ddPanelCls}
+                            style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280', color: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280' } : undefined}>
+                            <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
+                            <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
+                            <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
+                            <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
+                            <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
+                          </select>{chev}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+                        <div className="relative">
+                          <select value={filterTemp} onChange={e => { setFilterTemp(e.target.value); setPage(1); }} className={ddPanelCls}
+                            style={filterTemp !== 'all' ? { borderColor: TEMP[filterTemp]?.color, color: TEMP[filterTemp]?.color } : undefined}>
+                            <option value="all">{isRTL ? 'كل الحرارة' : 'All Temp'}</option>
+                            {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label} ({stats['temp_' + k] || 0})</option>)}
+                          </select>{chev}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-              {/* Activity */}
-              <div className="relative inline-block">
-                <select value={filterActivity} onChange={e => setFilterActivity(e.target.value)} className={ddCls}
-                  style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280', color: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280' } : undefined}>
-                  <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
-                  <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
-                  <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
-                  <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
-                  <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
-                </select>{chev}
-              </div>
-              {/* Temperature */}
-              <div className="relative inline-block">
-                <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} className={ddCls}
-                  style={filterTemp !== 'all' ? { borderColor: TEMP[filterTemp]?.color, color: TEMP[filterTemp]?.color } : undefined}>
-                  <option value="all">{isRTL ? 'كل الحرارة' : 'All Temp'}</option>
-                  {Object.entries(TEMP).map(([k, v]) => (
-                    <option key={k} value={k}>{isRTL ? v.labelAr : v.label} ({stats['temp_' + k] || 0})</option>
-                  ))}
-                </select>{chev}
-              </div>
-              </>)}
               {/* Saved filters — tucked into a bookmark dropdown (was a permanent
                   row above the table). Shows when there's something to save or
                   saved filters exist. */}
