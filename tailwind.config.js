@@ -29,8 +29,11 @@ export default {
         content: {
           DEFAULT:  '#1A2B3C',
           dark:     '#E2EAF4',
-          muted:    '#4A5568',
-          'muted-dark': '#A3B4C9',
+          // Secondary text — nudged clearer than before (#4A5568 / #A3B4C9) so
+          // labels/dates/captions read better everywhere, while staying clearly
+          // dimmer than the primary above so the text hierarchy holds.
+          muted:    '#3A4859',
+          'muted-dark': '#BAC8DA',
         },
         // Muted semantic palette (matches the redesign mockup) — overrides
         // Tailwind's bright defaults site-wide so every text-red-500 /
