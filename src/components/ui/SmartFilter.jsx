@@ -34,6 +34,7 @@ const OPERATORS = {
   ],
   date: [
     { id: 'is', ar: 'يساوي', en: 'is' },
+    { id: 'between', ar: 'بين تاريخين', en: 'between' },
     { id: 'before', ar: 'قبل', en: 'before' },
     { id: 'after', ar: 'بعد', en: 'after' },
     { id: 'last_7', ar: 'آخر ٧ أيام', en: 'last 7 days' },
@@ -69,6 +70,10 @@ export function getSmartFilterChipLabel(f, fields = [], isRTL = false) {
     return v;
   };
   if (NO_VALUE_OPS.includes(f.operator)) return `${fLabel} ${opLabel}`.trim();
+  if (f.operator === 'between' && Array.isArray(f.value)) {
+    const [a, b] = f.value;
+    return `${fLabel} ${opLabel} ${a || '…'} → ${b || '…'}`;
+  }
   if (Array.isArray(f.value)) return `${fLabel} ${opLabel} [${f.value.map(optLabel).join(isRTL ? '، ' : ', ')}]`;
   return `${fLabel} ${opLabel} "${optLabel(f.value)}"`;
 }
@@ -182,7 +187,11 @@ export default function SmartFilter({
     const isMulti = MULTI_OPS.includes(draft.operator);
     // Default logic: first filter has no logic connector, subsequent ones get 'and'
     const logic = filters.length === 0 ? undefined : 'and';
-    if (isMulti) {
+    if (draft.operator === 'between') {
+      const [a, b] = Array.isArray(draft.value) ? draft.value : [];
+      if (!a || !b) return;
+      onFiltersChange([...filters, { field: draft.field, operator: 'between', value: [a, b], logic }]);
+    } else if (isMulti) {
       if (draftMulti.length === 0) return;
       onFiltersChange([...filters, { field: draft.field, operator: draft.operator, value: draftMulti, logic }]);
     } else {
@@ -384,8 +393,26 @@ export default function SmartFilter({
                   </div>
                 )}
 
+                {/* Value — date range (between): a From + To pair. */}
+                {draft.field && draft.operator === 'between' && getFieldType(draft.field) === 'date' && (
+                  <div className="flex-1 min-w-[180px] flex gap-2">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'من' : 'From'}</div>
+                      <input type="date" value={Array.isArray(draft.value) ? (draft.value[0] || '') : ''}
+                        onChange={e => setDraft(d => ({ ...d, value: [e.target.value, (Array.isArray(d.value) ? d.value[1] : '') || ''] }))}
+                        className={`${inputCls} w-full`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'إلى' : 'To'}</div>
+                      <input type="date" value={Array.isArray(draft.value) ? (draft.value[1] || '') : ''}
+                        onChange={e => setDraft(d => ({ ...d, value: [(Array.isArray(d.value) ? d.value[0] : '') || '', e.target.value] }))}
+                        className={`${inputCls} w-full`} />
+                    </div>
+                  </div>
+                )}
+
                 {/* Value — single */}
-                {draft.field && draft.operator && !NO_VALUE_OPS.includes(draft.operator) && !MULTI_OPS.includes(draft.operator) && (
+                {draft.field && draft.operator && draft.operator !== 'between' && !NO_VALUE_OPS.includes(draft.operator) && !MULTI_OPS.includes(draft.operator) && (
                   <div className="flex-1 min-w-[100px]">
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القيمة' : 'Value'}</div>
                     {getFieldType(draft.field) === 'select' ? (
@@ -408,7 +435,9 @@ export default function SmartFilter({
                 {draft.field && draft.operator && !MULTI_OPS.includes(draft.operator) && (
                   <button
                     onClick={addFilter}
-                    disabled={!NO_VALUE_OPS.includes(draft.operator) && !draft.value}
+                    disabled={draft.operator === 'between'
+                      ? !(Array.isArray(draft.value) && draft.value[0] && draft.value[1])
+                      : (!NO_VALUE_OPS.includes(draft.operator) && !draft.value)}
                     className="h-[30px] px-3 rounded-lg bg-brand-500 text-white text-xs font-semibold border-none cursor-pointer hover:bg-brand-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                   >
                     <Plus size={12} /> {isRTL ? 'أضف' : 'Add'}
@@ -633,6 +662,12 @@ function evaluateFilter(item, f, fields) {
     case 'lte': return Number(val) <= Number(f.value);
     case 'before': return val && new Date(val) < new Date(f.value);
     case 'after': return val && new Date(val) > new Date(f.value);
+    case 'between': {
+      if (!val || !Array.isArray(f.value)) return false;
+      const [a, b] = f.value;
+      const d = new Date(val);
+      return (!a || d >= new Date(a + 'T00:00:00')) && (!b || d <= new Date(b + 'T23:59:59'));
+    }
     case 'last_7': {
       if (!val) return false;
       const ago = new Date(); ago.setDate(ago.getDate() - 7);

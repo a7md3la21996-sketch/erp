@@ -438,6 +438,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         else if (op === 'last_30') query = query.gte(cf.column, new Date(nowD - 30 * 86400000).toISOString());
         else if (op === 'this_month') { const d = new Date(); query = query.gte(cf.column, new Date(d.getFullYear(), d.getMonth(), 1).toISOString()); }
         else if (op === 'this_week') { const d = new Date(); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay()); ws.setHours(0, 0, 0, 0); query = query.gte(cf.column, ws.toISOString()); }
+        else if (op === 'between' && Array.isArray(v)) { const [a, b] = v; if (a) query = query.gte(cf.column, a + 'T00:00:00'); if (b) query = query.lte(cf.column, b + 'T23:59:59'); }
         else query = query.gte(cf.column, v + 'T00:00:00').lte(cf.column, v + 'T23:59:59'); // 'is'
       }
     }
