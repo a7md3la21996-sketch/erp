@@ -7,7 +7,7 @@ import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { usePageActions } from '../contexts/PageActionsContext';
 import { P } from '../config/roles';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock, Tag, RefreshCw, Archive, SlidersHorizontal } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock, Tag, RefreshCw, Archive, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact, restoreContact,
   createActivity, recordAssignment,
