@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { confirm } from '../components/ui';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import {
   getNotifications, markAsRead, markAllAsRead, deleteNotification, clearAll,
   getNotificationPreferences, setNotificationPreferences,
@@ -244,23 +245,6 @@ export default function NotificationsPage() {
   const textSecondary = isDark ? '#94a3b8' : '#64748b';
   const textMuted = isDark ? '#475569' : '#cbd5e1';
 
-  const selectStyle = {
-    appearance: 'none',
-    WebkitAppearance: 'none',
-    background: inputBg,
-    color: textPrimary,
-    border: `1px solid ${inputBorder}`,
-    borderRadius: 8,
-    padding: '8px 28px 8px 12px',
-    fontSize: 13,
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    minWidth: 130,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: `${isRTL ? '8px' : 'calc(100% - 10px)'} center`,
-  };
-
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 24px 40px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Page Header */}
@@ -405,20 +389,26 @@ export default function NotificationsPage() {
             </div>
 
             {/* Type filter */}
-            <select value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(0); }} style={selectStyle}>
-              <option value="">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-              {Object.keys(TYPE_LABELS).map(t => (
-                <option key={t} value={t}>{isRTL ? TYPE_LABELS[t].ar : TYPE_LABELS[t].en}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={filterType}
+              onChange={(v) => { setFilterType(v); setPage(0); }}
+              className="px-3 py-2 text-[13px] rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[130px]"
+              options={[
+                { value: '', label: isRTL ? 'كل الأنواع' : 'All Types' },
+                ...Object.keys(TYPE_LABELS).map(t => ({ value: t, label: isRTL ? TYPE_LABELS[t].ar : TYPE_LABELS[t].en })),
+              ]}
+            />
 
             {/* Priority filter */}
-            <select value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); setPage(0); }} style={selectStyle}>
-              <option value="">{isRTL ? 'كل الأولويات' : 'All Priorities'}</option>
-              {Object.keys(PRIORITY_LABELS).map(p => (
-                <option key={p} value={p}>{isRTL ? PRIORITY_LABELS[p].ar : PRIORITY_LABELS[p].en}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={filterPriority}
+              onChange={(v) => { setFilterPriority(v); setPage(0); }}
+              className="px-3 py-2 text-[13px] rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[130px]"
+              options={[
+                { value: '', label: isRTL ? 'كل الأولويات' : 'All Priorities' },
+                ...Object.keys(PRIORITY_LABELS).map(p => ({ value: p, label: isRTL ? PRIORITY_LABELS[p].ar : PRIORITY_LABELS[p].en })),
+              ]}
+            />
 
             {/* Read/Unread toggle */}
             <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${inputBorder}` }}>

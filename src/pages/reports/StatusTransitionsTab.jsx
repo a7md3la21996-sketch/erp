@@ -5,6 +5,7 @@ import supabase from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
 import { exportToCSV } from '../../services/reportExportService';
 import { thCls } from '../../utils/tableStyles';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 
 // Status-transition report (managers): which leads moved from one status to
 // another, who did it, and when. Sourced from audit_logs via
@@ -110,17 +111,21 @@ export default function StatusTransitionsTab({ lang, isRTL }) {
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'من حالة' : 'From'}</span>
-          <select value={fromStatus} onChange={e => setFromStatus(e.target.value)} className={inputCls + ' cursor-pointer'}>
-            <option value="all">{isRTL ? 'الكل' : 'Any'}</option>
-            {STATUSES.map(s => <option key={s.id} value={s.id}>{isRTL ? s.ar : s.en}</option>)}
-          </select>
+          <SearchableSelect
+            value={fromStatus}
+            onChange={(v) => setFromStatus(v)}
+            className={inputCls + ' cursor-pointer'}
+            options={[{ value: 'all', label: isRTL ? 'الكل' : 'Any' }, ...STATUSES.map(s => ({ value: s.id, label: isRTL ? s.ar : s.en }))]}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إلى حالة' : 'To'}</span>
-          <select value={toStatus} onChange={e => setToStatus(e.target.value)} className={inputCls + ' cursor-pointer'}>
-            <option value="all">{isRTL ? 'الكل' : 'Any'}</option>
-            {STATUSES.map(s => <option key={s.id} value={s.id}>{isRTL ? s.ar : s.en}</option>)}
-          </select>
+          <SearchableSelect
+            value={toStatus}
+            onChange={(v) => setToStatus(v)}
+            className={inputCls + ' cursor-pointer'}
+            options={[{ value: 'all', label: isRTL ? 'الكل' : 'Any' }, ...STATUSES.map(s => ({ value: s.id, label: isRTL ? s.ar : s.en }))]}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'من تاريخ' : 'From date'}</span>

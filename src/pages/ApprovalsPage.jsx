@@ -12,6 +12,7 @@ import {
   escalateStaleApprovals, APPROVAL_TYPES, TYPE_LABELS,
 } from '../services/approvalService';
 import { Button, KpiCard, PageSkeleton, Pagination } from '../components/ui';
+import SearchableSelect from '../components/ui/SearchableSelect';
 
 const STATUS_CONFIG = {
   pending:   { color: '#C9860A', bg: 'rgba(245,158,11,0.1)',  label: { ar: 'معلق',     en: 'Pending' },   icon: Clock },
@@ -214,40 +215,37 @@ export default function ApprovalsPage() {
         </div>
 
         {/* Status filter */}
-        <select
+        <SearchableSelect
           value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none', minWidth: 120 }}
-        >
-          <option value="all">{isRTL ? 'كل الحالات' : 'All Statuses'}</option>
-          {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-            <option key={k} value={k}>{v.label[lang]}</option>
-          ))}
-        </select>
+          onChange={(v) => { setStatusFilter(v); setPage(1); }}
+          className="px-3 py-2 text-[13px] rounded-[10px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[120px]"
+          options={[
+            { value: 'all', label: isRTL ? 'كل الحالات' : 'All Statuses' },
+            ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label[lang] })),
+          ]}
+        />
 
         {/* Type filter */}
-        <select
+        <SearchableSelect
           value={typeFilter}
-          onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none', minWidth: 120 }}
-        >
-          <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-          {APPROVAL_TYPES.map(t => (
-            <option key={t} value={t}>{TYPE_LABELS[t]?.[lang] || t}</option>
-          ))}
-        </select>
+          onChange={(v) => { setTypeFilter(v); setPage(1); }}
+          className="px-3 py-2 text-[13px] rounded-[10px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[120px]"
+          options={[
+            { value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' },
+            ...APPROVAL_TYPES.map(t => ({ value: t, label: TYPE_LABELS[t]?.[lang] || t })),
+          ]}
+        />
 
         {/* Priority filter */}
-        <select
+        <SearchableSelect
           value={priorityFilter}
-          onChange={e => { setPriorityFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none', minWidth: 120 }}
-        >
-          <option value="all">{isRTL ? 'كل الأولويات' : 'All Priorities'}</option>
-          {Object.entries(PRIORITY_CONFIG).map(([k, v]) => (
-            <option key={k} value={k}>{v.label[lang]}</option>
-          ))}
-        </select>
+          onChange={(v) => { setPriorityFilter(v); setPage(1); }}
+          className="px-3 py-2 text-[13px] rounded-[10px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer min-w-[120px]"
+          options={[
+            { value: 'all', label: isRTL ? 'كل الأولويات' : 'All Priorities' },
+            ...Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label[lang] })),
+          ]}
+        />
 
         {/* Bulk toggle */}
         <button

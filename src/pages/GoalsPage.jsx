@@ -8,6 +8,7 @@ import {
   Save, ChevronRight,
 } from 'lucide-react';
 import { KpiCard } from '../components/ui';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import Pagination from '../components/ui/Pagination';
 import SmartFilter, { applySmartFilters } from '../components/ui/SmartFilter';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -649,19 +650,12 @@ export default function GoalsPage() {
             </button>
           ))}
         </div>
-        <select
+        <SearchableSelect
           value={year}
-          onChange={e => { setYear(Number(e.target.value)); setPage(1); }}
-          style={{
-            padding: '7px 14px', borderRadius: 8,
-            border: '1px solid ' + (isDark ? '#ffffff15' : '#e2e8f0'),
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#e2e8f0' : '#1e293b',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none',
-          }}
-        >
-          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
+          onChange={(v) => { setYear(Number(v)); setPage(1); }}
+          className="px-3.5 py-[7px] text-[13px] font-semibold rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer"
+          options={YEARS.map(y => ({ value: y, label: String(y) }))}
+        />
       </div>
 
       {/* KPI Summary */}

@@ -4,13 +4,14 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   TrendingUp, DollarSign, Target, BarChart3, Percent,
-  ChevronDown, Filter, Calendar,
+  ChevronDown,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Line, ComposedChart, Cell,
 } from 'recharts';
 import { KpiCard, SmartFilter, applySmartFilters, Pagination, PageSkeleton } from '../../components/ui';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney, fmtFull } from '../../utils/formatting';
 import { fetchOpportunities } from '../../services/opportunitiesService';
@@ -230,52 +231,24 @@ export default function SalesForecastPage() {
         {/* Filters row */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Date Range */}
-          <div style={{ position: 'relative' }}>
-            <select
-              value={dateRange}
-              onChange={e => { setDateRange(e.target.value); setPage(1); }}
-              style={{
-                appearance: 'none', padding: '8px 32px 8px 12px', borderRadius: 8,
-                background: cardBg, color: textPrimary, border: cardBorder,
-                fontSize: 13, fontWeight: 500, cursor: 'pointer', outline: 'none',
-                minWidth: 140,
-              }}
-            >
-              {DATE_RANGES.map(r => (
-                <option key={r.value} value={r.value}>{isRTL ? r.ar : r.en}</option>
-              ))}
-            </select>
-            <Calendar size={14} style={{
-              position: 'absolute', [isRTL ? 'left' : 'right']: 10,
-              top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: textSecondary,
-            }} />
-          </div>
+          <SearchableSelect
+            value={dateRange}
+            onChange={(v) => { setDateRange(v); setPage(1); }}
+            className="px-3 py-2 text-[13px] font-medium rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer min-w-[140px]"
+            options={DATE_RANGES.map(r => ({ value: r.value, label: isRTL ? r.ar : r.en }))}
+          />
 
           {/* Department */}
           {(departments || []).length > 0 && (
-            <div style={{ position: 'relative' }}>
-              <select
-                value={deptFilter}
-                onChange={e => { setDeptFilter(e.target.value); setPage(1); }}
-                style={{
-                  appearance: 'none', padding: '8px 32px 8px 12px', borderRadius: 8,
-                  background: cardBg, color: textPrimary, border: cardBorder,
-                  fontSize: 13, fontWeight: 500, cursor: 'pointer', outline: 'none',
-                  minWidth: 140,
-                }}
-              >
-                <option value="all">{isRTL ? 'كل الأقسام' : 'All Departments'}</option>
-                {(departments || []).map(d => (
-                  <option key={d} value={d}>
-                    {DEPT_LABELS[d] ? (isRTL ? DEPT_LABELS[d].ar : DEPT_LABELS[d].en) : d}
-                  </option>
-                ))}
-              </select>
-              <Filter size={14} style={{
-                position: 'absolute', [isRTL ? 'left' : 'right']: 10,
-                top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: textSecondary,
-              }} />
-            </div>
+            <SearchableSelect
+              value={deptFilter}
+              onChange={(v) => { setDeptFilter(v); setPage(1); }}
+              className="px-3 py-2 text-[13px] font-medium rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer min-w-[140px]"
+              options={[
+                { value: 'all', label: isRTL ? 'كل الأقسام' : 'All Departments' },
+                ...(departments || []).map(d => ({ value: d, label: DEPT_LABELS[d] ? (isRTL ? DEPT_LABELS[d].ar : DEPT_LABELS[d].en) : d })),
+              ]}
+            />
           )}
         </div>
       </div>

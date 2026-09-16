@@ -12,6 +12,7 @@ import {
   getComparisonData, getMonthlyBreakdown, getAgentComparison, getDepartmentComparison,
 } from '../services/comparisonService';
 import { exportToExcel } from '../utils/exportUtils';
+import SearchableSelect from '../components/ui/SearchableSelect';
 
 const PERIOD_OPTIONS = [
   { id: 'this_month', label: 'هذا الشهر', labelEn: 'This Month' },
@@ -87,8 +88,6 @@ export default function ComparisonReportsPage() {
   const textPrimary = isDark ? '#F1F5F9' : '#1E293B';
   const textSecondary = isDark ? '#94A3B8' : '#64748B';
   const pageBg = isDark ? '#0F172A' : '#F8FAFC';
-  const selectBg = isDark ? '#1E293B' : '#FFFFFF';
-  const selectBorder = isDark ? '#475569' : '#CBD5E1';
   const tableBorderColor = isDark ? '#334155' : '#E2E8F0';
   const tableHeaderBg = isDark ? '#1E293B' : '#F1F5F9';
   const tableRowHoverBg = isDark ? '#1E293B80' : '#F8FAFC';
@@ -161,20 +160,14 @@ export default function ComparisonReportsPage() {
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: textSecondary, marginBottom: 6 }}>
             {isRTL ? 'الفترة أ' : 'Period A'}
           </label>
-          <select
-            value={period1}
-            onChange={e => setPeriod1(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: `1px solid ${selectBorder}`, background: selectBg,
-              color: textPrimary, fontSize: 14, outline: 'none',
-              direction: isRTL ? 'rtl' : 'ltr',
-            }}
-          >
-            {PERIOD_OPTIONS.map(o => (
-              <option key={o.id} value={o.id}>{isRTL ? o.label : o.labelEn}</option>
-            ))}
-          </select>
+          <div className="[&>div]:w-full">
+            <SearchableSelect
+              value={period1}
+              onChange={(v) => setPeriod1(v)}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer"
+              options={PERIOD_OPTIONS.map(o => ({ value: o.id, label: isRTL ? o.label : o.labelEn }))}
+            />
+          </div>
         </div>
 
         <div style={{
@@ -190,20 +183,14 @@ export default function ComparisonReportsPage() {
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: textSecondary, marginBottom: 6 }}>
             {isRTL ? 'الفترة ب' : 'Period B'}
           </label>
-          <select
-            value={period2}
-            onChange={e => setPeriod2(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: `1px solid ${selectBorder}`, background: selectBg,
-              color: textPrimary, fontSize: 14, outline: 'none',
-              direction: isRTL ? 'rtl' : 'ltr',
-            }}
-          >
-            {PERIOD_OPTIONS.map(o => (
-              <option key={o.id} value={o.id}>{isRTL ? o.label : o.labelEn}</option>
-            ))}
-          </select>
+          <div className="[&>div]:w-full">
+            <SearchableSelect
+              value={period2}
+              onChange={(v) => setPeriod2(v)}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark cursor-pointer"
+              options={PERIOD_OPTIONS.map(o => ({ value: o.id, label: isRTL ? o.label : o.labelEn }))}
+            />
+          </div>
         </div>
       </div>
 

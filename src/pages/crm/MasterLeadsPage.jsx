@@ -18,6 +18,7 @@ import DistributeLeadModal from './contacts/DistributeLeadModal';
 import HandOffLeadModal from './contacts/HandOffLeadModal';
 import BulkDistributeMasterModal from './BulkDistributeMasterModal';
 import { deleteContact } from '../../services/contactsService';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import supabase from '../../lib/supabase';
 import { PhoneCell } from './contacts/constants';
 
@@ -456,43 +457,38 @@ export default function MasterLeadsPage() {
           />
         </div>
         {/* Min clones */}
-        <select
+        <SearchableSelect
           value={minClones}
-          onChange={e => setMinClones(Number(e.target.value))}
+          onChange={(v) => setMinClones(Number(v))}
           className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer"
-        >
-          <option value={1}>{isRTL ? 'كل النسخ' : 'All families'}</option>
-          <option value={2}>{isRTL ? '2 نسخ أو أكتر' : '2+ copies'}</option>
-          <option value={3}>{isRTL ? '3 نسخ أو أكتر' : '3+ copies'}</option>
-          <option value={4}>{isRTL ? '4 نسخ أو أكتر' : '4+ copies'}</option>
-        </select>
+          options={[
+            { value: 1, label: isRTL ? 'كل النسخ' : 'All families' },
+            { value: 2, label: isRTL ? '2 نسخ أو أكتر' : '2+ copies' },
+            { value: 3, label: isRTL ? '3 نسخ أو أكتر' : '3+ copies' },
+            { value: 4, label: isRTL ? '4 نسخ أو أكتر' : '4+ copies' },
+          ]}
+        />
         {/* Owner */}
-        <select
+        <SearchableSelect
           value={ownerId}
-          onChange={e => setOwnerId(e.target.value)}
+          onChange={(v) => setOwnerId(v)}
           className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[180px]"
-        >
-          <option value="">{isRTL ? 'كل السيلز' : 'Any owner'}</option>
-          {agents.map(a => (
-            <option key={a.id} value={a.id}>
-              {a.name}{a.inactive ? (isRTL ? ' (غير نشط)' : ' (inactive)') : ''}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: isRTL ? 'كل السيلز' : 'Any owner' },
+            ...agents.map(a => ({ value: a.id, label: `${a.name}${a.inactive ? (isRTL ? ' (غير نشط)' : ' (inactive)') : ''}` })),
+          ]}
+        />
         {/* Status — combines with Owner above to narrow to "owner X with
             status Y". Applied client-side on the current page. */}
-        <select
+        <SearchableSelect
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={(v) => setStatusFilter(v)}
           className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[160px]"
-        >
-          <option value="">{isRTL ? 'كل الحالات' : 'Any status'}</option>
-          {Object.keys(STATUS_LABELS).map(k => (
-            <option key={k} value={k}>
-              {isRTL ? STATUS_LABELS[k].ar : STATUS_LABELS[k].en}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: isRTL ? 'كل الحالات' : 'Any status' },
+            ...Object.keys(STATUS_LABELS).map(k => ({ value: k, label: isRTL ? STATUS_LABELS[k].ar : STATUS_LABELS[k].en })),
+          ]}
+        />
         {/* Campaign — type-to-search; shows only families with a copy in the
             chosen campaign. */}
         {campaigns.length > 0 && (
