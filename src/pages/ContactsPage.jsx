@@ -2164,16 +2164,18 @@ export default function ContactsPage() {
           const showAssignee = profile?.role !== 'sales_agent';
           return (
             <>
-              {/* Category (lead origin) — most-used, kept inline. */}
-              <div className="relative inline-block">
-                <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }} className={ddCls}
-                  style={curCatDef ? { borderColor: curCatDef.color, color: curCatDef.color } : undefined}>
-                  <option value="all">{isRTL ? 'كل التصنيفات' : 'All Categories'} ({categoryCounts.total || 0})</option>
-                  {leadCategoryDefs.map(c => (
-                    <option key={c.key} value={c.key}>{(isRTL ? c.label_ar : c.label_en)} ({categoryCounts[c.key] || 0})</option>
-                  ))}
-                </select>{chev}
-              </div>
+              {/* Category (lead origin) — unified look via SearchableSelect
+                  (short list → the search box auto-hides). */}
+              <SearchableSelect
+                value={categoryFilter}
+                onChange={(v) => { setCategoryFilter(v); setPage(1); }}
+                className="px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark"
+                activeColor={curCatDef?.color}
+                options={[
+                  { value: 'all', label: `${isRTL ? 'كل التصنيفات' : 'All Categories'} (${categoryCounts.total || 0})` },
+                  ...leadCategoryDefs.map(c => ({ value: c.key, label: `${(isRTL ? c.label_ar : c.label_en)} (${categoryCounts[c.key] || 0})` })),
+                ]}
+              />
               {/* Assignee (managers/admins) — searchable (long list of names). */}
               {showAssignee && (
                 <SearchableSelect

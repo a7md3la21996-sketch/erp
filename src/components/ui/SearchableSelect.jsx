@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
  *   className (trigger classes), activeColor (border/text when a value is set),
  *   disabled.
  */
-export default function SearchableSelect({ value, onChange, options = [], placeholder, className, activeColor, disabled }) {
+export default function SearchableSelect({ value, onChange, options = [], placeholder, className, activeColor, disabled, searchThreshold = 8 }) {
   const { i18n } = useTranslation();
   const isRTL = (i18n.language || 'ar').startsWith('ar');
   const [open, setOpen] = useState(false);
@@ -28,10 +28,14 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
   useEffect(() => { if (open) { setQ(''); const t = setTimeout(() => inputRef.current?.focus(), 30); return () => clearTimeout(t); } }, [open]);
 
   const current = options.find(o => o.value === value);
+  // Only show the search box for long lists — on a short list it's friction,
+  // not help. So the SAME component can be used everywhere for one consistent
+  // look, and the search simply appears when it's actually useful.
+  const showSearch = options.length > searchThreshold;
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? options.filter(o => String(o.label).toLowerCase().includes(s)) : options;
-  }, [q, options]);
+    return (showSearch && s) ? options.filter(o => String(o.label).toLowerCase().includes(s)) : options;
+  }, [q, options, showSearch]);
 
   const triggerCls = className || 'px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
 
@@ -45,17 +49,19 @@ export default function SearchableSelect({ value, onChange, options = [], placeh
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-[199]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[3000]" onClick={() => setOpen(false)} />
           <div dir={isRTL ? 'rtl' : 'ltr'}
-            className="absolute top-full mt-1 end-0 z-[200] w-[230px] max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
-            <div className="p-1.5 border-b border-edge/60 dark:border-edge-dark/60">
-              <div className="relative">
-                <Search size={13} className="absolute end-2 top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark pointer-events-none" />
-                <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} dir="auto"
-                  placeholder={isRTL ? 'بحث...' : 'Search...'}
-                  className="w-full pe-7 ps-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none focus:border-brand-500" />
+            className="absolute top-full mt-1 end-0 z-[3001] w-[230px] max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
+            {showSearch && (
+              <div className="p-1.5 border-b border-edge/60 dark:border-edge-dark/60">
+                <div className="relative">
+                  <Search size={13} className="absolute end-2 top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark pointer-events-none" />
+                  <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} dir="auto"
+                    placeholder={isRTL ? 'بحث...' : 'Search...'}
+                    className="w-full pe-7 ps-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none focus:border-brand-500" />
+                </div>
               </div>
-            </div>
+            )}
             <div className="max-h-[240px] overflow-y-auto py-1">
               {filtered.length === 0 && <div className="px-3 py-2 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا نتائج' : 'No matches'}</div>}
               {filtered.map(o => {
