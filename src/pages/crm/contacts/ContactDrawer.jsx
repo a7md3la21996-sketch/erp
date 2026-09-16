@@ -1058,7 +1058,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         const labels = { call: { ar: 'مكالمة', en: 'Call' }, whatsapp: { ar: 'واتساب', en: 'WhatsApp' }, email: { ar: 'إيميل', en: 'Email' }, meeting: { ar: 'اجتماع', en: 'Meeting' }, site_visit: { ar: 'زيارة موقع', en: 'Site Visit' }, note: { ar: 'ملاحظة', en: 'Note' }, status_change: { ar: 'تغيير حالة', en: 'Status Change' } };
         return isRTL ? (labels[item.type]?.ar || 'نشاط') : (labels[item.type]?.en || 'Activity');
       }
-      if (item._type === 'task') return isRTL ? 'مهمة' : 'Task';
+      if (item._type === 'task') { const tt = TASK_TYPES[item.type]; return tt ? (isRTL ? tt.ar : tt.en) : (isRTL ? 'مهمة' : 'Task'); }
       if (item._type === 'opportunity') return isRTL ? 'فرصة' : 'Opportunity';
       if (item._type === 'comment') return isRTL ? 'تعليق' : 'Comment';
       if (item._type === 'document') return isRTL ? 'مستند' : 'Document';
@@ -1178,7 +1178,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <div className="mt-1.5 flex items-center gap-2 flex-wrap px-2.5 py-1 rounded-md bg-brand-500/[0.06]">
                   <span className="text-[10px] font-bold text-brand-500">{isRTL ? 'الخطوة الجاية' : 'Next step'}</span>
                   {TASK_TYPES[ns.type] && (
-                    <span className="text-[10px] text-content dark:text-content-dark">{isRTL ? TASK_TYPES[ns.type].ar : TASK_TYPES[ns.type].en}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-px rounded-[5px]" style={{ background: '#C9860A22', color: '#C9860A' }}>{isRTL ? TASK_TYPES[ns.type].ar : TASK_TYPES[ns.type].en}</span>
                   )}
                   {due && (
                     <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
