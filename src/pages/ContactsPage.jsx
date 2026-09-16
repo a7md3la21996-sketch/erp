@@ -88,7 +88,8 @@ function DateRangeMenu({ label, value, onChange, isRTL }) {
   const [a, b] = Array.isArray(value) ? value : ['', ''];
   const active = a || b;
   const summary = active ? `${a || '…'} → ${b || '…'}` : (isRTL ? 'أي وقت' : 'Any time');
-  const fmt = (d) => d.toISOString().slice(0, 10);
+  // Local Y-M-D (NOT toISOString, which is UTC and drifts a day in Cairo).
+  const fmt = (d) => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
   const preset = (days) => { const to = new Date(); const from = new Date(); from.setDate(to.getDate() - days); onChange([fmt(from), fmt(to)]); };
   const dcls = 'w-full px-2 py-1 rounded-lg text-[11px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none';
   return (
@@ -2194,7 +2195,10 @@ export default function ContactsPage() {
           // Full-width SearchableSelect trigger used inside the "Filters" popover.
           const ddPanelTriggerCls = 'w-full justify-between px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
           const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
-          const advCount = [filterType, filterActivity, filterTemp, categoryFilter, STAGE_UI_ENABLED ? filterStage : 'all'].filter(v => v && v !== 'all').length + smartFilters.length + (showUnassigned ? 1 : 0);
+          // Only count what's hidden INSIDE the panel — Category / Type / Stage
+          // are now surfaced inline in the bar (their own coloured triggers show
+          // their active state), so counting them here would be misleading.
+          const advCount = [filterActivity, filterTemp].filter(v => v && v !== 'all').length + smartFilters.length + (showUnassigned ? 1 : 0);
           const curCatDef = leadCategoryDefs.find(c => c.key === categoryFilter);
           // Assignee filter — only for viewers who see more than their own leads.
           // Names come from the RLS-scoped userMap; filters via the same
