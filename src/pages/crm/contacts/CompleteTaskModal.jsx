@@ -204,13 +204,8 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
                 </label>
               </div>
               {!noNextStep && (
-                <>
-                  <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                  <input type="text" value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)}
-                    placeholder={isRTL ? 'ملاحظة المتابعة (اختياري)' : 'Follow-up note (optional)'}
-                    className="w-full mt-2 px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                </>
+                <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
               )}
             </div>
           )}

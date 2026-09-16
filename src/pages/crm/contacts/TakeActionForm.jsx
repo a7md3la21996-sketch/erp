@@ -285,7 +285,7 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
       {/* ── Section 2: Follow-up Task ── (the "Follow-up date *" label is enough) */}
       {addTask && (
         <div className="ps-3 mb-3 mt-1">
-          {/* Follow-up type chips + notes — advanced only */}
+          {/* Follow-up type chips — advanced only */}
           {showAdv && (<>
           <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع المهمة' : 'Task Type'}</div>
           <div className="flex gap-1.5 flex-wrap mb-2.5">
@@ -300,11 +300,6 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
               </button>
             ))}
           </div>
-          {/* Description textarea */}
-          <Textarea size="sm" rows={2}
-            placeholder={isRTL ? 'وصف / تفاصيل...' : 'Description / details...'}
-            value={taskForm.notes} onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))}
-            className="mb-2" />
           </>)}
           {/* Quick follow-up presets */}
           <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
