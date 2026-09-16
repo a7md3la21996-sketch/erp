@@ -1316,9 +1316,13 @@ export default function ContactsPage() {
     // Export mode doesn't own the list — don't bump the load sequence (it would
     // invalidate a concurrent normal load) and don't touch the loading UI.
     const seq = opts.exportAll ? loadSeqRef.current : ++loadSeqRef.current;
-    // First load: full skeleton. Subsequent: subtle indicator only.
+    // First load: full skeleton. Subsequent user-initiated load: subtle dim.
+    // A SILENT background refresh (the 30s auto-refresh / tab-focus) updates the
+    // data in place with NO dim — dimming the table every 30s for a refresh the
+    // user didn't ask for was the visible "flicker". Rows keep their id keys, so
+    // React reconciles in place without a repaint.
     // Export mode reuses this to loop ALL pages — don't touch the list UI.
-    if (!opts.exportAll) { if (!hasLoadedOnce.current) setLoading(true); else setSearching(true); }
+    if (!opts.exportAll && !opts.silent) { if (!hasLoadedOnce.current) setLoading(true); else setSearching(true); }
     try {
       const currentPage = pg || page || 1;
       // Handle special quick filter values
@@ -1635,27 +1639,64 @@ export default function ContactsPage() {
   const loadContactsDataRef = useReactRef(loadContactsData);
   loadContactsDataRef.current = loadContactsData;
 
-  // Quiet periodic refresh — replaces a realtime firehose. The old
-  // useRealtimeSubscription('contacts') streamed EVERY org-wide contact change
-  // to the tab and grew the in-memory list without bound (applyRealtimePayload
-  // prepended every INSERT), so a tab left open filled memory until it
-  // white-screened (a plain F5 fixed it). Instead we just re-fetch the CURRENT
-  // page every 30s while the tab is visible (bounded — same ~50 rows, respects
-  // the active filter/scope), plus once when the tab regains focus. New leads
-  // appear within ~30s; memory never grows. Paused while the tab is hidden so a
-  // backgrounded tab does no work and there's no wake-up storm.
+  // Live updates, done RIGHT (root fix — replaces the 30s poll that dimmed the
+  // whole table every tick, which itself replaced a broken realtime firehose).
+  //
+  // The old realtime hook prepended EVERY org-wide INSERT to the list, so a tab
+  // left open grew unbounded until it white-screened. The fix keeps the list
+  // BOUNDED and updates SURGICAL:
+  //   • UPDATE of a row that's on-screen  → patch that ONE row in place,
+  //     instantly (this is the common case: a lead's status/owner/note changes).
+  //     A change to a row we don't have is ignored — the list never grows.
+  //   • INSERT / DELETE (list membership)  → one debounced, SILENT re-fetch of
+  //     the current page, so the new/removed lead lands in the right place per
+  //     the active filter/sort/page. Silent = no dim, no flicker.
+  // Nothing polls on a fixed beat: work happens only when data actually changes.
+  // A slow (2 min) SILENT re-fetch stays purely as a safety net for a dropped
+  // realtime connection, plus one on tab-focus. Paused while the tab is hidden.
   useEffect(() => {
-    let timer = null;
-    const tick = () => { if (document.visibilityState === 'visible') loadContactsDataRef.current(); };
-    const start = () => { if (!timer) timer = setInterval(tick, 30000); };
-    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') { loadContactsDataRef.current(); start(); }
-      else stop();
+    let safety = null, refetchPending = false, refetchTimer = null;
+    const silentRefetch = () => { if (document.visibilityState === 'visible') loadContactsDataRef.current(undefined, { silent: true }); };
+    // Throttle (not debounce): coalesce a BURST of membership changes into one
+    // refetch ~2s after the first, so a stream of inserts (e.g. a bulk import)
+    // can neither starve the refetch nor fire it many times a second.
+    const scheduleRefetch = () => {
+      if (refetchPending) return;
+      refetchPending = true;
+      refetchTimer = setTimeout(() => { refetchPending = false; silentRefetch(); }, 2000);
     };
-    start();
+
+    const channel = supabase
+      .channel('leads_contacts_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, (payload) => {
+        // UPDATE of an on-screen row → patch that ONE row in place, instantly.
+        // No re-fetch, no network, list stays bounded. A change to a row we
+        // don't currently show is ignored (never appended).
+        if (payload.eventType === 'UPDATE' && payload.new?.id) {
+          setContacts(prev => prev.some(r => String(r.id) === String(payload.new.id))
+            ? prev.map(r => String(r.id) === String(payload.new.id) ? { ...r, ...payload.new } : r)
+            : prev);
+          return;
+        }
+        // INSERT / DELETE change list membership → one throttled silent re-fetch
+        // places/removes the lead correctly per the active filter/sort/page.
+        scheduleRefetch();
+      })
+      .subscribe();
+
+    const startSafety = () => { if (!safety) safety = setInterval(silentRefetch, 120000); };
+    const stopSafety = () => { if (safety) { clearInterval(safety); safety = null; } };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { silentRefetch(); startSafety(); }
+      else stopSafety();
+    };
+    startSafety();
     document.addEventListener('visibilitychange', onVisibility);
-    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+    return () => {
+      clearTimeout(refetchTimer); stopSafety();
+      document.removeEventListener('visibilitychange', onVisibility);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Handle highlight query param — open contact drawer directly
