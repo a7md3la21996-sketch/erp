@@ -2150,8 +2150,8 @@ export default function ContactsPage() {
           const cfgTypeKeys = (configContactTypes || []).map(t => t.key);
           const types = deptView.contactTypes || (cfgTypeKeys.length ? cfgTypeKeys : LEAD_TYPES);
           const ddCls = 'px-3 py-1.5 rounded-lg text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
-          // Full-width select used inside the "Filters" popover.
-          const ddPanelCls = 'w-full px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7';
+          // Full-width SearchableSelect trigger used inside the "Filters" popover.
+          const ddPanelTriggerCls = 'w-full justify-between px-2.5 py-1.5 rounded-lg text-xs bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark';
           const chev = <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />;
           const advCount = [filterType, filterActivity, filterTemp, STAGE_UI_ENABLED ? filterStage : 'all'].filter(v => v !== 'all').length;
           const curCatDef = leadCategoryDefs.find(c => c.key === categoryFilter);
@@ -2223,46 +2223,45 @@ export default function ContactsPage() {
                       {STAGE_UI_ENABLED && (
                         <div>
                           <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المرحلة' : 'Stage'}</div>
-                          <div className="relative">
-                            <select value={filterStage} onChange={e => { setFilterStage(e.target.value); setPage(1); }} className={ddPanelCls}
-                              style={(filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? { borderColor: CONTACT_STAGE[filterStage].color, color: CONTACT_STAGE[filterStage].color } : undefined}>
-                              <option value="all">{isRTL ? 'كل المراحل' : 'All Stages'}</option>
-                              {CONTACT_STAGE_ORDER.map(k => <option key={k} value={k}>{isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en}</option>)}
-                            </select>{chev}
+                          <div className="[&>div]:w-full">
+                            <SearchableSelect value={filterStage} onChange={(v) => { setFilterStage(v); setPage(1); }}
+                              className={`${ddPanelTriggerCls}`}
+                              activeColor={(filterStage !== 'all' && CONTACT_STAGE[filterStage]) ? CONTACT_STAGE[filterStage].color : undefined}
+                              options={[{ value: 'all', label: isRTL ? 'كل المراحل' : 'All Stages' }, ...CONTACT_STAGE_ORDER.map(k => ({ value: k, label: isRTL ? CONTACT_STAGE[k].ar : CONTACT_STAGE[k].en }))]} />
                           </div>
                         </div>
                       )}
                       <div>
                         <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</div>
-                        <div className="relative">
-                          <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={ddPanelCls}
-                            style={TYPE[filterType] ? { borderColor: TYPE[filterType]?.color, color: TYPE[filterType]?.color } : undefined}>
-                            <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-                            {types.filter(k => TYPE[k]).map(k => <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>)}
-                          </select>{chev}
+                        <div className="[&>div]:w-full">
+                          <SearchableSelect value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }}
+                            className={`${ddPanelTriggerCls}`}
+                            activeColor={TYPE[filterType]?.color}
+                            options={[{ value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' }, ...types.filter(k => TYPE[k]).map(k => ({ value: k, label: `${isRTL ? TYPE[k].label : TYPE[k].labelEn} (${stats['type_' + k] || 0})` }))]} />
                         </div>
                       </div>
                       <div>
                         <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النشاط' : 'Activity'}</div>
-                        <div className="relative">
-                          <select value={filterActivity} onChange={e => { setFilterActivity(e.target.value); setPage(1); }} className={ddPanelCls}
-                            style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280', color: filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280' } : undefined}>
-                            <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
-                            <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
-                            <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
-                            <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
-                            <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
-                          </select>{chev}
+                        <div className="[&>div]:w-full">
+                          <SearchableSelect value={filterActivity} onChange={(v) => { setFilterActivity(v); setPage(1); }}
+                            className={`${ddPanelTriggerCls}`}
+                            activeColor={filterActivity !== 'all' ? (filterActivity === 'active_3d' ? '#158A57' : filterActivity === 'moderate_7d' ? '#C9860A' : filterActivity === 'stale' ? '#D6403B' : '#6b7280') : undefined}
+                            options={[
+                              { value: 'all', label: isRTL ? 'كل النشاط' : 'All Activity' },
+                              { value: 'active_3d', label: isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)` },
+                              { value: 'moderate_7d', label: isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)` },
+                              { value: 'stale', label: isRTL ? '■ مهمل' : '■ Stale' },
+                              { value: 'never', label: isRTL ? '✕ لم يتم التواصل' : '✕ Never' },
+                            ]} />
                         </div>
                       </div>
                       <div>
                         <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                        <div className="relative">
-                          <select value={filterTemp} onChange={e => { setFilterTemp(e.target.value); setPage(1); }} className={ddPanelCls}
-                            style={filterTemp !== 'all' ? { borderColor: TEMP[filterTemp]?.color, color: TEMP[filterTemp]?.color } : undefined}>
-                            <option value="all">{isRTL ? 'كل الحرارة' : 'All Temp'}</option>
-                            {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label} ({stats['temp_' + k] || 0})</option>)}
-                          </select>{chev}
+                        <div className="[&>div]:w-full">
+                          <SearchableSelect value={filterTemp} onChange={(v) => { setFilterTemp(v); setPage(1); }}
+                            className={`${ddPanelTriggerCls}`}
+                            activeColor={filterTemp !== 'all' ? TEMP[filterTemp]?.color : undefined}
+                            options={[{ value: 'all', label: isRTL ? 'كل الحرارة' : 'All Temp' }, ...Object.entries(TEMP).map(([k, v]) => ({ value: k, label: `${isRTL ? v.labelAr : v.label} (${stats['temp_' + k] || 0})` }))]} />
                         </div>
                       </div>
                     </div>
