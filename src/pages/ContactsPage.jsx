@@ -2189,7 +2189,7 @@ export default function ContactsPage() {
                         const SS = (field, label) => <div>{lbl(label)}<div className="[&>div]:w-full"><SearchableSelect value={getV(field)} onChange={(v) => setV(field, v)} className={ddPanelTriggerCls} options={fopts(field)} /></div></div>;
                         const DS = (label, value, on, options, color) => <div>{lbl(label)}<div className="[&>div]:w-full"><SearchableSelect value={value} onChange={on} className={ddPanelTriggerCls} activeColor={color} options={options} /></div></div>;
                         const dcls = 'w-full px-2 py-1.5 rounded-lg text-[11px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark outline-none';
-                        const DR = (field, label) => { const [a, b] = getD(field); return <div>{lbl(label)}<div className="flex gap-1.5"><input type="date" value={a} onChange={e => setD(field, e.target.value, b)} className={dcls} /><input type="date" value={b} onChange={e => setD(field, a, e.target.value)} className={dcls} /></div></div>; };
+                        const DR = (field, label) => { const [a, b] = getD(field); return <div className="col-span-2">{lbl(label)}<div className="flex gap-1.5"><input type="date" value={a} onChange={e => setD(field, e.target.value, b)} className={dcls} /><input type="date" value={b} onChange={e => setD(field, a, e.target.value)} className={dcls} /></div></div>; };
                         const sec = (t) => <div className="col-span-full text-[10px] font-bold uppercase tracking-wide text-brand-500 mb-1 mt-1.5 first:mt-0">{t}</div>;
                         return (
                           <>
@@ -2198,7 +2198,7 @@ export default function ContactsPage() {
                               <button onClick={() => { setFilterType('all'); setFilterActivity('all'); setFilterTemp('all'); setFilterStage('all'); setCategoryFilter('all'); setShowUnassigned(false); setSmartFilters([]); setPage(1); }}
                                 className="text-[10px] text-red-500 bg-transparent border-none cursor-pointer hover:underline p-0 flex items-center gap-1"><RotateCcw size={10} /> {isRTL ? 'مسح الكل' : 'Clear all'}</button>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-2.5 gap-y-2">
                               {sec(isRTL ? 'معلومات الليد' : 'Lead info')}
                               {DS(isRTL ? 'التصنيف' : 'Category', categoryFilter, (v) => { setCategoryFilter(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل التصنيفات' : 'All Categories' }, ...leadCategoryDefs.map(c => ({ value: c.key, label: isRTL ? c.label_ar : c.label_en }))], curCatDef?.color)}
                               {DS(isRTL ? 'النوع' : 'Type', filterType, (v) => { setFilterType(v); setPage(1); }, [{ value: 'all', label: isRTL ? 'كل الأنواع' : 'All Types' }, ...types.filter(k => TYPE[k]).map(k => ({ value: k, label: isRTL ? TYPE[k].label : TYPE[k].labelEn }))], TYPE[filterType]?.color)}
