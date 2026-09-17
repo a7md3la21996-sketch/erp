@@ -7,7 +7,7 @@ import { logInteraction, isNoteRequired } from '../../../services/interactionsSe
 import { updateTask, createTask } from '../../../services/tasksService';
 import { updateActivity } from '../../../services/activitiesService';
 import { updateContact } from '../../../services/contactsService';
-import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect } from './constants';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect, OUTCOME_UI_ENABLED } from './constants';
 
 // ── Shared "close a next-step" modal ────────────────────────────────────────
 // The ONE way to close any task / meeting / next-step across the app: record
@@ -72,7 +72,7 @@ export default function CompleteTaskModal({ task, activity = null, onClose, onDo
   // FOLLOWUP_REQUIRED) — unless the rep explicitly closes with no next step
   // (deal done / dead). A pure note never requires one.
   const followUpRequired = actType !== 'note' && !noNextStep;
-  const outcomeRequired = noteRequired; // engaged → conversation outcome too
+  const outcomeRequired = noteRequired && OUTCOME_UI_ENABLED; // engaged → outcome too (temporarily hidden)
   const canSave = (!resultRequired || actResult)
     && (!noteRequired || actNotes.trim())
     && (!outcomeRequired || outcome)

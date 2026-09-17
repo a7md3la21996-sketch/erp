@@ -6,7 +6,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input, Select, Textarea } from '../../../components/ui/';
 import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
-import { contactPropType, OutcomeSelect } from './constants';
+import { contactPropType, OutcomeSelect, OUTCOME_UI_ENABLED } from './constants';
 
 const CALL_RESULTS = [
   { key: 'answered', ar: 'رد', en: 'Answered', color: '#158A57' },
@@ -89,7 +89,7 @@ export default function LogCallModal({ contact, onClose }) {
   const handleSave = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
     if (isNoteRequired('call', callResult) && !callNotes.trim()) { toast.warning(isRTL ? 'اكتب اللي اتقال في المكالمة' : 'Write what was said on the call'); return; }
-    if (isNoteRequired('call', callResult) && !outcome) { toast.warning(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
+    if (OUTCOME_UI_ENABLED && isNoteRequired('call', callResult) && !outcome) { toast.warning(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
     if (!followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
     setSaving(true);
 
@@ -157,8 +157,8 @@ export default function LogCallModal({ contact, onClose }) {
           }}>{isRTL ? r.ar : r.en}</button>
         ))}
       </div>
-      {/* Conversation outcome — required after an engaged (answered) call */}
-      {isNoteRequired('call', callResult) && (
+      {/* Conversation outcome — required after an engaged (answered) call (temporarily hidden) */}
+      {OUTCOME_UI_ENABLED && isNoteRequired('call', callResult) && (
         <div className="mb-3.5">
           <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span></div>
           <OutcomeSelect value={outcome} onChange={setOutcome} isRTL={isRTL} invalid={!outcome} />

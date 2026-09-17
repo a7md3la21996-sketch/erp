@@ -7,7 +7,7 @@ import SearchableSelect from '../../../components/ui/SearchableSelect';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 import { isFollowUpRequired, isNoteRequired } from '../../../services/interactionsService';
-import { OutcomeSelect } from './constants';
+import { OutcomeSelect, OUTCOME_UI_ENABLED } from './constants';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
 // Assembles a single interaction payload and hands it to onLogInteraction,
@@ -134,7 +134,7 @@ export default function TakeActionForm({ contact, onLogInteraction, onCancel, in
   const descriptionMissing = noteRequired && !actForm.description.trim();
   // After an engaged touch we also require the conversation outcome (what the
   // talk led to) so the pipeline signal is captured, not just "answered".
-  const outcomeRequired = noteRequired;
+  const outcomeRequired = noteRequired && OUTCOME_UI_ENABLED; // temporarily hidden
   const outcomeMissing = outcomeRequired && !actForm.outcome;
   const canSave = (actMode === 'schedule'
     ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)

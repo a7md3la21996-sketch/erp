@@ -117,6 +117,10 @@ export function ResultBadge({ result, isRTL, className = '' }) {
 // analysis of 7,444 answered-call notes (top phrases: "غير مهتم"/"صرف نظر",
 // "مهتم", "ابعتلي التفاصيل"/واتساب, "بعتله اوفر", "اكلمه الساعة", "استلام فوري",
 // "شاري اصلا", "بروكر/سمسار", "السعر غالي"). Not guessed.
+// TEMP: hide the conversation-outcome picker everywhere (kept code + data +
+// badges intact). Flip back to true to re-enable capture. Set false 2026-09-17.
+export const OUTCOME_UI_ENABLED = false;
+
 export const CONVERSATION_OUTCOME_GROUPS = [
   { key: 'moving', ar: 'مهتم/بيتحرك', en: 'Interested', color: '#158A57', items: [
     ['meeting_scheduled', 'اتحجزت معاينة/اجتماع', 'Visit booked'],

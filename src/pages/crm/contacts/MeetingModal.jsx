@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button, Input, Textarea } from '../../../components/ui';
 import { logInteraction, isNoteRequired } from '../../../services/interactionsService';
-import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect } from './constants';
+import { ACTIVITY_RESULT_BADGES, ACTIVITY_RESULTS_BY_TYPE, OutcomeSelect, OUTCOME_UI_ENABLED } from './constants';
 
 // Meeting result is a fixed enum (same as every other activity) — NOT free text.
 const MEETING_RESULTS = ACTIVITY_RESULTS_BY_TYPE.meeting;
@@ -52,7 +52,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
     // actually attended — a written feedback note (same engaged rule as calls).
     if (!scheduled && !result) { setError(isRTL ? 'اختر نتيجة الاجتماع' : 'Pick the meeting result'); return; }
     if (!scheduled && result === 'attended' && !note.trim()) { setError(isRTL ? 'اكتب اللي حصل في الاجتماع' : 'Write what happened'); return; }
-    if (!scheduled && isNoteRequired('meeting', result) && !outcome) { setError(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
+    if (OUTCOME_UI_ENABLED && !scheduled && isNoteRequired('meeting', result) && !outcome) { setError(isRTL ? 'اختر نتيجة المحادثة' : 'Select the conversation outcome'); return; }
     setSaving(true); setError('');
     const typeLabel = (TYPES.find(t => t.key === subtype) || {})[isRTL ? 'ar' : 'en'];
     // Feedback note → description (pure). result is the structured enum.
@@ -156,7 +156,7 @@ export default function MeetingModal({ contact, mode: initialMode = 'happened', 
             </div>
           )}
 
-          {!scheduled && isNoteRequired('meeting', result) && (
+          {OUTCOME_UI_ENABLED && !scheduled && isNoteRequired('meeting', result) && (
             <div>
               <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'نتيجة المحادثة' : 'Conversation outcome'} <span className="text-red-500">*</span></label>
               <div className="mt-1"><OutcomeSelect value={outcome} onChange={setOutcome} isRTL={isRTL} invalid={!outcome} /></div>
