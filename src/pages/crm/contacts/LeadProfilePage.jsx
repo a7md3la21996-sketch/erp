@@ -1,24 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, ArrowLeft, User, Phone, Mail, Tag, DollarSign, MapPin, Calendar, Clock, Briefcase, FileText, MessageSquare, MessageCircle, Pencil, Building2, Hash, History } from 'lucide-react';
+import { User, Phone, Mail, Tag, DollarSign, MapPin, Calendar, Clock, Briefcase, FileText, MessageSquare, MessageCircle, Pencil, Building2, Hash, History, X, Plus, Activity as ActivityIcon, BarChart3 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { PageSkeleton, EmptyState } from '../../../components/ui';
+import { PageSkeleton, EmptyState, Modal } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useSystemConfig } from '../../../contexts/SystemConfigContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { P } from '../../../config/roles';
-import { updateContact } from '../../../services/contactsService';
+import { updateContact, fetchContactActivities } from '../../../services/contactsService';
+import { logInteraction } from '../../../services/interactionsService';
 import { getAuditLogs } from '../../../services/auditService';
 import EditContactModal from './EditContactModal';
 import ResaleUnitsTab from './ResaleUnitsTab';
+import TakeActionForm from './TakeActionForm';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
-import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince } from './constants';
+import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince, CONTACT_STAGE, ResultBadge, OutcomeBadge } from './constants';
+import { computeResponsiveness, RESP_LABELS } from './responsiveness';
 
-// ── Full Lead Profile — the roomy, id-based home for a lead's DETAILS
-// (all fields, units, documents, comments). Phase 1 of the drawer/profile
-// split: the drawer stays the fast triage surface; this page is where you go
-// deep. Reached from the drawer's "Full profile" button. Nothing was removed
-// from the drawer — this is purely additive.
+// ── Full Lead Profile — the roomy, id-based home for a lead: presented as a
+// CENTERED, routable overlay (over the Leads list) with tabs. The drawer stays
+// the fast triage surface; this is where you go deep. Reached from the drawer's
+// "Full profile" button (navigate `/crm/leads/:id`).
+
+const STATUS_STYLES = {
+  new:             { ar: 'جديد',       en: 'New',          color: '#2F6BD3' },
+  following:       { ar: 'متابعة',     en: 'Following',    color: '#158A57' },
+  contacted:       { ar: 'تم التواصل', en: 'Contacted',    color: '#C9860A' },
+  has_opportunity: { ar: 'لديه فرصة',  en: 'Opportunity',  color: '#117049' },
+  disqualified:    { ar: 'غير مؤهل',   en: 'Disqualified', color: '#6b7280' },
+};
+const CHANNEL_LABEL = {
+  call: { ar: 'مكالمة', en: 'Call' }, whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
+  email: { ar: 'إيميل', en: 'Email' }, meeting: { ar: 'اجتماع', en: 'Meeting' },
+  visit: { ar: 'زيارة', en: 'Visit' }, note: { ar: 'ملاحظة', en: 'Note' },
+};
 
 const deptLabel = (d, isRTL) =>
   (isRTL
@@ -36,7 +53,15 @@ const dealStatusLabel = (s, isRTL) =>
     : { new_deal: 'New deal', reserved: 'Reserved', contracted: 'Contracted', won: 'Won', lost: 'Lost' }
   )[s] || s;
 const fmtMoney = (n) => (n ? Number(n).toLocaleString() : '—');
+const nextDayAt10 = () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); return d.toISOString(); };
 
+function Badge({ text, color, icon: Icon }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap" style={{ color, background: color + '18' }}>
+      {Icon && <Icon size={11} />}{text}
+    </span>
+  );
+}
 function Field({ icon: Icon, label, value, ltr }) {
   if (value == null || value === '') return null;
   return (
@@ -49,16 +74,25 @@ function Field({ icon: Icon, label, value, ltr }) {
     </div>
   );
 }
-
-function Section({ title, icon: Icon, children }) {
+function Card({ title, icon: Icon, children }) {
   return (
-    <section className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl shadow-sm overflow-hidden mb-4">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-edge dark:border-edge-dark">
-        {Icon && <Icon size={16} className="text-brand-500 shrink-0" aria-hidden="true" />}
-        <h2 className="m-0 text-sm font-bold text-content dark:text-content-dark">{title}</h2>
-      </div>
+    <section className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl overflow-hidden mb-4">
+      {title && (
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-edge dark:border-edge-dark">
+          {Icon && <Icon size={16} className="text-brand-500 shrink-0" aria-hidden="true" />}
+          <h2 className="m-0 text-sm font-bold text-content dark:text-content-dark">{title}</h2>
+        </div>
+      )}
       <div className="p-4">{children}</div>
     </section>
+  );
+}
+function SummaryRow({ label, children }) {
+  return (
+    <div className="flex items-center gap-3 py-2 border-t border-edge/60 dark:border-edge-dark/60 first:border-t-0">
+      <span className="text-xs text-content-muted dark:text-content-muted-dark w-32 shrink-0">{label}</span>
+      <span className="flex items-center gap-2 flex-wrap">{children}</span>
+    </div>
   );
 }
 
@@ -67,32 +101,46 @@ export default function LeadProfilePage() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
-  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
   const { profile, hasPermission } = useAuth();
+  const { crmThresholds } = useSystemConfig();
+  const toast = useToast();
   const canEdit = hasPermission(P.CONTACTS_EDIT) || hasPermission(P.CONTACTS_EDIT_OWN);
   const canViewAudit = hasPermission('audit.view');
+  const windowDays = crmThresholds?.responsive_window_days || 7;
 
   const [contact, setContact] = useState(null);
   const [showEdit, setShowEdit] = useState(false);
   const [state, setState] = useState('loading'); // loading | ready | missing
   const [deals, setDeals] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [tab, setTab] = useState('overview');
+  const [showAction, setShowAction] = useState(false);
+  const [actionType, setActionType] = useState('call');
+
+  const close = () => navigate(-1);
 
   useEffect(() => {
     let alive = true;
     setState('loading');
     supabase.from('contacts').select('*').eq('id', id).maybeSingle()
-      .then(({ data }) => {
-        if (!alive) return;
-        setContact(data || null);
-        setState(data ? 'ready' : 'missing');
-      })
+      .then(({ data }) => { if (!alive) return; setContact(data || null); setState(data ? 'ready' : 'missing'); })
       .catch(() => { if (alive) setState('missing'); });
     return () => { alive = false; };
   }, [id]);
 
-  // Deals (all of this lead's deals) + change history (admin-only) — the
-  // details that used to live in the drawer's Deal / Audit tabs.
+  const refreshContact = useCallback(async () => {
+    const { data } = await supabase.from('contacts').select('*').eq('id', id).maybeSingle();
+    if (data) setContact(data);
+  }, [id]);
+
+  const refreshActivities = useCallback(async () => {
+    try {
+      const rows = await fetchContactActivities(id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id });
+      setActivities(rows || []);
+    } catch { /* leave as-is */ }
+  }, [id, profile?.role, profile?.id, profile?.team_id]);
+
   useEffect(() => {
     let alive = true;
     supabase.from('deals')
@@ -105,194 +153,324 @@ export default function LeadProfilePage() {
         .then(({ data }) => { if (alive) setAudit(data || []); })
         .catch(() => { if (alive) setAudit([]); });
     }
+    refreshActivities();
     return () => { alive = false; };
-  }, [id, canViewAudit]);
+  }, [id, canViewAudit, refreshActivities]);
 
-  if (state === 'loading') {
+  // ── Unified log path (quick bar + TakeActionForm both funnel here) ──
+  const handleLog = useCallback(async (payload) => {
+    try {
+      await logInteraction(id, payload);
+      await Promise.all([refreshActivities(), refreshContact()]);
+    } catch (e) {
+      if (e?.message === 'FOLLOWUP_REQUIRED') toast.error(isRTL ? 'لازم تحدد خطوة جاية' : 'A next step is required');
+      else if (e?.message === 'NOTE_REQUIRED') toast.error(isRTL ? 'لازم تكتب ملاحظة' : 'A note is required');
+      else toast.error(isRTL ? 'فشل التسجيل' : 'Failed to log');
+      throw e;
+    }
+  }, [id, refreshActivities, refreshContact, toast, isRTL]);
+
+  // No-engagement one-click: logs instantly with an auto retry follow-up (so it
+  // satisfies enforcement and matches "no-engagement → only the next step moves").
+  const quickNo = async (type, result, label) => {
+    try {
+      await handleLog({ type, result, followUp: { type: 'followup', title: isRTL ? 'إعادة محاولة' : 'Retry contact', dueAt: nextDayAt10(), contactName: contact?.full_name } });
+      toast.success((isRTL ? 'تم التسجيل: ' : 'Logged: ') + label);
+    } catch { /* toast shown in handleLog */ }
+  };
+  // Engaged: open the full form preset to that channel (outcome + note required).
+  const quickEngaged = (type) => { setActionType(type); setShowAction(true); };
+
+  const resp = useMemo(() => computeResponsiveness(activities, windowDays), [activities, windowDays]);
+
+  // ---------------- render ----------------
+  const body = () => {
+    if (state === 'loading') return <PageSkeleton />;
+    if (state === 'missing' || !contact) return <EmptyState message={isRTL ? 'العميل غير موجود' : 'Lead not found'} />;
+
+    const tp = TYPE[contact.contact_type];
+    const temp = TEMP[contact.temperature];
+    const st = STATUS_STYLES[contact.contact_status];
+    const stage = CONTACT_STAGE[contact.stage];
+    const extraPhones = Array.isArray(contact.extra_phones) ? contact.extra_phones.filter(Boolean) : [];
+    const respLabel = RESP_LABELS[resp.state] ? (isRTL ? RESP_LABELS[resp.state].ar : RESP_LABELS[resp.state].en) : resp.state;
+    const respStat = `${resp.replies} ${isRTL ? 'رد' : 'replies'} · ${resp.attempts} ${isRTL ? 'محاولة' : 'attempts'}` + (resp.lastReplyDays != null ? ` · ${isRTL ? 'آخر رد' : 'last reply'} ${resp.lastReplyDays === 0 ? (isRTL ? 'اليوم' : 'today') : resp.lastReplyDays + (isRTL ? ' يوم' : 'd')}` : '');
+    const meetings = activities.filter(a => a.type === 'meeting');
+
+    const TABS = [
+      { key: 'overview', ar: 'نظرة عامة', en: 'Overview', icon: User },
+      { key: 'activity', ar: 'النشاط', en: 'Activity', icon: ActivityIcon },
+      { key: 'deals', ar: 'الصفقات والاجتماعات', en: 'Deals & Meetings', icon: DollarSign },
+      { key: 'documents', ar: 'المستندات', en: 'Documents', icon: FileText },
+      { key: 'analysis', ar: 'التحليل', en: 'Analysis', icon: BarChart3 },
+    ];
+
     return (
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
-        <PageSkeleton />
-      </div>
-    );
-  }
-
-  if (state === 'missing' || !contact) {
-    return (
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh">
-        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-sm text-brand-500 bg-transparent border-none cursor-pointer mb-4">
-          <BackIcon size={16} /> {isRTL ? 'رجوع' : 'Back'}
-        </button>
-        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl">
-          <EmptyState message={isRTL ? 'العميل غير موجود' : 'Lead not found'} />
-        </div>
-      </div>
-    );
-  }
-
-  const tp = TYPE[contact.contact_type];
-  const temp = TEMP[contact.temperature];
-  const extraPhones = Array.isArray(contact.extra_phones) ? contact.extra_phones.filter(Boolean) : [];
-
-  return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16 max-w-[900px] mx-auto">
-      {/* Back */}
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-sm text-content-muted dark:text-content-muted-dark bg-transparent border-none cursor-pointer mb-4 hover:text-brand-500">
-        <BackIcon size={16} /> {isRTL ? 'رجوع' : 'Back'}
-      </button>
-
-      {/* Header */}
-      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl shadow-sm p-5 mb-4">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center text-lg font-bold shadow-sm"
-            style={tp?.color ? { background: `linear-gradient(135deg, ${tp.color}30, ${tp.color}15)`, color: tp.color, border: `1px solid ${tp.color}20` } : { background: 'linear-gradient(135deg,#2B4C6F,#2F6BD3)', color: '#fff' }}>
+      <div>
+        {/* Header */}
+        <div className="flex items-start gap-3.5">
+          <div className="w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center text-base font-bold"
+            style={tp?.color ? { background: `linear-gradient(135deg, ${tp.color}30, ${tp.color}15)`, color: tp.color } : { background: 'linear-gradient(135deg,#2B4C6F,#2F6BD3)', color: '#fff' }}>
             {initials(contact.full_name)}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark leading-tight break-words">
-              {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-base">{contact.prefix}</span>}
+            <h1 className="m-0 text-lg font-bold text-content dark:text-content-dark leading-tight break-words">
+              {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
             </h1>
+            <div className="text-xs text-content-muted dark:text-content-muted-dark mt-1 flex items-center gap-2 flex-wrap">
+              {contact.phone && <span dir="ltr" className="font-medium">{contact.phone}</span>}
+              {contact.source && <span>· {isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source)}</span>}
+              {contact.assigned_to_name && <span>· {contact.assigned_to_name}</span>}
+            </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
-              {tp && <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: tp.color, background: tp.bg }}>{isRTL ? tp.label : tp.labelEn}</span>}
-              {contact.department && <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-[#8BA8C8] bg-[#8BA8C8]/10">{deptLabel(contact.department, isRTL)}</span>}
-              {temp && <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: temp.color, background: temp.bg }}><temp.Icon size={11} />{isRTL ? temp.labelAr : temp.label}</span>}
-              {contact.contact_number && <span className="text-[11px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.06] px-2 py-0.5 rounded-full">{contact.contact_number}</span>}
+              {st && <Badge text={isRTL ? st.ar : st.en} color={st.color} />}
+              {temp && <Badge text={isRTL ? temp.labelAr : temp.label} color={temp.color} icon={temp.Icon} />}
+              <Badge text={respLabel} color={resp.color} />
+              {contact.interested_in_type && <Badge text={propTypeLabel(contact.interested_in_type, isRTL)} color="#6B7684" />}
             </div>
           </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {contact.phone && <a href={`tel:${contact.phone}`} title={isRTL ? 'اتصال' : 'Call'} className="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline"><Phone size={16} /></a>}
+            {contact.phone && <a href={`https://wa.me/${contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 text-[#25D366] no-underline"><MessageCircle size={16} /></a>}
+            {canEdit && <button onClick={() => setShowEdit(true)} title={isRTL ? 'تعديل' : 'Edit'} className="w-9 h-9 flex items-center justify-center rounded-lg bg-surface-bg dark:bg-brand-500/10 border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer"><Pencil size={15} /></button>}
+            <button onClick={close} title={isRTL ? 'إغلاق' : 'Close'} className="w-9 h-9 flex items-center justify-center rounded-lg text-content-muted dark:text-content-muted-dark hover:bg-gray-100 dark:hover:bg-brand-500/10 cursor-pointer"><X size={18} /></button>
+          </div>
         </div>
 
-        {/* Quick actions — act straight from the profile (call / whatsapp / edit)
-            so it isn't a read-only viewer. */}
-        {(contact.phone || canEdit) && (
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
-            {contact.phone && (
-              <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-brand-500/10 border border-brand-500/25 text-brand-600 dark:text-brand-400 text-sm font-semibold no-underline active:scale-95 transition-transform">
-                <Phone size={15} /> {isRTL ? 'اتصال' : 'Call'}
-              </a>
-            )}
-            {contact.phone && (
-              <a href={`https://wa.me/${contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-sm font-semibold no-underline active:scale-95 transition-transform">
-                <MessageCircle size={15} /> {isRTL ? 'واتساب' : 'WhatsApp'}
-              </a>
-            )}
-            {canEdit && (
-              <button onClick={() => setShowEdit(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-surface-bg dark:bg-brand-500/10 border border-edge dark:border-edge-dark text-content dark:text-content-dark text-sm font-semibold cursor-pointer active:scale-95 transition-transform">
-                <Pencil size={15} /> {isRTL ? 'تعديل' : 'Edit'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Data */}
-      <Section title={isRTL ? 'البيانات' : 'Details'} icon={User}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-          <Field icon={Phone} label={isRTL ? 'الهاتف' : 'Phone'} value={contact.phone} ltr />
-          <Field icon={Phone} label={isRTL ? 'هاتف 2' : 'Phone 2'} value={contact.phone2} ltr />
-          {extraPhones.length > 0 && <Field icon={Phone} label={isRTL ? 'أرقام إضافية' : 'Extra phones'} value={extraPhones.join(' · ')} ltr />}
-          <Field icon={Mail} label={isRTL ? 'الإيميل' : 'Email'} value={contact.email} ltr />
-          <Field icon={Tag} label={isRTL ? 'المصدر' : 'Source'} value={contact.source ? (isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source)) : null} />
-          <Field icon={Tag} label={isRTL ? 'الحملة' : 'Campaign'} value={contact.campaign_name} />
-          <Field icon={DollarSign} label={isRTL ? 'الميزانية' : 'Budget'} value={(contact.budget_min || contact.budget_max) ? fmtBudget(contact.budget_min, contact.budget_max, isRTL) : null} />
-          <Field icon={Building2} label={isRTL ? 'مهتم بـ' : 'Interested in'} value={contact.interested_in_type ? propTypeLabel(contact.interested_in_type, isRTL) : null} />
-          <Field icon={MapPin} label={isRTL ? 'الموقع المفضل' : 'Preferred location'} value={contact.preferred_location} />
-          <Field icon={User} label={isRTL ? 'المسؤول' : 'Owner'} value={contact.assigned_to_name} />
-          <Field icon={Briefcase} label={isRTL ? 'الشركة' : 'Company'} value={contact.company} />
-          <Field icon={Briefcase} label={isRTL ? 'المسمى الوظيفي' : 'Job title'} value={contact.job_title} />
-          <Field icon={Hash} label={isRTL ? 'الجنسية' : 'Nationality'} value={contact.nationality} />
-          <Field icon={Calendar} label={isRTL ? 'أُنشئ' : 'Created'} value={contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
-          <Field icon={Clock} label={isRTL ? 'آخر نشاط' : 'Last activity'} value={contact.last_activity_at ? `${new Date(contact.last_activity_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} · ${daysSince(contact.last_activity_at)}${isRTL ? ' يوم' : 'd'}` : null} />
-          <Field icon={User} label={isRTL ? 'أُنشئ بواسطة' : 'Created by'} value={contact.created_by_name} />
+        {/* Quick-log bar — fast, common cases; accuracy preserved */}
+        <div className="flex items-center gap-2 flex-wrap mt-4 p-2.5 rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark">
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#158A57' }}>{isRTL ? 'تفاعل' : 'Engaged'}</span>
+          <QuickChip color="#158A57" onClick={() => quickEngaged('call')} label={isRTL ? 'رد' : 'Answered'} />
+          <QuickChip color="#158A57" onClick={() => quickEngaged('whatsapp')} label={isRTL ? 'رد واتساب' : 'Replied'} />
+          <QuickChip color="#158A57" onClick={() => quickEngaged('meeting')} label={isRTL ? 'حضر' : 'Attended'} />
+          <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1" />
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#C9860A' }}>{isRTL ? 'مفيش تفاعل' : 'No engagement'}</span>
+          <QuickChip color="#C9860A" onClick={() => quickNo('call', 'no_answer', isRTL ? 'لم يرد' : 'No answer')} label={isRTL ? 'لم يرد' : 'No answer'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('call', 'busy', isRTL ? 'مشغول' : 'Busy')} label={isRTL ? 'مشغول' : 'Busy'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('whatsapp', 'delivered', isRTL ? 'اتبعت' : 'Sent')} label={isRTL ? 'اتبعت' : 'Sent'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('meeting', 'no_show', isRTL ? 'لم يحضر' : 'No show')} label={isRTL ? 'لم يحضر' : 'No show'} />
+          <button onClick={() => quickEngaged('call')} className="ms-auto inline-flex items-center gap-1 text-xs font-bold text-brand-500 bg-transparent border border-dashed border-edge dark:border-edge-dark rounded-lg px-2.5 py-1.5 cursor-pointer"><Plus size={13} />{isRTL ? 'تسجيل كامل' : 'Full log'}</button>
         </div>
-        {contact.notes && (
-          <div className="mt-3 pt-3 border-t border-edge/60 dark:border-edge-dark/60">
-            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</div>
-            <p className="m-0 text-sm text-content dark:text-content-dark whitespace-pre-line leading-relaxed">{contact.notes}</p>
-          </div>
-        )}
-      </Section>
 
-      {/* Deals */}
-      <Section title={isRTL ? 'الصفقات' : 'Deals'} icon={DollarSign}>
-        {deals.length === 0 ? (
-          <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'مفيش صفقات لسه' : 'No deals yet'}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {deals.map(dr => (
-              <div key={dr.id} className="rounded-xl border border-edge dark:border-edge-dark p-3.5">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[11px] font-mono text-content-muted dark:text-content-muted-dark">{dr.deal_number}{dr.unit_code ? ` · ${dr.unit_code}` : ''}</span>
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ color: DEAL_COLOR[dr.status] || '#6B7280', background: (DEAL_COLOR[dr.status] || '#6B7280') + '18' }}>
-                    {dealStatusLabel(dr.status, isRTL)}
-                  </span>
+        {/* Tabs */}
+        <div className="flex gap-1 mt-4 border-b border-edge dark:border-edge-dark overflow-x-auto">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-3.5 py-2.5 text-sm font-bold whitespace-nowrap border-0 border-b-2 bg-transparent cursor-pointer ${tab === t.key ? 'text-brand-500 border-brand-500' : 'text-content-muted dark:text-content-muted-dark border-transparent'}`}>
+              {isRTL ? t.ar : t.en}
+            </button>
+          ))}
+        </div>
+
+        <div className="pt-4">
+          {tab === 'overview' && (
+            <>
+              <Card title={isRTL ? 'البيانات' : 'Details'} icon={User}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                  <Field icon={Phone} label={isRTL ? 'الهاتف' : 'Phone'} value={contact.phone} ltr />
+                  <Field icon={Phone} label={isRTL ? 'هاتف 2' : 'Phone 2'} value={contact.phone2} ltr />
+                  {extraPhones.length > 0 && <Field icon={Phone} label={isRTL ? 'أرقام إضافية' : 'Extra phones'} value={extraPhones.join(' · ')} ltr />}
+                  <Field icon={Mail} label={isRTL ? 'الإيميل' : 'Email'} value={contact.email} ltr />
+                  <Field icon={Tag} label={isRTL ? 'المصدر' : 'Source'} value={contact.source ? (isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source)) : null} />
+                  <Field icon={Tag} label={isRTL ? 'الحملة' : 'Campaign'} value={contact.campaign_name} />
+                  <Field icon={DollarSign} label={isRTL ? 'الميزانية' : 'Budget'} value={(contact.budget_min || contact.budget_max) ? fmtBudget(contact.budget_min, contact.budget_max, isRTL) : null} />
+                  <Field icon={Building2} label={isRTL ? 'مهتم بـ' : 'Interested in'} value={contact.interested_in_type ? propTypeLabel(contact.interested_in_type, isRTL) : null} />
+                  <Field icon={MapPin} label={isRTL ? 'الموقع المفضل' : 'Preferred location'} value={contact.preferred_location} />
+                  <Field icon={User} label={isRTL ? 'المسؤول' : 'Owner'} value={contact.assigned_to_name} />
+                  <Field icon={Briefcase} label={isRTL ? 'الشركة' : 'Company'} value={contact.company} />
+                  <Field icon={Hash} label={isRTL ? 'الجنسية' : 'Nationality'} value={contact.nationality} />
+                  <Field icon={Calendar} label={isRTL ? 'أُنشئ' : 'Created'} value={contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
+                  <Field icon={Clock} label={isRTL ? 'آخر نشاط' : 'Last activity'} value={contact.last_activity_at ? `${new Date(contact.last_activity_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} · ${daysSince(contact.last_activity_at)}${isRTL ? ' يوم' : 'd'}` : null} />
+                  <Field icon={User} label={isRTL ? 'أُنشئ بواسطة' : 'Created by'} value={contact.created_by_name} />
                 </div>
-                <div className="flex gap-4 text-xs mb-1.5">
-                  <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'القيمة: ' : 'Value: '}</span><span className="font-bold text-content dark:text-content-dark">{fmtMoney(dr.deal_value)}</span></div>
-                  <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المقدّم: ' : 'Down: '}</span><span className="font-bold text-content dark:text-content-dark">{fmtMoney(dr.down_payment)}</span></div>
+                {contact.notes && (
+                  <div className="mt-3 pt-3 border-t border-edge/60 dark:border-edge-dark/60">
+                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</div>
+                    <p className="m-0 text-sm text-content dark:text-content-dark whitespace-pre-line leading-relaxed">{contact.notes}</p>
+                  </div>
+                )}
+              </Card>
+
+              <Card title={isRTL ? 'ملخّص الليد' : 'Lead summary'} icon={BarChart3}>
+                <SummaryRow label={isRTL ? 'المرحلة' : 'Lead stage'}>{stage ? <Badge text={isRTL ? stage.ar : stage.en} color={stage.color} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
+                <SummaryRow label={isRTL ? 'الحالة' : 'Lead status'}>{st ? <Badge text={isRTL ? st.ar : st.en} color={st.color} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
+                <SummaryRow label={isRTL ? 'الحرارة' : 'Temperature'}>{temp ? <Badge text={isRTL ? temp.labelAr : temp.label} color={temp.color} icon={temp.Icon} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
+                <SummaryRow label={isRTL ? 'التجاوب' : 'Responsiveness'}>
+                  <Badge text={respLabel} color={resp.color} />
+                  <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{respStat}</span>
+                </SummaryRow>
+                <SummaryRow label={isRTL ? 'الخطوة الجاية' : 'Next step'}>{contact.next_follow_up_at ? <Badge text={new Date(contact.next_follow_up_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} color="#2F6BD3" /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
+              </Card>
+
+              {canViewAudit && audit.length > 0 && (
+                <Card title={isRTL ? 'سجل التغييرات' : 'Change history'} icon={History}>
+                  <div className="flex flex-col">
+                    {audit.map(a => {
+                      const actor = a.users ? (isRTL ? (a.users.full_name_ar || a.users.full_name_en) : (a.users.full_name_en || a.users.full_name_ar)) : a.user_name;
+                      return (
+                        <div key={a.id} className="flex items-start gap-2.5 py-2 border-b border-edge/60 dark:border-edge-dark/60 last:border-b-0">
+                          <History size={14} className="text-content-muted dark:text-content-muted-dark shrink-0 mt-0.5" aria-hidden="true" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-content dark:text-content-dark break-words">{a.description || a.action}</div>
+                            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{actor || '—'}{a.created_at ? ` · ${new Date(a.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}` : ''}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
+
+          {tab === 'activity' && (
+            <Card title={isRTL ? 'السجل الزمني' : 'Timeline'} icon={ActivityIcon}>
+              {activities.length === 0 ? (
+                <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا يوجد نشاط بعد' : 'No activity yet'}</p>
+              ) : (
+                <div className="flex flex-col">
+                  {activities.map(a => {
+                    const ch = CHANNEL_LABEL[a.type];
+                    return (
+                      <div key={a.id} className="flex items-start gap-2.5 py-2.5 border-b border-edge/60 dark:border-edge-dark/60 last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: a.result && ['answered', 'replied', 'attended', 'visited'].includes(a.result) ? '#158A57' : '#C9860A' }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-semibold text-content dark:text-content-dark">{ch ? (isRTL ? ch.ar : ch.en) : a.type}</span>
+                            <ResultBadge result={a.result} isRTL={isRTL} />
+                            <OutcomeBadge outcome={a.outcome} isRTL={isRTL} />
+                          </div>
+                          {a.description && <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5 break-words">{a.description}</div>}
+                          <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">
+                            {a.user_name || '—'}{a.created_at ? ` · ${new Date(a.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} · ${new Date(a.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="text-[10px] text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? 'بواسطة: ' : 'By: '}{(isRTL ? (dr.agent_ar || dr.agent_en) : (dr.agent_en || dr.agent_ar)) || '—'}
-                  {dr.created_at ? ` · ${new Date(dr.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}` : ''}
+              )}
+            </Card>
+          )}
+
+          {tab === 'deals' && (
+            <>
+              <Card title={isRTL ? 'الصفقات' : 'Deals'} icon={DollarSign}>
+                {deals.length === 0 ? (
+                  <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'مفيش صفقات لسه' : 'No deals yet'}</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {deals.map(dr => (
+                      <div key={dr.id} className="rounded-xl border border-edge dark:border-edge-dark p-3.5">
+                        <div className="flex items-center justify-between mb-2.5">
+                          <span className="text-[11px] font-mono text-content-muted dark:text-content-muted-dark">{dr.deal_number}{dr.unit_code ? ` · ${dr.unit_code}` : ''}</span>
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ color: DEAL_COLOR[dr.status] || '#6B7280', background: (DEAL_COLOR[dr.status] || '#6B7280') + '18' }}>{dealStatusLabel(dr.status, isRTL)}</span>
+                        </div>
+                        <div className="flex gap-4 text-xs">
+                          <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'القيمة: ' : 'Value: '}</span><span className="font-bold text-content dark:text-content-dark">{fmtMoney(dr.deal_value)}</span></div>
+                          <div><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المقدّم: ' : 'Down: '}</span><span className="font-bold text-content dark:text-content-dark">{fmtMoney(dr.down_payment)}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+              <Card title={isRTL ? 'الاجتماعات' : 'Meetings'} icon={Calendar}>
+                {meetings.length === 0 ? (
+                  <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'مفيش اجتماعات' : 'No meetings'}</p>
+                ) : (
+                  <div className="flex flex-col">
+                    {meetings.map(mt => (
+                      <div key={mt.id} className="flex items-center gap-2 py-2 border-b border-edge/60 dark:border-edge-dark/60 last:border-b-0 text-sm">
+                        <Calendar size={14} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                        <span className="text-content dark:text-content-dark">{mt.scheduled_date ? new Date(mt.scheduled_date).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : (mt.created_at ? new Date(mt.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' }) : '—')}</span>
+                        <ResultBadge result={mt.result} isRTL={isRTL} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+              <Card title={isRTL ? 'وحدات للبيع' : 'Resale units'} icon={Building2}>
+                <ResaleUnitsTab contact={contact} isRTL={isRTL} />
+              </Card>
+            </>
+          )}
+
+          {tab === 'documents' && (
+            <>
+              <Card title={isRTL ? 'المستندات' : 'Documents'} icon={FileText}>
+                <DocumentsSection entity="contact" entityId={contact.id} entityName={contact.full_name} />
+              </Card>
+              <Card title={isRTL ? 'التعليقات' : 'Comments'} icon={MessageSquare}>
+                <CommentsSection entity="contact" entityId={contact.id} entityName={contact.full_name} />
+              </Card>
+            </>
+          )}
+
+          {tab === 'analysis' && (
+            <Card title={isRTL ? 'تحليل الليد' : 'Lead analysis'} icon={BarChart3}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark p-3">
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'التجاوب' : 'Responsiveness'}</div>
+                  <div className="text-lg font-bold mt-1" style={{ color: resp.color }}>{respLabel}</div>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{respStat}</div>
+                </div>
+                <div className="rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark p-3">
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجمالي الأنشطة' : 'Total activities'}</div>
+                  <div className="text-lg font-bold text-content dark:text-content-dark mt-1">{activities.length}</div>
+                </div>
+                <div className="rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark p-3">
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'ردود / محاولات' : 'Replies / attempts'}</div>
+                  <div className="text-lg font-bold text-content dark:text-content-dark mt-1">{resp.replies} / {resp.attempts}</div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* Units for sale */}
-      <Section title={isRTL ? 'وحدات للبيع' : 'Resale units'} icon={Building2}>
-        <ResaleUnitsTab contact={contact} isRTL={isRTL} />
-      </Section>
-
-      {/* Documents */}
-      <Section title={isRTL ? 'المستندات' : 'Documents'} icon={FileText}>
-        <DocumentsSection entity="contact" entityId={contact.id} entityName={contact.full_name} />
-      </Section>
-
-      {/* Comments */}
-      <Section title={isRTL ? 'التعليقات' : 'Comments'} icon={MessageSquare}>
-        <CommentsSection entity="contact" entityId={contact.id} entityName={contact.full_name} />
-      </Section>
-
-      {/* Change history — admin/operations only (audit_logs is RLS-gated). */}
-      {canViewAudit && (
-        <Section title={isRTL ? 'سجل التغييرات' : 'Change history'} icon={History}>
-          {audit.length === 0 ? (
-            <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا يوجد تغييرات مسجّلة' : 'No recorded changes'}</p>
-          ) : (
-            <div className="flex flex-col">
-              {audit.map(a => {
-                const actor = a.users ? (isRTL ? (a.users.full_name_ar || a.users.full_name_en) : (a.users.full_name_en || a.users.full_name_ar)) : a.user_name;
-                return (
-                  <div key={a.id} className="flex items-start gap-2.5 py-2 border-b border-edge/60 dark:border-edge-dark/60 last:border-b-0">
-                    <History size={14} className="text-content-muted dark:text-content-muted-dark shrink-0 mt-0.5" aria-hidden="true" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-content dark:text-content-dark break-words">{a.description || a.action}</div>
-                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">
-                        {actor || '—'}{a.created_at ? ` · ${new Date(a.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })} · ${new Date(a.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              <p className="text-[11px] text-content-muted dark:text-content-muted-dark mt-3">{isRTL ? 'المزيد من التحليل من كل الزوايا (القمع، أفضل وقت للتواصل، توقّع النية) قادم لاحقاً.' : 'More full-angle analysis (funnel, best contact time, predicted intent) is coming later.'}</p>
+            </Card>
           )}
-        </Section>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <Modal open onClose={close} width="max-w-5xl" ariaLabel={isRTL ? 'ملف العميل' : 'Lead profile'}>
+        {body()}
+      </Modal>
+
+      {showAction && contact && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAction(false)} aria-hidden="true" />
+          <div className="relative w-full max-w-lg z-[1]">
+            <TakeActionForm
+              contact={contact}
+              initialType={actionType}
+              onCancel={() => setShowAction(false)}
+              onLogInteraction={handleLog}
+            />
+          </div>
+        </div>
       )}
 
-      {showEdit && (
+      {showEdit && contact && (
         <EditContactModal
           contact={contact}
           userRole={profile?.role}
           campaigns={[]}
           onClose={() => setShowEdit(false)}
-          onSave={async (updated) => {
-            await updateContact(contact.id, updated);
-            setContact(c => ({ ...c, ...updated }));
-          }}
+          onSave={async (updated) => { await updateContact(contact.id, updated); setContact(c => ({ ...c, ...updated })); }}
         />
       )}
-    </div>
+    </>
+  );
+}
+
+function QuickChip({ label, color, onClick }) {
+  return (
+    <button onClick={onClick} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-surface-card dark:bg-surface-card-dark border cursor-pointer"
+      style={{ borderColor: color + '55', color }}>
+      {label}
+    </button>
   );
 }

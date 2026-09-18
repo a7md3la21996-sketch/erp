@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 // ─── Tab: Contact Types ───────────────────────────────────────────────
-function ContactTypesTab({ config, updateSection, isRTL, toast }) {
+export function ContactTypesTab({ config, updateSection, isRTL, toast }) {
   const [types, setTypes] = useState(() => [...(config.contactTypes || [])]);
   const [newType, setNewType] = useState({ label_ar: '', label_en: '', color: '#5A63C4', departments: [] });
 
@@ -151,7 +151,7 @@ function ContactTypesTab({ config, updateSection, isRTL, toast }) {
 // Lead ORIGIN categories (Fresh / Rotation / Distributed / Cold Calls). The
 // KEY is stable and assigned automatically (add=fresh, distribute=distributed,
 // reassign=rotation); this tab only renames / recolors / adds / removes them.
-function LeadCategoriesTab({ config, updateSection, isRTL, toast }) {
+export function LeadCategoriesTab({ config, updateSection, isRTL, toast }) {
   const [cats, setCats] = useState(() => [...(config.leadCategories || [])]);
   const [newCat, setNewCat] = useState({ label_ar: '', label_en: '', color: '#5A63C4' });
 
@@ -245,7 +245,7 @@ function LeadCategoriesTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Sources ─────────────────────────────────────────────────────
-function SourcesTab({ config, updateSection, isRTL, toast }) {
+export function SourcesTab({ config, updateSection, isRTL, toast }) {
   const [sources, setSources] = useState(() => [...(config.sources || [])]);
   const [newSource, setNewSource] = useState({ label_ar: '', label_en: '', platform: 'other' });
 
@@ -326,7 +326,7 @@ function SourcesTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Pipeline Stages ─────────────────────────────────────────────
-function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
+export function PipelineStagesTab({ config, updateSection, isRTL, toast }) {
   const depts = config.departments || [];
   const allStages = config.pipelineStages || {};
   const [selectedDept, setSelectedDept] = useState(depts[0]?.key || '');
@@ -885,7 +885,7 @@ function RolesPermissionsTab({ isRTL, toast }) {
 }
 
 // ─── Tab: Lost Reasons ────────────────────────────────────────────────
-function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
+export function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
   const [lostReasons, setLostReasons] = useState(() => [...(config.lostReasons || [])]);
   const [newLost, setNewLost] = useState({ label_ar: '', label_en: '' });
 
@@ -956,7 +956,7 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: DQ Reasons ──────────────────────────────────────────────────
-function DQReasonsTab({ config, updateSection, isRTL, toast }) {
+export function DQReasonsTab({ config, updateSection, isRTL, toast }) {
   const [reasons, setReasons] = useState(() => [...(config.dqReasons || [
     { key: 'existing_client', label_ar: 'عميل حالي (شاري)', label_en: 'Existing Client' },
     { key: 'resale', label_ar: 'عايز يبيع وحدته', label_en: 'Wants to sell unit' },
@@ -1004,7 +1004,7 @@ function DQReasonsTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Activity Types & Results ────────────────────────────────────
-function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
+export function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
   const [types, setTypes] = useState(() => [...(config.activityTypes || [])]);
   const [results, setResults] = useState(() => JSON.parse(JSON.stringify(config.activityResults || {})));
   const [selectedType, setSelectedType] = useState(types[0]?.key || '');
@@ -1143,7 +1143,7 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Contacts Settings ──────────────────────────────────────────
-function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
+export function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
   const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, inactiveDays: 5, activityActiveDays: 3, activityModerateDays: 7, ...(config.contactsSettings || {}) }));
 
   // Privacy toggle: stored in system_config root level
@@ -1230,7 +1230,7 @@ function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Stage Win Rates ─────────────────────────────────────────────
-function StageWinRatesTab({ config, updateSection, isRTL, toast }) {
+export function StageWinRatesTab({ config, updateSection, isRTL, toast }) {
   const depts = config.departments || [];
   const allStages = config.pipelineStages || {};
   const [rates, setRates] = useState(() => ({ ...(config.stageWinRates || {}) }));
@@ -1331,7 +1331,7 @@ const DRAWER_FIELDS_LIST = [
   { key: 'created_at',         ar: 'تاريخ الإنشاء',     en: 'Created Date' },
 ];
 
-function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
+export function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
   const [fields, setFields] = useState(() => {
     const saved = config.drawerFields || {};
     const result = {};

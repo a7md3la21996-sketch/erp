@@ -112,6 +112,7 @@ export function SystemConfigProvider({ children }) {
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},
       contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5, inactiveDays: 5, activityActiveDays: 3, activityModerateDays: 7 },
+      crmThresholds: config.crmThresholds || { responsive_window_days: 7 },
       drawerFields: config.drawerFields || {},
       stageWinRates: config.stageWinRates || {},
       getType,

@@ -151,6 +151,11 @@ export const DEFAULT_CONFIG = {
     mergeLimit: 2,
     maxPins: 5,
   },
+  // CRM-domain thresholds (edited from the CRM Settings page). responsive_window_days
+  // = a lead counts as "Responsive" if it replied within this many days; older = "Unresponsive lately".
+  crmThresholds: {
+    responsive_window_days: 7,
+  },
   drawerFields: {
     phone: true,
     phone2: true,

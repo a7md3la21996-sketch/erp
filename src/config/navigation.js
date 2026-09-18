@@ -22,6 +22,7 @@ export const NAV_ITEMS = [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, icon: Building2, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, icon: Boxes, path: '/real-estate/units', permission: P.UNITS_VIEW },
     { id: 'developers', label: { ar: 'المطوّرون', en: 'Developers' }, icon: Briefcase, path: '/real-estate/developers', permission: P.PROJECTS_VIEW },
+    { id: 'crm-settings', label: { ar: 'إعدادات CRM', en: 'CRM Settings' }, icon: Settings, path: '/crm/settings', permission: P.SETTINGS_MANAGE },
   ]},
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
   { id: 'sales', label: { ar: 'المبيعات', en: 'Sales' }, icon: DollarSign, permission: P.DEALS_VIEW_OWN, children: [
