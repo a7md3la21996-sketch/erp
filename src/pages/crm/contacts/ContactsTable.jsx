@@ -88,6 +88,7 @@ export default function ContactsTable({
   handleDelete,
   setMergePreview,
   onEdit,
+  onOpenProfile,
   perms = {},
   tdCls,
   // Pagination
@@ -113,7 +114,10 @@ export default function ContactsTable({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const openProfile = useCallback((e, c) => { e.stopPropagation(); navigate(`/crm/leads/${c.id}`); }, [navigate]);
+  // Prefer opening the Full Profile as an OVERLAY over the list (onOpenProfile,
+  // supplied by ContactsPage) so we don't navigate away from the leads list.
+  // Falls back to the route for any other caller that doesn't pass it.
+  const openProfile = useCallback((e, c) => { e.stopPropagation(); if (onOpenProfile) onOpenProfile(c); else navigate(`/crm/leads/${c.id}`); }, [onOpenProfile, navigate]);
   const { leadCategories: leadCategoryDefs } = useSystemConfig();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);

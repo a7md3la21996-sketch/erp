@@ -96,9 +96,11 @@ function SummaryRow({ label, children }) {
   );
 }
 
-export default function LeadProfilePage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+// The overlay body — takes a contactId + onClose so it can be rendered EITHER
+// as a route (/crm/leads/:id) OR, preferably, as an overlay on top of the Leads
+// list (so clicking a name doesn't navigate away from the list).
+export function LeadProfileOverlay({ contactId, onClose }) {
+  const id = contactId;
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const { profile, hasPermission } = useAuth();
@@ -118,7 +120,7 @@ export default function LeadProfilePage() {
   const [showAction, setShowAction] = useState(false);
   const [actionType, setActionType] = useState('call');
 
-  const close = () => navigate(-1);
+  const close = onClose;
 
   useEffect(() => {
     let alive = true;
@@ -473,4 +475,11 @@ function QuickChip({ label, color, onClick }) {
       {label}
     </button>
   );
+}
+
+// Route wrapper for /crm/leads/:id (direct links) — closes by going back.
+export default function LeadProfilePage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  return <LeadProfileOverlay contactId={id} onClose={() => navigate(-1)} />;
 }

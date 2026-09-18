@@ -42,6 +42,7 @@ import AddLeadModal from './crm/contacts/AddLeadModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
 import ContactDrawer from './crm/contacts/ContactDrawer';
+import { LeadProfileOverlay } from './crm/contacts/LeadProfilePage';
 import ContactsTable from './crm/contacts/ContactsTable';
 import { LEAD_CATEGORIES } from '../config/leadCategories';
 import ContactsCardList from './crm/contacts/ContactsCardList';
@@ -196,6 +197,7 @@ export default function ContactsPage() {
   const [saveFilterName, setSaveFilterName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [profileId, setProfileId] = useState(null); // Full Profile overlay (opened from a lead name)
   const [openMenuId, setOpenMenuId] = useState(null);
   const [quickActionTarget, setQuickActionTarget] = useState(null);
   const [quickActionForm, setQuickActionForm] = useState({ type: 'call', result: '', description: '', followupDate: '' });
@@ -2482,6 +2484,7 @@ export default function ContactsPage() {
         handleDelete={handleDelete}
         setMergePreview={setMergePreview}
         onEdit={(c) => { setSelected(c); }}
+        onOpenProfile={(c) => setProfileId(c.id)}
         perms={perms}
         tdCls={tdCls}
         safePage={page}
@@ -2616,6 +2619,7 @@ export default function ContactsPage() {
         const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${cleanUpdated[k] || ''}"`).join(', ') : `Updated contact: ${cleanUpdated.full_name}`;
         logAction({ action: 'update', entity: 'contact', entityId: cleanUpdated.id, entityName: cleanUpdated.full_name, description: desc, oldValue: old || null, newValue: cleanUpdated, userName: profile?.full_name_ar || '' }).catch(() => {});
       }} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
+      {profileId && <LeadProfileOverlay contactId={profileId} onClose={() => setProfileId(null)} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => { setReminderTarget(null); loadContactsData(); }} />}
       {/* Save Filter Modal — replaces the native prompt() that was used before. */}
