@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Mail, Tag, DollarSign, MapPin, Calendar, Clock, Briefcase, FileText, MessageSquare, MessageCircle, Pencil, Building2, Hash, History, X, Plus, Activity as ActivityIcon, BarChart3, PhoneMissed, PhoneOff, CheckCheck, Check, UserCheck, UserX } from 'lucide-react';
+import { User, Phone, Mail, Tag, DollarSign, MapPin, Calendar, Clock, Briefcase, FileText, MessageSquare, MessageCircle, Pencil, Building2, Hash, History, X, Plus, Activity as ActivityIcon, BarChart3 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { PageSkeleton, EmptyState, Modal } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -9,14 +9,14 @@ import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { P } from '../../../config/roles';
 import { updateContact, fetchContactActivities } from '../../../services/contactsService';
-import { logInteraction, ENGAGED_RESULTS } from '../../../services/interactionsService';
+import { logInteraction } from '../../../services/interactionsService';
 import { getAuditLogs } from '../../../services/auditService';
 import EditContactModal from './EditContactModal';
 import ResaleUnitsTab from './ResaleUnitsTab';
 import TakeActionForm from './TakeActionForm';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
-import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince, CONTACT_STAGE, ResultBadge, OutcomeBadge, ACTIVITY_RESULTS_BY_TYPE, ACTIVITY_RESULT_BADGES } from './constants';
+import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince, CONTACT_STAGE, ResultBadge, OutcomeBadge } from './constants';
 import { computeResponsiveness, RESP_LABELS } from './responsiveness';
 
 // ── Full Lead Profile — the roomy, id-based home for a lead: presented as a
@@ -55,21 +55,12 @@ const dealStatusLabel = (s, isRTL) =>
 const fmtMoney = (n) => (n ? Number(n).toLocaleString() : '—');
 const nextDayAt10 = () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); return d.toISOString(); };
 
-function Badge({ text, color, icon: Icon, rail }) {
+function Badge({ text, color, icon: Icon }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap" style={{ color, background: color + '18' }}>
-      {rail && <span className="w-[3px] h-3 rounded-sm shrink-0" style={{ background: color }} />}
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap" style={{ color, background: color + '18' }}>
       {Icon && <Icon size={11} />}{text}
     </span>
   );
-}
-// State-specific icon (green = engaged, amber = not) — mirrors the mockup.
-function stateIcon(type, result) {
-  const eng = ENGAGED_RESULTS[type]?.has(result);
-  if (type === 'call') return eng ? Phone : (result === 'no_answer' ? PhoneMissed : PhoneOff);
-  if (type === 'whatsapp') return eng ? CheckCheck : Check;
-  if (type === 'meeting') return eng ? UserCheck : UserX;
-  return ActivityIcon;
 }
 function Field({ icon: Icon, label, value, ltr }) {
   if (value == null || value === '') return null;
@@ -235,7 +226,7 @@ export function LeadProfileOverlay({ contactId, onClose }) {
               {contact.assigned_to_name && <span>· {contact.assigned_to_name}</span>}
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
-              {st && <Badge text={isRTL ? st.ar : st.en} color={st.color} rail />}
+              {st && <Badge text={isRTL ? st.ar : st.en} color={st.color} />}
               {temp && <Badge text={isRTL ? temp.labelAr : temp.label} color={temp.color} icon={temp.Icon} />}
               <Badge text={respLabel} color={resp.color} />
               {contact.interested_in_type && <Badge text={propTypeLabel(contact.interested_in_type, isRTL)} color="#6B7684" />}
@@ -249,39 +240,19 @@ export function LeadProfileOverlay({ contactId, onClose }) {
           </div>
         </div>
 
-        {/* Quick-log bar — grouped by engagement, then channel (mockup layout).
-            Engaged opens the full form (outcome + note); no-engagement logs in one click. */}
-        <div className="mt-4 rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: '#158A57' }}><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#158A57' }} />{isRTL ? 'تفاعل' : 'Engaged'}</span>
-            <button onClick={() => quickEngaged('call')} className="inline-flex items-center gap-1 text-xs font-bold text-brand-500 bg-transparent border border-dashed border-edge dark:border-edge-dark rounded-lg px-2.5 py-1 cursor-pointer"><Plus size={13} />{isRTL ? 'تسجيل كامل' : 'Full log'}</button>
-          </div>
-          {['call', 'whatsapp', 'meeting'].map(ch => {
-            const items = (ACTIVITY_RESULTS_BY_TYPE[ch] || []).filter(r => ENGAGED_RESULTS[ch]?.has(r));
-            if (!items.length) return null;
-            return (
-              <div key={'eng-' + ch} className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark w-16 shrink-0">{isRTL ? CHANNEL_LABEL[ch].ar : CHANNEL_LABEL[ch].en}</span>
-                {items.map(r => { const b = ACTIVITY_RESULT_BADGES[r]; const Ic = stateIcon(ch, r); return (
-                  <button key={r} onClick={() => quickEngaged(ch)} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-surface-card dark:bg-surface-card-dark border cursor-pointer hover:opacity-80" style={{ borderColor: '#158A5755', color: '#158A57' }}><Ic size={13} />{isRTL ? b.ar : b.en}</button>
-                ); })}
-              </div>
-            );
-          })}
-          <div className="h-px bg-edge dark:bg-edge-dark my-2.5" />
-          <div className="mb-2"><span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: '#C9860A' }}><span className="w-1.5 h-1.5 rounded-full" style={{ background: '#C9860A' }} />{isRTL ? 'مفيش تفاعل' : 'No engagement'}</span></div>
-          {['call', 'whatsapp', 'meeting'].map(ch => {
-            const items = (ACTIVITY_RESULTS_BY_TYPE[ch] || []).filter(r => !ENGAGED_RESULTS[ch]?.has(r));
-            if (!items.length) return null;
-            return (
-              <div key={'no-' + ch} className="flex items-center gap-2 flex-wrap mb-1.5">
-                <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark w-16 shrink-0">{isRTL ? CHANNEL_LABEL[ch].ar : CHANNEL_LABEL[ch].en}</span>
-                {items.map(r => { const b = ACTIVITY_RESULT_BADGES[r]; const Ic = stateIcon(ch, r); return (
-                  <button key={r} onClick={() => quickNo(ch, r, isRTL ? b.ar : b.en)} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-surface-card dark:bg-surface-card-dark border cursor-pointer hover:opacity-80" style={{ borderColor: '#C9860A55', color: '#C9860A' }}><Ic size={13} />{isRTL ? b.ar : b.en}</button>
-                ); })}
-              </div>
-            );
-          })}
+        {/* Quick-log bar — fast, common cases; accuracy preserved */}
+        <div className="flex items-center gap-2 flex-wrap mt-4 p-2.5 rounded-xl bg-surface-bg dark:bg-brand-500/[0.04] border border-edge dark:border-edge-dark">
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#158A57' }}>{isRTL ? 'تفاعل' : 'Engaged'}</span>
+          <QuickChip color="#158A57" onClick={() => quickEngaged('call')} label={isRTL ? 'رد' : 'Answered'} />
+          <QuickChip color="#158A57" onClick={() => quickEngaged('whatsapp')} label={isRTL ? 'رد واتساب' : 'Replied'} />
+          <QuickChip color="#158A57" onClick={() => quickEngaged('meeting')} label={isRTL ? 'حضر' : 'Attended'} />
+          <span className="w-px h-5 bg-edge dark:bg-edge-dark mx-1" />
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#C9860A' }}>{isRTL ? 'مفيش تفاعل' : 'No engagement'}</span>
+          <QuickChip color="#C9860A" onClick={() => quickNo('call', 'no_answer', isRTL ? 'لم يرد' : 'No answer')} label={isRTL ? 'لم يرد' : 'No answer'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('call', 'busy', isRTL ? 'مشغول' : 'Busy')} label={isRTL ? 'مشغول' : 'Busy'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('whatsapp', 'delivered', isRTL ? 'اتبعت' : 'Sent')} label={isRTL ? 'اتبعت' : 'Sent'} />
+          <QuickChip color="#C9860A" onClick={() => quickNo('meeting', 'no_show', isRTL ? 'لم يحضر' : 'No show')} label={isRTL ? 'لم يحضر' : 'No show'} />
+          <button onClick={() => quickEngaged('call')} className="ms-auto inline-flex items-center gap-1 text-xs font-bold text-brand-500 bg-transparent border border-dashed border-edge dark:border-edge-dark rounded-lg px-2.5 py-1.5 cursor-pointer"><Plus size={13} />{isRTL ? 'تسجيل كامل' : 'Full log'}</button>
         </div>
 
         {/* Tabs */}
@@ -325,7 +296,7 @@ export function LeadProfileOverlay({ contactId, onClose }) {
 
               <Card title={isRTL ? 'ملخّص الليد' : 'Lead summary'} icon={BarChart3}>
                 <SummaryRow label={isRTL ? 'المرحلة' : 'Lead stage'}>{stage ? <Badge text={isRTL ? stage.ar : stage.en} color={stage.color} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
-                <SummaryRow label={isRTL ? 'الحالة' : 'Lead status'}>{st ? <Badge text={isRTL ? st.ar : st.en} color={st.color} rail /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
+                <SummaryRow label={isRTL ? 'الحالة' : 'Lead status'}>{st ? <Badge text={isRTL ? st.ar : st.en} color={st.color} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
                 <SummaryRow label={isRTL ? 'الحرارة' : 'Temperature'}>{temp ? <Badge text={isRTL ? temp.labelAr : temp.label} color={temp.color} icon={temp.Icon} /> : <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>}</SummaryRow>
                 <SummaryRow label={isRTL ? 'التجاوب' : 'Responsiveness'}>
                   <Badge text={respLabel} color={resp.color} />
@@ -497,10 +468,18 @@ export function LeadProfileOverlay({ contactId, onClose }) {
   );
 }
 
+function QuickChip({ label, color, onClick }) {
+  return (
+    <button onClick={onClick} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-surface-card dark:bg-surface-card-dark border cursor-pointer"
+      style={{ borderColor: color + '55', color }}>
+      {label}
+    </button>
+  );
+}
+
 // Route wrapper for /crm/leads/:id (direct links) — closes by going back.
 export default function LeadProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   return <LeadProfileOverlay contactId={id} onClose={() => navigate(-1)} />;
 }
-// (QuickChip removed — the quick-log bar now renders its own channel-grouped chips.)
