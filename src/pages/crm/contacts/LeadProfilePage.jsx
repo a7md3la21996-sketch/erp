@@ -456,13 +456,16 @@ export function LeadProfileOverlay({ contactId, onClose }) {
       )}
 
       {showEdit && contact && (
-        <EditContactModal
-          contact={contact}
-          userRole={profile?.role}
-          campaigns={[]}
-          onClose={() => setShowEdit(false)}
-          onSave={async (updated) => { await updateContact(contact.id, updated); setContact(c => ({ ...c, ...updated })); }}
-        />
+        // Raise above the profile overlay (Modal is z-1000; EditContactModal is z-950).
+        <div className="relative z-[1100]">
+          <EditContactModal
+            contact={contact}
+            userRole={profile?.role}
+            campaigns={[]}
+            onClose={() => setShowEdit(false)}
+            onSave={async (updated) => { await updateContact(contact.id, updated); setContact(c => ({ ...c, ...updated })); }}
+          />
+        </div>
       )}
     </>
   );
