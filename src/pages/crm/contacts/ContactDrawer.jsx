@@ -1492,12 +1492,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               )}
             </div>
 
-            {/* Center: contact name — click to open the Full Profile */}
-            <button id="drawer-contact-name" onClick={() => { navigate(`/crm/leads/${contact.id}`); onClose?.(); }}
-              title={isRTL ? 'فتح الملف الكامل' : 'Open full profile'}
-              className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2 bg-transparent border-none cursor-pointer hover:text-brand-500 hover:underline transition-colors">
+            {/* Center: contact name */}
+            <span id="drawer-contact-name" className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2">
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
-            </button>
+            </span>
 
             {/* Right: More menu + close */}
             <div className="flex items-center gap-0.5 relative">

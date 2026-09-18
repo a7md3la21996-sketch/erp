@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil, Mail, Users, MapPin, FileText } from 'lucide-react';
 
 // Activity type → icon for the "Last interaction" column.
@@ -111,6 +112,8 @@ export default function ContactsTable({
   deptView,
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const openProfile = useCallback((e, c) => { e.stopPropagation(); navigate(`/crm/leads/${c.id}`); }, [navigate]);
   const { leadCategories: leadCategoryDefs } = useSystemConfig();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
@@ -212,7 +215,8 @@ export default function ContactsTable({
                       {c.is_blacklisted ? <Ban size={15} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className={`font-semibold text-sm block truncate ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                      <span onClick={(e) => openProfile(e, c)} title={isRTL ? 'فتح الملف الكامل' : 'Open full profile'}
+                        className={`font-semibold text-sm block truncate cursor-pointer hover:text-brand-500 hover:underline ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                         {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                       </span>
                       {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
@@ -381,7 +385,8 @@ export default function ContactsTable({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                        <span className={`font-bold text-[15px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                        <span onClick={(e) => openProfile(e, c)} title={isRTL ? 'فتح الملف الكامل' : 'Open full profile'}
+                          className={`font-bold text-[15px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 cursor-pointer hover:text-brand-500 hover:underline ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
                         {c.lead_category && (() => { const col = leadCategoryColor(c.lead_category, leadCategoryDefs); return (
