@@ -1492,10 +1492,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               )}
             </div>
 
-            {/* Center: contact name */}
-            <span id="drawer-contact-name" className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2">
+            {/* Center: contact name — click to open the Full Profile */}
+            <button id="drawer-contact-name" onClick={() => { navigate(`/crm/leads/${contact.id}`); onClose?.(); }}
+              title={isRTL ? 'فتح الملف الكامل' : 'Open full profile'}
+              className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2 bg-transparent border-none cursor-pointer hover:text-brand-500 hover:underline transition-colors">
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
-            </span>
+            </button>
 
             {/* Right: More menu + close */}
             <div className="flex items-center gap-0.5 relative">
@@ -1518,12 +1520,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       const sectionLabelCls = "text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark px-3 pt-2 pb-1";
                       const Divider = () => <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-1" />;
                       const groups = [
-                        // Full profile — the roomy, id-based details page (all
-                        // fields, units, documents, comments). Drawer stays the
-                        // fast triage surface; this is where you go deep.
-                        <button key="fullprofile" onClick={() => { navigate(`/crm/leads/${contact.id}`); onClose?.(); setShowDrawerMenu(false); }} className={itemCls}>
-                          <Briefcase size={13} className="text-brand-500" /> {isRTL ? 'الملف الكامل' : 'Full profile'}
-                        </button>,
+                        // Full profile now opens by clicking the lead's NAME in the
+                        // drawer header (removed from this menu).
                         // Edit (single primary action)
                         canEditContact && (
                           <button key="edit" onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className={itemCls}>
