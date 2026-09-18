@@ -5,6 +5,7 @@ export { default as Badge } from './Badge';
 export { default as Modal, ModalFooter } from './Modal';
 export { Table, Th, Td, Tr } from './Table';
 export { default as KpiCard } from './KpiCard';
+export { default as MetricCard } from './MetricCard';
 export { TableSkeleton, KpiSkeleton, DashboardSkeleton, ListSkeleton, FormSkeleton, PageSkeleton, ChartSkeleton, DrawerSkeleton } from './PageSkeletons';
 export { default as FilterPill } from './FilterPill';
 export { default as EmptyState } from './EmptyState';

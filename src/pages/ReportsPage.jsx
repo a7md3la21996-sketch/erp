@@ -12,7 +12,7 @@ import {
   ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer,
   GitCompareArrows, Map as MapIcon, LineChart, PenTool, Copy, ArrowRightLeft
 } from 'lucide-react';
-import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { Card, CardHeader, Button, Badge, Modal, Input, Select, MetricCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';
 import { exportToCSV as exportReportCSV, exportToPrintableHTML } from '../services/reportExportService';
 import PrintPreview from '../components/ui/PrintPreview';
@@ -270,11 +270,11 @@ function TargetTrackerTab({ lang, isRTL }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
-        <KpiCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sub={monthLabel(selectedMonth)} color="#2F6BD3" />
-        <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sub={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? '#2F6BD3' : '#D6403B'} />
-        <KpiCard icon={Crown} label={lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer'} value={topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—'} sub={topPerformer ? `${topPerformer.pct}%` : ''} color="#FFD700" />
-        <KpiCard icon={Zap} label={lang === 'ar' ? 'حققوا التارجت' : 'Hit Target'} value={`${aboveTarget} / ${monthData.length}`} sub={lang === 'ar' ? 'موظف' : 'agents'} color="#2F6BD3" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <MetricCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sublabel={monthLabel(selectedMonth)} color="brand" hero />
+        <MetricCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sublabel={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? 'emerald' : 'red'} />
+        <MetricCard icon={Crown} label={lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer'} value={topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—'} sublabel={topPerformer ? `${topPerformer.pct}%` : ''} color="amber" />
+        <MetricCard icon={Zap} label={lang === 'ar' ? 'حققوا التارجت' : 'Hit Target'} value={`${aboveTarget} / ${monthData.length}`} sublabel={lang === 'ar' ? 'موظف' : 'agents'} color="brand" />
       </div>
 
       {/* Main content grid */}
@@ -504,11 +504,11 @@ function KpiPerformanceTab({ lang, isRTL }) {
       </div>
 
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
-        <KpiCard icon={Target} label={lang === 'ar' ? 'أداء الفريق' : 'Team Performance'} value={`${teamOverall}%`} sub={lang === 'ar' ? monthLabel?.ar : monthLabel?.en} color={getPctColor(teamOverall)} />
-        <KpiCard icon={Users} label={lang === 'ar' ? 'أعضاء الفريق' : 'Team Members'} value={teamKpis.length} sub={lang === 'ar' ? 'موظف مبيعات' : 'sales agents'} color="#2F6BD3" />
-        <KpiCard icon={Award} label={lang === 'ar' ? 'فوق 80%' : 'Above 80%'} value={`${aboveTarget} / ${teamKpis.length}`} sub={lang === 'ar' ? 'حققوا الهدف' : 'hit target'} color="#158A57" />
-        <KpiCard icon={Trophy} label={lang === 'ar' ? 'الأفضل' : 'Top Performer'} value={teamKpis[0] ? (lang === 'ar' ? teamKpis[0].employee.full_name_ar.split(' ')[0] : teamKpis[0].employee.full_name_en.split(' ')[0]) : '—'} sub={teamKpis[0] ? `${teamKpis[0].overallPct}%` : ''} color="#FFD700" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <MetricCard icon={Target} label={lang === 'ar' ? 'أداء الفريق' : 'Team Performance'} value={`${teamOverall}%`} sublabel={lang === 'ar' ? monthLabel?.ar : monthLabel?.en} color={teamOverall >= 80 ? 'emerald' : teamOverall >= 50 ? 'amber' : 'red'} hero />
+        <MetricCard icon={Users} label={lang === 'ar' ? 'أعضاء الفريق' : 'Team Members'} value={teamKpis.length} sublabel={lang === 'ar' ? 'موظف مبيعات' : 'sales agents'} color="brand" />
+        <MetricCard icon={Award} label={lang === 'ar' ? 'فوق 80%' : 'Above 80%'} value={`${aboveTarget} / ${teamKpis.length}`} sublabel={lang === 'ar' ? 'حققوا الهدف' : 'hit target'} color="emerald" />
+        <MetricCard icon={Trophy} label={lang === 'ar' ? 'الأفضل' : 'Top Performer'} value={teamKpis[0] ? (lang === 'ar' ? teamKpis[0].employee.full_name_ar.split(' ')[0] : teamKpis[0].employee.full_name_en.split(' ')[0]) : '—'} sublabel={teamKpis[0] ? `${teamKpis[0].overallPct}%` : ''} color="amber" />
       </div>
 
       {/* Main KPI Table */}
@@ -887,40 +887,43 @@ export default function ReportsPage() {
   const exportColumns = useMemo(() => reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [], [reportTable]);
 
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto bg-[#F7F8FA] dark:bg-[#0A0D13] min-h-dvh pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
-            <BarChart3 size={20} className="text-brand-500" />
-          </div>
-          <div>
-            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
-              {lang === 'ar' ? 'التقارير والتحليلات' : 'Reports & Analytics'}
-            </h1>
-            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
-              {lang === 'ar' ? 'تقارير، تحليلات، مقارنات ورسوم بيانية' : 'Reports, analytics, comparisons & charts'}
-            </p>
-          </div>
+      {/* Header — matches the CRM grammar: plain bold title + muted subtitle,
+          no icon chip, so Reports reads as the same system as the dashboard. */}
+      <div className="flex items-start justify-between mb-5 sm:mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="m-0 text-xl sm:text-2xl font-bold text-content dark:text-content-dark">
+            {lang === 'ar' ? 'التقارير والتحليلات' : 'Reports & Analytics'}
+          </h1>
+          <p className="m-0 mt-1 text-xs sm:text-sm text-content-muted dark:text-content-muted-dark">
+            {lang === 'ar' ? 'تقارير، تحليلات، مقارنات ورسوم بيانية' : 'Reports, analytics, comparisons & charts'}
+          </p>
         </div>
       </div>
 
-      {/* Section Tabs (pill style) */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 flex-wrap">
+      {/* Section tabs — CRM segmented control (soft track + solid brand active),
+          horizontally scrollable so all sections fit without wrapping into a
+          messy pill grid. */}
+      <div
+        role="tablist"
+        aria-label={lang === 'ar' ? 'أقسام التقارير' : 'Report sections'}
+        className="mb-5 flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-xl p-1 overflow-x-auto scrollbar-hide"
+      >
         {visibleSectionTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = sectionTab === tab.id;
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setSectionTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-all border ${
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors shrink-0 ${
                 isActive
-                  ? 'bg-brand-500/[0.12] border-brand-500/30 text-brand-500'
-                  : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark hover:border-brand-500/20'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'
               }`}
-              style={{ whiteSpace: 'nowrap' }}
             >
               <Icon size={15} />
               {lang === 'ar' ? tab.ar : tab.en}
@@ -978,7 +981,7 @@ export default function ReportsPage() {
               Comparison / Heatmap / Chart Builder pills) ── */}
       {sectionTab === 'analytics' && (
         <>
-          <div className="flex gap-1 mb-5 border-b border-edge dark:border-edge-dark overflow-x-auto">
+          <div className="mb-5 flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-xl p-1 overflow-x-auto scrollbar-hide">
             {ANALYTICS_SUB_TABS.map(tab => {
               const Icon = tab.icon;
               const isActive = analyticsSubTab === tab.id;
@@ -986,13 +989,13 @@ export default function ReportsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setAnalyticsSubTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 cursor-pointer transition-colors bg-transparent border-x-0 border-t-0 whitespace-nowrap ${
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-colors shrink-0 ${
                     isActive
-                      ? 'border-brand-500 text-brand-500'
-                      : 'border-transparent text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark'
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'
                   }`}
                 >
-                  <Icon size={16} />
+                  <Icon size={15} />
                   {lang === 'ar' ? tab.ar : tab.en}
                 </button>
               );
@@ -1016,11 +1019,11 @@ export default function ReportsPage() {
       {sectionTab === 'reports' && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-            <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="#2F6BD3" />
-            <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={reportsByCategoryKey.crm || 0} color="#2F6BD3" />
-            <KpiCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={reportsByCategoryKey.finance || 0} color="#2B4C6F" />
-            <KpiCard icon={Briefcase} label={lang === 'ar' ? 'تقارير HR' : 'HR Reports'} value={reportsByCategoryKey.hr || 0} color="#6B8DB5" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <MetricCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="brand" hero />
+            <MetricCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={reportsByCategoryKey.crm || 0} color="brand" />
+            <MetricCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={reportsByCategoryKey.finance || 0} color="emerald" />
+            <MetricCard icon={Briefcase} label={lang === 'ar' ? 'تقارير HR' : 'HR Reports'} value={reportsByCategoryKey.hr || 0} color="purple" />
           </div>
 
           {/* Filter bar */}

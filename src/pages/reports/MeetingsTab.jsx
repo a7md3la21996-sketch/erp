@@ -3,6 +3,7 @@ import { Download, RefreshCw, Calendar, CheckSquare, Clock } from 'lucide-react'
 import supabase from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
 import { exportToCSV } from '../../services/reportExportService';
+import { MetricCard, Button } from '../../components/ui';
 
 // Per-agent MEETINGS breakdown over a selectable date range (managers only —
 // registered under MANAGER_ONLY_TABS, so a sales agent never sees a peer's
@@ -104,9 +105,9 @@ export default function MeetingsTab({ lang, isRTL }) {
   };
 
   const kpis = [
-    { label: isRTL ? 'اتحددت' : 'Booked', value: totals.booked, sub: isRTL ? 'مواعيد اتسجّلت في الفترة' : 'booked in period', icon: Calendar, color: '#185FA5' },
-    { label: isRTL ? 'حصلت' : 'Happened', value: totals.happened, sub: isRTL ? 'مقابلات تمّت' : 'completed', icon: CheckSquare, color: '#0F6E56' },
-    { label: isRTL ? 'قادمة' : 'Upcoming', value: totals.upcoming, sub: isRTL ? 'مجدولة في المستقبل' : 'future scheduled', icon: Clock, color: '#534AB7' },
+    { label: isRTL ? 'اتحددت' : 'Booked', value: totals.booked, sub: isRTL ? 'مواعيد اتسجّلت في الفترة' : 'booked in period', icon: Calendar, color: 'brand' },
+    { label: isRTL ? 'حصلت' : 'Happened', value: totals.happened, sub: isRTL ? 'مقابلات تمّت' : 'completed', icon: CheckSquare, color: 'emerald' },
+    { label: isRTL ? 'قادمة' : 'Upcoming', value: totals.upcoming, sub: isRTL ? 'مجدولة في المستقبل' : 'future scheduled', icon: Clock, color: 'purple' },
   ];
 
   return (
@@ -119,27 +120,27 @@ export default function MeetingsTab({ lang, isRTL }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs font-semibold cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+          <Button variant="secondary" size="sm" onClick={load} disabled={loading}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {isRTL ? 'تحديث' : 'Refresh'}
-          </button>
-          <button onClick={handleExport} disabled={!rows.length}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border-none bg-brand-500 text-white text-xs font-semibold cursor-pointer hover:bg-brand-600 disabled:opacity-50">
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleExport} disabled={!rows.length}>
             <Download size={14} /> {isRTL ? 'تصدير Excel' : 'Export'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Date range */}
       <div className="flex items-center gap-1.5 flex-wrap mb-4">
-        {PRESETS.map(p => (
-          <button key={p.key} onClick={() => setRange(p.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-              range === p.key ? 'bg-brand-500 text-white border-brand-500'
-              : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'}`}>
-            {isRTL ? p.ar : p.en}
-          </button>
-        ))}
+        <div className="inline-flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-xl p-1 flex-wrap">
+          {PRESETS.map(p => (
+            <button key={p.key} onClick={() => setRange(p.key)}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                range === p.key ? 'bg-brand-500 text-white shadow-sm'
+                : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'}`}>
+              {isRTL ? p.ar : p.en}
+            </button>
+          ))}
+        </div>
         {range === 'custom' && (
           <div className="flex items-center gap-1.5">
             <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
@@ -152,20 +153,10 @@ export default function MeetingsTab({ lang, isRTL }) {
       </div>
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {kpis.map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} className="rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium">{k.label}</span>
-                <Icon size={15} style={{ color: k.color }} />
-              </div>
-              <div className="text-2xl font-bold tabular-nums" style={{ color: k.color }}>{(k.value || 0).toLocaleString()}</div>
-              <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5">{k.sub}</div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+        {kpis.map((k, i) => (
+          <MetricCard key={i} icon={k.icon} label={k.label} value={k.value} sublabel={k.sub} color={k.color} />
+        ))}
       </div>
 
       {loading ? (

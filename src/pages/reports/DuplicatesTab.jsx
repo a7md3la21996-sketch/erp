@@ -5,6 +5,7 @@ import supabase from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
 import { exportToCSV } from '../../services/reportExportService';
 import { thCls } from '../../utils/tableStyles';
+import { Button } from '../../components/ui';
 
 // Duplicate-leads report (managers): live leads that share a phone number, with
 // each copy's owner + status. Powered by get_duplicate_summary / get_duplicate_groups.
@@ -88,21 +89,23 @@ export default function DuplicatesTab({ lang, isRTL }) {
 
       {/* Filter + actions */}
       <div className="flex flex-wrap items-center gap-2">
-        {FILTERS.map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 text-xs rounded-lg border cursor-pointer transition-colors ${
-              filter === f.key ? 'bg-brand-500 text-white border-brand-500'
-              : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:text-content'}`}>
-            {isRTL ? f.ar : f.en}
-          </button>
-        ))}
+        <div className="inline-flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-xl p-1 flex-wrap">
+          {FILTERS.map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                filter === f.key ? 'bg-brand-500 text-white shadow-sm'
+                : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'}`}>
+              {isRTL ? f.ar : f.en}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
-        <button onClick={load} className="h-8 px-3 flex items-center gap-1.5 text-xs rounded-lg bg-brand-500/10 text-brand-500 border border-brand-500/20 cursor-pointer hover:bg-brand-500/15">
+        <Button variant="secondary" size="sm" onClick={load}>
           <RefreshCw size={13} /> {isRTL ? 'تحديث' : 'Refresh'}
-        </button>
-        <button onClick={handleExport} disabled={!rows.length} className="h-8 px-3 flex items-center gap-1.5 text-xs rounded-lg bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark cursor-pointer hover:text-content disabled:opacity-40">
+        </Button>
+        <Button variant="primary" size="sm" onClick={handleExport} disabled={!rows.length}>
           <Download size={13} /> {isRTL ? 'تصدير' : 'Export'}
-        </button>
+        </Button>
       </div>
 
       {/* Table */}

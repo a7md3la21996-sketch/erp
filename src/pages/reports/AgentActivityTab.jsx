@@ -3,6 +3,7 @@ import { Download, RefreshCw } from 'lucide-react';
 import supabase from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
 import { exportToCSV } from '../../services/reportExportService';
+import { Button } from '../../components/ui';
 
 // Per-agent ACTIVITY/work breakdown over a selectable date range (managers).
 // Counts calls / whatsapp / meetings / emails / notes / status-changes + deals
@@ -158,27 +159,27 @@ export default function AgentActivityTab({ lang, isRTL }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs font-semibold cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+          <Button variant="secondary" size="sm" onClick={load} disabled={loading}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {isRTL ? 'تحديث' : 'Refresh'}
-          </button>
-          <button onClick={handleExport} disabled={!rows.length}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border-none bg-brand-500 text-white text-xs font-semibold cursor-pointer hover:bg-brand-600 disabled:opacity-50">
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleExport} disabled={!rows.length}>
             <Download size={14} /> {isRTL ? 'تصدير Excel' : 'Export'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Date range */}
       <div className="flex items-center gap-1.5 flex-wrap mb-4">
-        {PRESETS.map(p => (
-          <button key={p.key} onClick={() => setRange(p.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-              range === p.key ? 'bg-brand-500 text-white border-brand-500'
-              : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'}`}>
-            {isRTL ? p.ar : p.en}
-          </button>
-        ))}
+        <div className="inline-flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-xl p-1 flex-wrap">
+          {PRESETS.map(p => (
+            <button key={p.key} onClick={() => setRange(p.key)}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                range === p.key ? 'bg-brand-500 text-white shadow-sm'
+                : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'}`}>
+              {isRTL ? p.ar : p.en}
+            </button>
+          ))}
+        </div>
         {range === 'custom' && (
           <div className="flex items-center gap-1.5">
             <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}

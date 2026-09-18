@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { exportToCSV } from '../../services/reportExportService';
 import { thCls } from '../../utils/tableStyles';
 import SearchableSelect from '../../components/ui/SearchableSelect';
+import { Button } from '../../components/ui';
 
 // Status-transition report (managers): which leads moved from one status to
 // another, who did it, and when. Sourced from audit_logs via
@@ -135,12 +136,12 @@ export default function StatusTransitionsTab({ lang, isRTL }) {
           <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إلى تاريخ' : 'To date'}</span>
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={inputCls} />
         </div>
-        <button onClick={load} className="h-9 px-3 flex items-center gap-1.5 text-xs rounded-lg bg-brand-500/10 text-brand-500 border border-brand-500/20 cursor-pointer hover:bg-brand-500/15">
+        <Button variant="secondary" size="sm" onClick={load}>
           <RefreshCw size={13} /> {isRTL ? 'تحديث' : 'Refresh'}
-        </button>
-        <button onClick={handleExport} disabled={!rows.length} className="h-9 px-3 flex items-center gap-1.5 text-xs rounded-lg bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark cursor-pointer hover:text-content disabled:opacity-40">
+        </Button>
+        <Button variant="primary" size="sm" onClick={handleExport} disabled={!rows.length}>
           <Download size={13} /> {isRTL ? 'تصدير' : 'Export'}
-        </button>
+        </Button>
       </div>
 
       {/* Summary matrix (click a cell to filter the list) */}
