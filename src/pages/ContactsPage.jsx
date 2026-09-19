@@ -2516,6 +2516,7 @@ export default function ContactsPage() {
         setMergeTargets={setMergeTargets}
         MERGE_LIMIT={MERGE_LIMIT}
         setSelected={setSelected}
+        onOpenProfile={(c) => setProfileId(c.id)}
         toggleSelect={toggleSelect}
         toggleSelectAll={toggleSelectAll}
         togglePin={togglePin}

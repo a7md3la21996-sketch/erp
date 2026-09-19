@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, Clock, X as XIcon } from 'lucide-react';
 import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell, NextActionBadge, CONTACT_STAGE, STAGE_UI_ENABLED } from './constants';
 import { Pagination } from '../../../components/ui';
@@ -73,6 +74,7 @@ export default function ContactsCardList({
   setMergeTargets,
   MERGE_LIMIT,
   setSelected,
+  onOpenProfile,
   toggleSelect,
   toggleSelectAll,
   togglePin,
@@ -111,6 +113,9 @@ export default function ContactsCardList({
   filtered,
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  // Open the Full Profile overlay (via ContactsPage) instead of navigating away.
+  const openProfile = useCallback((e, c) => { e.stopPropagation(); if (onOpenProfile) onOpenProfile(c); else navigate(`/crm/leads/${c.id}`); }, [onOpenProfile, navigate]);
   const statusLabels = isRTL ? STATUS_LABELS_AR : STATUS_LABELS_EN;
   // Which card's phone chooser is open, and for which channel.
   // { id, mode: 'call' | 'wa' } — only shown when a lead has >1 number.
@@ -329,7 +334,8 @@ export default function ContactsCardList({
                   <div className="flex-1 min-w-0">
                     {/* Name + temperature + markers */}
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-bold text-[15px] text-content dark:text-content-dark truncate">
+                      <span onClick={(e) => openProfile(e, c)} title={isRTL ? 'فتح الملف الكامل' : 'Open full profile'}
+                        className="font-bold text-[15px] text-content dark:text-content-dark truncate cursor-pointer hover:text-brand-500 hover:underline">
                         {c.full_name || (isRTL ? '— بدون اسم —' : '— No Name —')}
                       </span>
                       {tempData?.Icon && (
