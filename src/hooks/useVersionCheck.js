@@ -77,12 +77,24 @@ export function useVersionCheck({ intervalMs = 60_000 } = {}) {
   return updateAvailable;
 }
 
-/** Reload the current URL, bypassing cache. */
+/** Reload the current URL onto the fresh build — unregister any stale caching
+ *  service worker (keep the Firebase messaging one) and wipe caches first, so a
+ *  stuck SW can't just re-serve the old bundle after the reload. */
 export function reloadForUpdate() {
+  const done = () => window.location.reload();
   try {
-    if ('caches' in window) {
-      caches.keys().then(names => names.forEach(n => caches.delete(n))).catch(() => {});
+    const tasks = [];
+    if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+      tasks.push(
+        navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => {
+          const url = r.active?.scriptURL || r.waiting?.scriptURL || r.installing?.scriptURL || '';
+          return url.includes('firebase-messaging-sw') ? null : r.unregister();
+        }))).catch(() => {})
+      );
     }
-  } catch { /* noop */ }
-  window.location.reload();
+    if ('caches' in window) {
+      tasks.push(caches.keys().then(names => Promise.all(names.map(n => caches.delete(n)))).catch(() => {}));
+    }
+    Promise.all(tasks).finally(done);
+  } catch { done(); }
 }

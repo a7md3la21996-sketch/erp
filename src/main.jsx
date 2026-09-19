@@ -3,10 +3,15 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/globals.css';
 import { initSentry } from './lib/sentry';
+import { cleanupStaleServiceWorkers } from './utils/swCleanup';
 
 // Initialize Sentry as early as possible so init-time errors are captured.
 // No-op when VITE_SENTRY_DSN isn't set (so dev builds stay quiet).
 initSentry();
+
+// Free any browser stuck on an old build by a leftover caching service worker
+// (keeps only the Firebase messaging SW). Reloads once onto the live build.
+cleanupStaleServiceWorkers();
 
 // ── Clear legacy localStorage data (Supabase is now the only source of truth) ──
 const DATA_VERSION = 'v3_supabase_only';
