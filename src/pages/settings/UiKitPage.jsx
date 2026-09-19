@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Button, Card, CardHeader, CardBody, Input, Select, Textarea, Badge, Modal, ModalFooter,
   KpiCard, MetricCard, FilterPill, EmptyState, Pagination, confirm, Table, Th, Tr, Td,
+  DataTable, SmartFilter, ExportButton,
 } from '../../components/ui';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import { TableSkeleton, ListSkeleton } from '../../components/ui/PageSkeletons';
@@ -47,6 +48,24 @@ export default function UiKitPage() {
   const [pill, setPill] = useState('all');
   const [page, setPage] = useState(1);
   const [formErr, setFormErr] = useState('');
+  const [sfSearch, setSfSearch] = useState('');
+  const [sfFilters, setSfFilters] = useState([]);
+  const [sfSort, setSfSort] = useState('name');
+
+  const demoRows = [
+    { id: 1, name: 'Ahmed Gaber', phone: '+20 100 111', status: isRTL ? 'نشط' : 'Active', _c: '#158A57' },
+    { id: 2, name: 'Sara Ali', phone: '+20 101 222', status: isRTL ? 'متابعة' : 'Following', _c: '#C9860A' },
+    { id: 3, name: 'Mona Adel', phone: '+20 102 333', status: isRTL ? 'غير مؤهل' : 'DQ', _c: '#D6403B' },
+  ];
+  const demoCols = [
+    { key: 'name', header: isRTL ? 'الاسم' : 'Name', sortable: true },
+    { key: 'phone', header: isRTL ? 'الهاتف' : 'Phone' },
+    { key: 'status', header: isRTL ? 'الحالة' : 'Status', render: (r) => <Badge color={r._c}>{r.status}</Badge> },
+  ];
+  const sfFields = [
+    { id: 'name', label: 'الاسم', labelEn: 'Name', type: 'text' },
+    { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: [{ value: 'active', label: isRTL ? 'نشط' : 'Active' }, { value: 'following', label: isRTL ? 'متابعة' : 'Following' }] },
+  ];
 
   const selOptions = [
     { value: 'hot', label: isRTL ? 'حار' : 'Hot', color: '#D6403B' },
@@ -188,14 +207,35 @@ export default function UiKitPage() {
             <div className="w-full mt-3"><TableSkeleton /></div>
             <div className="w-full mt-3"><Pagination page={page} totalPages={8} safePage={page} onPageChange={setPage} pageSize={25} onPageSizeChange={() => {}} totalItems={200} /></div>
           </Section>
-          <Section title={isRTL ? 'مكوّنات مركّبة (مدفوعة بالبيانات)' : 'Composite components (data-driven)'} desc={isRTL ? 'بتاخد بيانات/إعدادات — تتشاف حيّة في صفحاتها.' : 'Take data/config — seen live in their own pages.'}>
+          <Section title="DataTable" desc={isRTL ? 'الجدول الموحّد config-driven (columns + rows + render + sort).' : 'The config-driven unified table (columns + rows + render + sort).'}>
+            <div className="w-full">
+              <DataTable columns={demoCols} rows={demoRows} sortBy={sfSort} onSort={setSfSort} />
+            </div>
+          </Section>
+          <Section title="SmartFilter" desc={isRTL ? 'باني فلاتر + بحث + ترتيب + شريط «Filtered by».' : 'Filter builder + search + sort + Filtered-by bar.'}>
+            <div className="w-full">
+              <SmartFilter
+                fields={sfFields}
+                filters={sfFilters}
+                onFiltersChange={setSfFilters}
+                search={sfSearch}
+                onSearchChange={setSfSearch}
+                searchPlaceholder={isRTL ? 'ابحث بالاسم أو الهاتف...' : 'Search by name or phone...'}
+                sortOptions={[{ value: 'name', label: isRTL ? 'الاسم' : 'Name' }, { value: 'created', label: isRTL ? 'الأحدث' : 'Newest' }]}
+                sortBy={sfSort}
+                onSortChange={setSfSort}
+                resultsCount={demoRows.length}
+              />
+            </div>
+          </Section>
+          <Section title="ExportButton" desc={isRTL ? 'تصدير CSV/Excel لأي بيانات + أعمدة.' : 'CSV/Excel export for any data + columns.'}>
+            <ExportButton data={demoRows} filename="sample" title={isRTL ? 'عيّنة' : 'Sample'} columns={demoCols.map(c => ({ key: c.key, header: c.header }))} />
+          </Section>
+          <Section title={isRTL ? 'كمان متاح' : 'Also available'} desc={isRTL ? 'مكوّنات محتاجة سياق/بيانات حيّة — بتتشاف في صفحاتها.' : 'Components needing live context/data — seen in their own pages.'}>
             <ul className="text-xs text-content dark:text-content-dark leading-6 m-0 ps-4 list-disc">
-              <li><b>DataTable</b> — {isRTL ? 'جدول موحّد config-driven (الجدول المستقبلي للنظام).' : 'config-driven unified table (future single table).'}</li>
-              <li><b>VirtualTable</b> — {isRTL ? 'جدول افتراضي للقوائم الضخمة.' : 'virtualised table for huge lists.'}</li>
-              <li><b>SmartFilter</b> — {isRTL ? 'باني فلاتر + شريط «Filtered by».' : 'filter builder + Filtered-by bar.'}</li>
+              <li><b>VirtualTable</b> — {isRTL ? 'جدول افتراضي للقوائم الضخمة (آلاف الصفوف).' : 'virtualised table for huge lists.'}</li>
               <li><b>DocumentsSection / CommentsSection</b> — {isRTL ? 'مرفقات وتعليقات لأي كيان.' : 'attachments & comments for any entity.'}</li>
-              <li><b>ExportButton</b> — {isRTL ? 'تصدير CSV/Excel.' : 'CSV/Excel export.'}</li>
-              <li><b>ProductTour / UpdateBanner / ConnectionStatus</b> — {isRTL ? 'جولة، بانر تحديث، حالة الاتصال.' : 'tour, update banner, connection status.'}</li>
+              <li><b>ProductTour / UpdateBanner / ConnectionStatus / HeatmapCalendar</b> — {isRTL ? 'جولة، بانر تحديث، حالة الاتصال، تقويم حراري.' : 'tour, update banner, connection status, heatmap.'}</li>
             </ul>
           </Section>
         </>)}
