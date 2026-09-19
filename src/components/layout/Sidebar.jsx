@@ -330,7 +330,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 {isAdmin && switcherOpen && (
                   <>
                     <div className="fixed inset-0 z-[59]" onClick={() => setSwitcherOpen(false)} aria-hidden="true" />
-                    <div className={`absolute z-[60] top-full mt-1 ${isRTL ? 'end-0' : 'start-0'} min-w-[220px] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 border border-edge dark:border-edge-dark rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] overflow-hidden py-1`}>
+                    <div className="absolute z-[60] top-full mt-1 inset-x-0 w-auto bg-white dark:bg-gray-900 border border-edge dark:border-edge-dark rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] overflow-hidden py-1">
                       {workspaces.filter(w => w.id !== moduleItem.id).length > 0 && (
                         <>
                           <div className={`px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${isRTL ? 'text-right' : ''}`}>{isRTL ? 'التبديل لمساحة' : 'Switch workspace'}</div>
