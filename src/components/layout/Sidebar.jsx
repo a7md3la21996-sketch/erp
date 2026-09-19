@@ -478,29 +478,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
           flexShrink: 0,
         }}>
-          {/* Global shortcuts — always reachable from any workspace */}
-          {globalQuick.length > 0 && (
-            <div className={`flex ${collapsed ? 'flex-col items-center' : 'items-center justify-between'} gap-1 mb-2 pb-2 border-b border-edge dark:border-edge-dark`}>
-              {globalQuick.map(g => {
-                const gActive = location.pathname === g.to || location.pathname.startsWith(g.to + '/');
-                return (
-                  <Link
-                    key={g.id}
-                    to={g.to}
-                    onClick={handleNavClick}
-                    title={g.label[lang]}
-                    aria-label={g.label[lang]}
-                    className={`relative flex items-center justify-center w-9 h-9 rounded-lg no-underline transition-colors ${gActive ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'}`}
-                  >
-                    <g.Icon size={18} />
-                    {g.badge > 0 && (
-                      <span style={{ position: 'absolute', top: 2, [isRTL ? 'left' : 'right']: 2, minWidth: 8, height: 8, borderRadius: 8, background: '#D6403B' }} />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+          {/* (Removed the global-shortcuts icon strip that sat above the profile —
+              those actions live in the top bar / bottom nav.) */}
           {/* Settings shortcut */}
           <Link
             to="/settings"
