@@ -44,13 +44,15 @@ export const STAGE_UI_ENABLED = true;
 export const CONTACT_STAGE = {
   new:         { ar: 'جديد',         en: 'New',         color: '#8A94A6' },
   contacted:   { ar: 'تم التواصل',   en: 'Contacted',   color: '#2F6BD3' },
+  qualified:   { ar: 'مؤهل',         en: 'Qualified',   color: '#14B8A6' },
   meeting_set: { ar: 'تحديد موعد',   en: 'Meeting Set', color: '#0EA5E9' },
   met:         { ar: 'تمت المقابلة', en: 'Met',         color: '#6B54D3' },
+  negotiation: { ar: 'تفاوض',        en: 'Negotiation', color: '#F59E0B' },
   reserved:    { ar: 'حجز',          en: 'Reserved',    color: '#C9860A' },
   contracted:  { ar: 'تعاقد',        en: 'Contracted',  color: '#D9730B' },
   deal_done:   { ar: 'صفقة مكتملة',  en: 'Deal Done',   color: '#0FA372' },
 };
-export const CONTACT_STAGE_ORDER = ['new', 'contacted', 'meeting_set', 'met', 'reserved', 'contracted', 'deal_done'];
+export const CONTACT_STAGE_ORDER = ['new', 'contacted', 'qualified', 'meeting_set', 'met', 'negotiation', 'reserved', 'contracted', 'deal_done'];
 export const contactStageLabel = (key, isRTL) => { const s = CONTACT_STAGE[key]; return s ? (isRTL ? s.ar : s.en) : null; };
 
 // ── Activity result badges (shared) ─────────────────────────────────────────
