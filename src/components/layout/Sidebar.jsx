@@ -19,6 +19,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const navigate = useNavigate();
   const { setShowHelp } = useShortcutsHelp();
   const [openMenus, setOpenMenus] = useState({});
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [profileMenu, setProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
@@ -291,34 +292,57 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               }} />
             </div>
           )}
-          {/* Back to the workspace launcher (only while inside a module) */}
-          {inModule && (
-            <Link
-              to="/home"
-              onClick={handleNavClick}
-              title={!(!collapsed || mobileOpen) ? (isRTL ? 'كل المساحات' : 'All workspaces') : undefined}
-              className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} ${(!collapsed || mobileOpen) ? '' : 'justify-center'} gap-2 py-1.5 px-3 mb-1 rounded-lg no-underline text-[11.5px] font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
-            >
-              {isRTL ? <ChevronRight size={15} className="shrink-0" /> : <ChevronLeft size={15} className="shrink-0" />}
-              {(!collapsed || mobileOpen) && <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>}
-            </Link>
-          )}
-          {/* Current-module header — the module's home link + shows which workspace
-              you're in (replaces the old duplicate module-page row). */}
+          {/* Workspace switcher — the current module + a dropdown to jump to any
+              other workspace or the module home, replacing the old back row. */}
           {inModule && (() => {
             const MIcon = moduleItem.icon || LayoutGrid;
             const showLabels = !collapsed || mobileOpen;
-            const homeActive = moduleItem.path ? isActive(moduleItem.path) : false;
-            const inner = (
-              <>
-                <MIcon size={showLabels ? 18 : 20} className="shrink-0 text-brand-600 dark:text-brand-400" />
-                {showLabels && <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>}
-              </>
+            const workspaces = visibleItems.filter(i => MODULE_IDS.includes(i.id));
+            const go = () => { setSwitcherOpen(false); handleNavClick(); };
+            return (
+              <div className="relative mb-2">
+                <button
+                  onClick={() => setSwitcherOpen(o => !o)}
+                  title={!showLabels ? moduleItem.label[lang] : undefined}
+                  aria-haspopup="true" aria-expanded={switcherOpen}
+                  className={`w-full flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} ${showLabels ? 'gap-2.5 px-3' : 'justify-center px-0'} py-2 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.12] transition-colors cursor-pointer border-none`}
+                >
+                  <MIcon size={showLabels ? 18 : 20} className="shrink-0 text-brand-600 dark:text-brand-400" />
+                  {showLabels && <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>}
+                  {showLabels && <ChevronDown size={15} className={`shrink-0 text-brand-500 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />}
+                </button>
+                {switcherOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[59]" onClick={() => setSwitcherOpen(false)} aria-hidden="true" />
+                    <div className={`absolute z-[60] top-full mt-1 ${isRTL ? 'end-0' : 'start-0'} min-w-[220px] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 border border-edge dark:border-edge-dark rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] overflow-hidden py-1`}>
+                      {moduleItem.path && (
+                        <Link to={moduleItem.path} onClick={go} className={`flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} gap-2.5 px-3 py-2 no-underline text-[13px] font-semibold ${isActive(moduleItem.path) ? 'text-brand-600 dark:text-brand-400 bg-brand-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+                          <MIcon size={16} className="shrink-0" /> <span className="flex-1 text-start">{isRTL ? `لوحة ${moduleItem.label.ar}` : `${moduleItem.label.en} home`}</span>
+                        </Link>
+                      )}
+                      {workspaces.length > 1 && (
+                        <>
+                          <div className="my-1 h-px bg-edge/70 dark:bg-edge-dark/70" />
+                          <div className={`px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${isRTL ? 'text-right' : ''}`}>{isRTL ? 'التبديل لمساحة' : 'Switch workspace'}</div>
+                          {workspaces.filter(w => w.id !== moduleItem.id).map(w => {
+                            const WIcon = w.icon || LayoutGrid;
+                            return (
+                              <Link key={w.id} to={w.path || '/home'} onClick={go} className={`flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} gap-2.5 px-3 py-2 no-underline text-[13px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5`}>
+                                <WIcon size={16} className="shrink-0 text-gray-400 dark:text-gray-500" /> <span className="flex-1 text-start">{w.label[lang]}</span>
+                              </Link>
+                            );
+                          })}
+                        </>
+                      )}
+                      <div className="my-1 h-px bg-edge/70 dark:bg-edge-dark/70" />
+                      <Link to="/home" onClick={go} className={`flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} gap-2.5 px-3 py-2 no-underline text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5`}>
+                        <LayoutGrid size={16} className="shrink-0" /> <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
             );
-            const cls = `flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} ${showLabels ? 'gap-2.5 px-3' : 'justify-center px-0'} py-2 mb-2 rounded-lg no-underline ${homeActive ? 'bg-brand-500/[0.14]' : 'bg-brand-500/[0.08] hover:bg-brand-500/[0.12]'} transition-colors`;
-            return moduleItem.path
-              ? <Link to={moduleItem.path} onClick={handleNavClick} title={!showLabels ? moduleItem.label[lang] : undefined} className={cls}>{inner}</Link>
-              : <div className={cls} title={!showLabels ? moduleItem.label[lang] : undefined}>{inner}</div>;
           })()}
           {navList.map(item => {
             const Icon = item.icon || Circle;
