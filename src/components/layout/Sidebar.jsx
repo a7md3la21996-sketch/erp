@@ -170,12 +170,12 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
   // Cross-cutting shortcuts pinned in the footer — reachable from any workspace.
   const globalQuick = [
-    { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'المساحات', en: 'Workspaces' }, perm: P.DASHBOARD },
+    { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'المساحات', en: 'Workspaces' }, perm: P.DASHBOARD, adminOnly: true },
     { id: 'g-tasks', to: '/tasks', Icon: CheckSquare, label: { ar: 'المهام', en: 'Tasks' }, perm: P.TASKS_VIEW_OWN },
     { id: 'g-notif', to: '/notifications', Icon: Bell, label: { ar: 'الإشعارات', en: 'Notifications' }, perm: P.DASHBOARD, badge: annUnread },
     { id: 'g-chat', to: '/chat', Icon: MessageSquare, label: { ar: 'المحادثات', en: 'Chat' }, perm: P.CHAT_USE, badge: emailUnread },
     { id: 'g-help', to: '/help', Icon: HelpCircle, label: { ar: 'المساعدة', en: 'Help' }, perm: P.DASHBOARD },
-  ].filter(g => hasPermission(g.perm));
+  ].filter(g => hasPermission(g.perm) && (!g.adminOnly || role === 'admin'));
   const hasChild = (item, childId) => item.children?.some(c => c.id === childId);
   const getBadgeCount = (item) => {
     let count = 0;
@@ -297,32 +297,42 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           {inModule && (() => {
             const MIcon = moduleItem.icon || LayoutGrid;
             const showLabels = !collapsed || mobileOpen;
-            const workspaces = visibleItems.filter(i => MODULE_IDS.includes(i.id));
+            const isAdmin = role === 'admin';
+            // Only admin roams between workspaces (other modules are still WIP).
+            const workspaces = isAdmin ? visibleItems.filter(i => MODULE_IDS.includes(i.id)) : [];
             const go = () => { setSwitcherOpen(false); handleNavClick(); };
+            const headInner = (
+              <>
+                <MIcon size={showLabels ? 18 : 20} className="shrink-0 text-brand-600 dark:text-brand-400" />
+                {showLabels && <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>}
+              </>
+            );
+            const headCls = `flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} ${showLabels ? 'gap-2.5 px-3 flex-1 min-w-0' : 'justify-center px-0 flex-1'} py-2 no-underline rounded-lg hover:bg-brand-500/[0.10] transition-colors`;
             return (
               <div className="relative mb-2">
-                <button
-                  onClick={() => setSwitcherOpen(o => !o)}
-                  title={!showLabels ? moduleItem.label[lang] : undefined}
-                  aria-haspopup="true" aria-expanded={switcherOpen}
-                  className={`w-full flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} ${showLabels ? 'gap-2.5 px-3' : 'justify-center px-0'} py-2 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.12] transition-colors cursor-pointer border-none`}
-                >
-                  <MIcon size={showLabels ? 18 : 20} className="shrink-0 text-brand-600 dark:text-brand-400" />
-                  {showLabels && <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>}
-                  {showLabels && <ChevronDown size={15} className={`shrink-0 text-brand-500 transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />}
-                </button>
-                {switcherOpen && (
+                {/* Row: clicking the name/icon opens the module home; the chevron
+                    (admin only) opens the workspace switcher. */}
+                <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} rounded-lg bg-brand-500/[0.08]`}>
+                  {moduleItem.path
+                    ? <Link to={moduleItem.path} onClick={go} title={!showLabels ? moduleItem.label[lang] : undefined} className={headCls}>{headInner}</Link>
+                    : <div className={headCls} title={!showLabels ? moduleItem.label[lang] : undefined}>{headInner}</div>}
+                  {isAdmin && showLabels && (
+                    <button
+                      onClick={() => setSwitcherOpen(o => !o)}
+                      title={isRTL ? 'تبديل المساحة' : 'Switch workspace'}
+                      aria-haspopup="true" aria-expanded={switcherOpen}
+                      className="shrink-0 flex items-center justify-center px-2.5 py-2 rounded-lg text-brand-500 hover:bg-brand-500/[0.14] transition-colors cursor-pointer border-none bg-transparent"
+                    >
+                      <ChevronDown size={15} className={`transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+                </div>
+                {isAdmin && switcherOpen && (
                   <>
                     <div className="fixed inset-0 z-[59]" onClick={() => setSwitcherOpen(false)} aria-hidden="true" />
                     <div className={`absolute z-[60] top-full mt-1 ${isRTL ? 'end-0' : 'start-0'} min-w-[220px] max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-900 border border-edge dark:border-edge-dark rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.2)] overflow-hidden py-1`}>
-                      {moduleItem.path && (
-                        <Link to={moduleItem.path} onClick={go} className={`flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} gap-2.5 px-3 py-2 no-underline text-[13px] font-semibold ${isActive(moduleItem.path) ? 'text-brand-600 dark:text-brand-400 bg-brand-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
-                          <MIcon size={16} className="shrink-0" /> <span className="flex-1 text-start">{isRTL ? `لوحة ${moduleItem.label.ar}` : `${moduleItem.label.en} home`}</span>
-                        </Link>
-                      )}
-                      {workspaces.length > 1 && (
+                      {workspaces.filter(w => w.id !== moduleItem.id).length > 0 && (
                         <>
-                          <div className="my-1 h-px bg-edge/70 dark:bg-edge-dark/70" />
                           <div className={`px-3 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${isRTL ? 'text-right' : ''}`}>{isRTL ? 'التبديل لمساحة' : 'Switch workspace'}</div>
                           {workspaces.filter(w => w.id !== moduleItem.id).map(w => {
                             const WIcon = w.icon || LayoutGrid;
@@ -332,9 +342,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                               </Link>
                             );
                           })}
+                          <div className="my-1 h-px bg-edge/70 dark:bg-edge-dark/70" />
                         </>
                       )}
-                      <div className="my-1 h-px bg-edge/70 dark:bg-edge-dark/70" />
                       <Link to="/home" onClick={go} className={`flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} gap-2.5 px-3 py-2 no-underline text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5`}>
                         <LayoutGrid size={16} className="shrink-0" /> <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>
                       </Link>

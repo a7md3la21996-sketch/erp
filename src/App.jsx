@@ -199,8 +199,16 @@ function AuthRedirect() {
 // that are hidden from everyone except admin until they're finished.
 function AdminOnly({ children }) {
   const { profile } = useAuth();
-  if (profile && profile.role !== 'admin') return <Navigate to="/home" replace />;
+  if (profile && profile.role !== 'admin') return <Navigate to="/leads" replace />;
   return children;
+}
+
+// The workspace launcher is admin-only for now (other modules still WIP) — every
+// other role lands straight in the CRM (Leads) instead of the workspaces picker.
+function HomeOrDefault() {
+  const { profile } = useAuth();
+  if (profile && profile.role !== 'admin') return <Navigate to="/leads" replace />;
+  return <LauncherPage />;
 }
 
 // The Leads page moved from /contacts to /leads. Keep /contacts working for old
@@ -246,7 +254,7 @@ export default function App() {
               <Route path="/login" element={<AuthRedirect />} />
               <Route path="/" element={<AuthRedirect />} />
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
-                <Route path="/home" element={<Guarded><LauncherPage /></Guarded>} />
+                <Route path="/home" element={<Guarded><HomeOrDefault /></Guarded>} />
                 <Route path="/dashboard" element={<AdminOnly><Guarded><DashboardPage /></Guarded></AdminOnly>} />
                 <Route path="/leads" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/contacts" element={<ContactsToLeadsRedirect />} />
