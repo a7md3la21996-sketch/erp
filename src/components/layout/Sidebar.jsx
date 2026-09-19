@@ -162,11 +162,10 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   // Inside a module, show its pages FLAT (module page + each child as its own
   // top-level row) — no redundant collapsible module header, since you're already
   // scoped to that world. Outside, show the cross-cutting globals.
+  // Inside a module the module header (below) is the module's home link, so we
+  // DON'T repeat the module page as a row — just its children.
   const navList = inModule
-    ? [
-        ...(moduleItem.path ? [{ ...moduleItem, children: undefined }] : []),
-        ...(moduleItem.children || []).filter(c => !c.group && hasPermission(c.permission)),
-      ]
+    ? (moduleItem.children || []).filter(c => !c.group && hasPermission(c.permission))
     : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
   // Cross-cutting shortcuts pinned in the footer — reachable from any workspace.
   const globalQuick = [
@@ -304,18 +303,23 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               {(!collapsed || mobileOpen) && <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>}
             </Link>
           )}
-          {/* Current-module header — makes it obvious which workspace you're in */}
-          {inModule && (!collapsed || mobileOpen) && (
-            <div className={`flex items-center gap-2.5 px-3 py-2 mb-2 rounded-lg bg-brand-500/[0.08] ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-              {(() => { const MIcon = moduleItem.icon || LayoutGrid; return <MIcon size={18} className="shrink-0 text-brand-600 dark:text-brand-400" />; })()}
-              <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>
-            </div>
-          )}
-          {inModule && !(!collapsed || mobileOpen) && (
-            <div className="flex items-center justify-center py-2 mb-1" title={moduleItem.label[lang]}>
-              {(() => { const MIcon = moduleItem.icon || LayoutGrid; return <MIcon size={20} className="shrink-0 text-brand-600 dark:text-brand-400" />; })()}
-            </div>
-          )}
+          {/* Current-module header — the module's home link + shows which workspace
+              you're in (replaces the old duplicate module-page row). */}
+          {inModule && (() => {
+            const MIcon = moduleItem.icon || LayoutGrid;
+            const showLabels = !collapsed || mobileOpen;
+            const homeActive = moduleItem.path ? isActive(moduleItem.path) : false;
+            const inner = (
+              <>
+                <MIcon size={showLabels ? 18 : 20} className="shrink-0 text-brand-600 dark:text-brand-400" />
+                {showLabels && <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>}
+              </>
+            );
+            const cls = `flex items-center ${isRTL ? 'flex-row-reverse text-right' : ''} ${showLabels ? 'gap-2.5 px-3' : 'justify-center px-0'} py-2 mb-2 rounded-lg no-underline ${homeActive ? 'bg-brand-500/[0.14]' : 'bg-brand-500/[0.08] hover:bg-brand-500/[0.12]'} transition-colors`;
+            return moduleItem.path
+              ? <Link to={moduleItem.path} onClick={handleNavClick} title={!showLabels ? moduleItem.label[lang] : undefined} className={cls}>{inner}</Link>
+              : <div className={cls} title={!showLabels ? moduleItem.label[lang] : undefined}>{inner}</div>;
+          })()}
           {navList.map(item => {
             const Icon = item.icon || Circle;
             const hasChildren = item.children?.length > 0;
