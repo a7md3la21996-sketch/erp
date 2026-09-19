@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
-  { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
+  // Analytics dashboard is still WIP — hidden from everyone except admin (adminOnly)
+  // until it's finished; the route is guarded to match (see App.jsx).
+  { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD, adminOnly: true },
   // CRM as a scoped module: the card lands on the CRM Dashboard, and its side
   // menu exposes Leads, Meetings, Developers, plus the real-estate inventory
   // (Projects/Units) and Deals — all consolidated here so the sales day lives in

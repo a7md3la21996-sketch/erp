@@ -195,6 +195,14 @@ function AuthRedirect() {
   return <LoginPage />;
 }
 
+// Admin-only route guard — used for WIP pages (e.g. the analytics dashboard)
+// that are hidden from everyone except admin until they're finished.
+function AdminOnly({ children }) {
+  const { profile } = useAuth();
+  if (profile && profile.role !== 'admin') return <Navigate to="/home" replace />;
+  return children;
+}
+
 // The Leads page moved from /contacts to /leads. Keep /contacts working for old
 // links/bookmarks by redirecting while PRESERVING the query string (e.g. the
 // ?highlight= deep-links that open a specific lead's drawer).
@@ -239,7 +247,7 @@ export default function App() {
               <Route path="/" element={<AuthRedirect />} />
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
                 <Route path="/home" element={<Guarded><LauncherPage /></Guarded>} />
-                <Route path="/dashboard" element={<Guarded><DashboardPage /></Guarded>} />
+                <Route path="/dashboard" element={<AdminOnly><Guarded><DashboardPage /></Guarded></AdminOnly>} />
                 <Route path="/leads" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/contacts" element={<ContactsToLeadsRedirect />} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />

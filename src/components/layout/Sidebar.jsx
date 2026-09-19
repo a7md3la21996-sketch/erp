@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS, ROLE_NAV_GROUPS, MODULE_IDS, GLOBAL_IDS, findModuleId } from '../../config/navigation';
 import { P } from '../../config/roles';
 import { useShortcutsHelp } from './KeyboardShortcutsProvider';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle, Circle, Sun, Moon, Globe, LogOut, Keyboard, User, ChevronUp } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings, LayoutGrid, Home, Bell, CheckSquare, MessageSquare, HelpCircle, Circle, Sun, Moon, Globe, LogOut, Keyboard, User, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 import { getEmailStats } from '../../services/emailService';
@@ -148,6 +148,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const role = profile?.role || 'admin';
   const roleGroups = ROLE_NAV_GROUPS[role];
   const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.adminOnly && role !== 'admin') return false; // WIP pages hidden until ready
     if (!hasPermission(item.permission)) return false;
     if (roleGroups && !roleGroups.includes(item.id)) return false;
     return true;
@@ -169,7 +170,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     : visibleItems.filter(i => GLOBAL_IDS.includes(i.id));
   // Cross-cutting shortcuts pinned in the footer — reachable from any workspace.
   const globalQuick = [
-    { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'الرئيسية', en: 'Home' }, perm: P.DASHBOARD },
+    { id: 'g-home', to: '/home', Icon: LayoutGrid, label: { ar: 'المساحات', en: 'Workspaces' }, perm: P.DASHBOARD },
     { id: 'g-tasks', to: '/tasks', Icon: CheckSquare, label: { ar: 'المهام', en: 'Tasks' }, perm: P.TASKS_VIEW_OWN },
     { id: 'g-notif', to: '/notifications', Icon: Bell, label: { ar: 'الإشعارات', en: 'Notifications' }, perm: P.DASHBOARD, badge: annUnread },
     { id: 'g-chat', to: '/chat', Icon: MessageSquare, label: { ar: 'المحادثات', en: 'Chat' }, perm: P.CHAT_USE, badge: emailUnread },
@@ -297,11 +298,23 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               to="/home"
               onClick={handleNavClick}
               title={!(!collapsed || mobileOpen) ? (isRTL ? 'كل المساحات' : 'All workspaces') : undefined}
-              className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} ${(!collapsed || mobileOpen) ? '' : 'justify-center'} gap-2.5 py-2 px-3 mb-2 rounded-lg no-underline text-[12.5px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+              className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} ${(!collapsed || mobileOpen) ? '' : 'justify-center'} gap-2 py-1.5 px-3 mb-1 rounded-lg no-underline text-[11.5px] font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
             >
-              <LayoutGrid size={17} className="shrink-0" />
+              {isRTL ? <ChevronRight size={15} className="shrink-0" /> : <ChevronLeft size={15} className="shrink-0" />}
               {(!collapsed || mobileOpen) && <span className="flex-1 text-start">{isRTL ? 'كل المساحات' : 'All workspaces'}</span>}
             </Link>
+          )}
+          {/* Current-module header — makes it obvious which workspace you're in */}
+          {inModule && (!collapsed || mobileOpen) && (
+            <div className={`flex items-center gap-2.5 px-3 py-2 mb-2 rounded-lg bg-brand-500/[0.08] ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+              {(() => { const MIcon = moduleItem.icon || LayoutGrid; return <MIcon size={18} className="shrink-0 text-brand-600 dark:text-brand-400" />; })()}
+              <span className="flex-1 text-start text-[13px] font-extrabold text-brand-700 dark:text-brand-300 truncate">{moduleItem.label[lang]}</span>
+            </div>
+          )}
+          {inModule && !(!collapsed || mobileOpen) && (
+            <div className="flex items-center justify-center py-2 mb-1" title={moduleItem.label[lang]}>
+              {(() => { const MIcon = moduleItem.icon || LayoutGrid; return <MIcon size={20} className="shrink-0 text-brand-600 dark:text-brand-400" />; })()}
+            </div>
           )}
           {navList.map(item => {
             const Icon = item.icon || Circle;

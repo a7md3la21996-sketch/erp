@@ -16,7 +16,7 @@ import ResaleUnitsTab from './ResaleUnitsTab';
 import TakeActionForm from './TakeActionForm';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
-import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince, CONTACT_STAGE, ResultBadge, OutcomeBadge } from './constants';
+import { TYPE, TEMP, SOURCE_LABELS, SOURCE_EN, fmtBudget, initials, daysSince, CONTACT_STAGE, ResultBadge, OutcomeBadge, normalizePhone } from './constants';
 import { computeResponsiveness, RESP_LABELS } from './responsiveness';
 
 // ── Full Lead Profile — the roomy, id-based home for a lead: presented as a
@@ -118,6 +118,7 @@ export function LeadProfileOverlay({ contactId, onClose }) {
   const [activities, setActivities] = useState([]);
   const [tab, setTab] = useState('overview');
   const [showAction, setShowAction] = useState(false);
+  const [numMenu, setNumMenu] = useState(null); // 'call' | 'wa' when the lead has >1 number
   const [actionType, setActionType] = useState('call');
 
   const close = onClose;
@@ -195,6 +196,8 @@ export function LeadProfileOverlay({ contactId, onClose }) {
     const st = STATUS_STYLES[contact.contact_status];
     const stage = CONTACT_STAGE[contact.stage];
     const extraPhones = Array.isArray(contact.extra_phones) ? contact.extra_phones.filter(Boolean) : [];
+    const phones = [...new Set([contact.phone, contact.phone2, ...extraPhones].filter(Boolean))];
+    const multiPhone = phones.length > 1;
     const respLabel = RESP_LABELS[resp.state] ? (isRTL ? RESP_LABELS[resp.state].ar : RESP_LABELS[resp.state].en) : resp.state;
     const respStat = `${resp.replies} ${isRTL ? 'رد' : 'replies'} · ${resp.attempts} ${isRTL ? 'محاولة' : 'attempts'}` + (resp.lastReplyDays != null ? ` · ${isRTL ? 'آخر رد' : 'last reply'} ${resp.lastReplyDays === 0 ? (isRTL ? 'اليوم' : 'today') : resp.lastReplyDays + (isRTL ? ' يوم' : 'd')}` : '');
     const meetings = activities.filter(a => a.type === 'meeting');
@@ -232,11 +235,34 @@ export function LeadProfileOverlay({ contactId, onClose }) {
               {contact.interested_in_type && <Badge text={propTypeLabel(contact.interested_in_type, isRTL)} color="#6B7684" />}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {contact.phone && <a href={`tel:${contact.phone}`} title={isRTL ? 'اتصال' : 'Call'} className="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline"><Phone size={16} /></a>}
-            {contact.phone && <a href={`https://wa.me/${contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 text-[#25D366] no-underline"><MessageCircle size={16} /></a>}
+          <div className="flex items-center gap-1.5 shrink-0 relative">
+            {contact.phone && (multiPhone
+              ? <button onClick={() => setNumMenu(numMenu === 'call' ? null : 'call')} title={isRTL ? 'اتصال' : 'Call'} aria-haspopup="true" className="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 cursor-pointer"><Phone size={16} /></button>
+              : <a href={`tel:${normalizePhone(contact.phone)}`} title={isRTL ? 'اتصال' : 'Call'} className="w-9 h-9 flex items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline"><Phone size={16} /></a>)}
+            {contact.phone && (multiPhone
+              ? <button onClick={() => setNumMenu(numMenu === 'wa' ? null : 'wa')} title="WhatsApp" aria-haspopup="true" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 text-[#25D366] cursor-pointer"><MessageCircle size={16} /></button>
+              : <a href={`https://wa.me/${normalizePhone(contact.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#25D366]/10 text-[#25D366] no-underline"><MessageCircle size={16} /></a>)}
             {canEdit && <button onClick={() => setShowEdit(true)} title={isRTL ? 'تعديل' : 'Edit'} className="w-9 h-9 flex items-center justify-center rounded-lg bg-surface-bg dark:bg-brand-500/10 border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer"><Pencil size={15} /></button>}
             <button onClick={close} title={isRTL ? 'إغلاق' : 'Close'} className="w-9 h-9 flex items-center justify-center rounded-lg text-content-muted dark:text-content-muted-dark hover:bg-gray-100 dark:hover:bg-brand-500/10 cursor-pointer"><X size={18} /></button>
+            {numMenu && (
+              <>
+                <div className="fixed inset-0 z-[10]" onClick={() => setNumMenu(null)} aria-hidden="true" />
+                <div className="absolute z-[11] top-full end-0 mt-1.5 min-w-[210px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.25)] overflow-hidden">
+                  <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark border-b border-edge/60 dark:border-edge-dark/60">
+                    {numMenu === 'wa' ? (isRTL ? 'واتساب لأنهي رقم؟' : 'WhatsApp which number?') : (isRTL ? 'اتصال بأنهي رقم؟' : 'Call which number?')}
+                  </div>
+                  {phones.map((p, i) => (
+                    <a key={`num-${i}`} href={numMenu === 'wa' ? `https://wa.me/${normalizePhone(p).replace('+', '')}` : `tel:${normalizePhone(p)}`}
+                      target={numMenu === 'wa' ? '_blank' : undefined} rel={numMenu === 'wa' ? 'noreferrer' : undefined}
+                      onClick={() => setNumMenu(null)} dir="ltr"
+                      className="flex items-center gap-2 px-3 py-2.5 text-sm text-content dark:text-content-dark no-underline hover:bg-brand-500/[0.07] border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0">
+                      {numMenu === 'wa' ? <MessageCircle size={14} className="text-[#25D366] shrink-0" /> : <Phone size={14} className="text-brand-500 shrink-0" />}
+                      <span className="font-mono">{p}</span>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
