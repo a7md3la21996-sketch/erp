@@ -41,6 +41,7 @@ const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
 const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'));
 const LeadProfilePage = lazyRetry(() => import('./pages/crm/contacts/LeadProfilePage'));
 const CrmSettingsPage = lazyRetry(() => import('./pages/crm/settings/CrmSettingsPage'));
+const UiKitPage = lazyRetry(() => import('./pages/settings/UiKitPage'));
 const MasterLeadsPage = lazyRetry(() => import('./pages/crm/MasterLeadsPage'));
 const ActivitiesPage = lazyRetry(() => import('./pages/ActivitiesPage'));
 const MeetingsPage = lazyRetry(() => import('./pages/MeetingsPage'));
@@ -268,6 +269,7 @@ export default function App() {
                 <Route path="/contacts/master/:phone" element={<ProtectedRoute permission={P.CONTACTS_VIEW_ALL}><Guarded><MasterProfilePage /></Guarded></ProtectedRoute>} />
                 <Route path="/crm/leads/:id" element={<Guarded><LeadProfilePage /></Guarded>} />
                 <Route path="/crm/settings" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><CrmSettingsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/ui-kit" element={<AdminOnly><Guarded><UiKitPage /></Guarded></AdminOnly>} />
                 <Route path="/hr/performance" element={<Guarded><PerformancePage /></Guarded>} />
                 <Route path="/hr/goals" element={<Guarded><GoalsPage /></Guarded>} />
                 <Route path="/performance" element={<Navigate to="/hr/performance" replace />} />

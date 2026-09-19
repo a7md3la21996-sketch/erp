@@ -5,7 +5,7 @@ import {
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
   TrendingUp, PieChart, Volume2, Grid3x3, Gift, Bell, HelpCircle,
   GitCompareArrows, Mail, BookOpen, FileText, MessageCircle,
-  Briefcase, Boxes, HeartHandshake, Package, Headphones, GraduationCap, Clock, User, Receipt,
+  Briefcase, Boxes, HeartHandshake, Package, Headphones, GraduationCap, Clock, User, Receipt, Palette,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -27,6 +27,8 @@ export const NAV_ITEMS = [
     { id: 'crm-settings', label: { ar: 'إعدادات CRM', en: 'CRM Settings' }, icon: Settings, path: '/crm/settings', permission: P.SETTINGS_MANAGE },
   ]},
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
+  // Design-system catalogue — admin-only reference, hidden from everyone else.
+  { id: 'ui-kit', label: { ar: 'UI Kit', en: 'UI Kit' }, icon: Palette, path: '/ui-kit', permission: P.DASHBOARD, adminOnly: true },
   { id: 'sales', label: { ar: 'المبيعات', en: 'Sales' }, icon: DollarSign, permission: P.DEALS_VIEW_OWN, children: [
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, icon: PieChart, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
     { id: 'forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, icon: TrendingUp, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
@@ -91,7 +93,7 @@ export const NAV_ITEMS = [
 // these as entry cards, and the sidebar scopes to ONE module at a time (derived
 // from the URL) so you only ever see what belongs to the world you're in.
 export const MODULE_IDS = ['crm', 'sales', 'operations', 'marketing', 'hr', 'finance', 'reports'];
-export const GLOBAL_IDS = ['dashboard', 'activities', 'workspace', 'communication', 'help-center', 'changelog'];
+export const GLOBAL_IDS = ['dashboard', 'activities', 'ui-kit', 'workspace', 'communication', 'help-center', 'changelog'];
 
 // Extra route prefixes a module owns beyond its own path + children paths (some
 // pages live under a different URL than their group, e.g. Leads at /leads). CRM
